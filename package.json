@@ -1,0 +1,32 @@
+{
+  "name": "bambu",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "check:features": "node checks/features.cjs",
+    "build:remind": "vite build -c vite.remind.config.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "5.2.8",
+    "@supabase/supabase-js": "2.112.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "~6.0.3",
+    "vite": "^8.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4"
+  },
+  "packageManager": "pnpm@10.12.1",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

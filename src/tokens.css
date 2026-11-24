@@ -1,0 +1,72 @@
+/*
+ * Tokens de marca de Bambú: el ÚNICO dueño de colores, radios, sombras, movimiento y letra.
+ * Manual: docs/BRAND.md. Regla: el CSS nuevo solo usa var(--token); un color suelto falla la prueba.
+ * Se carga al final para ganarle a las definiciones viejas de index.css.
+ *
+ * Paleta base (no se usa directo en componentes; se usa por su función):
+ *   Bambú (crecimiento, acción principal) · Sol (logro, XP, promesa) · Brasa (compromiso, sostener)
+ *   Tinta (texto y estructura) · Alerta (dolor, error, cuidado)
+ */
+:root {
+  /* Paleta base */
+  --bambu-900: #173f31; --bambu-700: #225b46; --bambu-500: #4f9470; --bambu-300: #89b77a; --bambu-100: #edf4ef;
+  --sol-700: #a87a1c; --sol-500: #e9b949; --sol-400: #f6c443; --sol-100: #fff6dc;
+  --brasa-800: #8f3a08; --brasa-600: #c9540f; --brasa-200: #e9b99a;
+  --tinta-900: #17221d; --tinta-600: #4f5c55; --tinta-500: #58665e; --tinta-200: #e1e7e3; --tinta-50: #f4f6f4;
+  --alerta-700: #9a3b1f; --alerta-50: #fbefe9;
+  --cielo-600: #2f6fa8; --cielo-100: #e6f0f9;
+
+  /* Función: superficies y texto */
+  --canvas: var(--tinta-50); --surface: #fff; --ink: var(--tinta-900); --body: var(--tinta-600); --muted: var(--tinta-500);
+  --line: var(--tinta-200); --line-strong: #cbd6cf; --on-accent: #fff; --scrim: #0b140f80;
+
+  /* Función: acción principal (Bambú) */
+  --accent: var(--bambu-700); --accent-deep: var(--bambu-900); --accent-wash: var(--bambu-100); --accent-edge: #cfe0d5;
+  --accent-soft: #e3f0e6; --accent-soft-2: #cfe3d5; --accent-bright: var(--bambu-900); --accent-ink-soft: var(--bambu-900);
+  --success: #1d7a4a;
+
+  /* Función: logro y promesa (Sol) */
+  --gold: var(--sol-700); --gold-wash: #fbf3dc;
+  --promise: var(--sol-400); --promise-edge: #d6a325; --promise-ink: #2b2208;
+  --sun-wash: var(--sol-100); --sun-banner: #fff8e6; --sun-edge: #e8d6a6; --sun-ink: #4a3a0c; --sun-strong: #8a5a00;
+
+  /* Función: compromiso, mantener presionado (Brasa) */
+  --commit: var(--brasa-600); --commit-deep: var(--brasa-800); --commit-soft: var(--brasa-200); --commit-soft-deep: #d39a78;
+
+  /* Función: alerta */
+  --warn: var(--alerta-700); --warn-wash: var(--alerta-50);
+
+  /* Relieve de botones (el "labio" que se hunde al tocar) */
+  --lip-primary: #123426; --lip-secondary: #d6dfd9; --lip-sun: #9c7410;
+
+  /* Forma y movimiento */
+  --radius-s: 10px; --radius: 16px; --radius-l: 24px; --pill: 999px; --tap: 44px;
+  --ease: cubic-bezier(.2, 0, 0, 1); --ease-pop: cubic-bezier(.2, .8, .2, 1); --dur-fast: 120ms; --dur: 260ms;
+
+  /* Letra: Fraunces SOFT para títulos y números; sistema para el cuerpo */
+  /* v5: áreas de tu día (tira medida), vidrio de la navegación y el disco del botón + */
+  --area-read: var(--bambu-500); --area-focus: var(--sol-500); --area-move: var(--brasa-600); --area-rescue: var(--cielo-600);
+  --area-food: var(--cielo-600); --area-habit: var(--tinta-500);
+  --rescue-wash: var(--cielo-100); --glass: color-mix(in srgb, var(--surface) 90%, transparent); --shadow-float: 0 10px 30px color-mix(in srgb, var(--tinta-900) 22%, transparent);
+  --flame: var(--brasa-600); --flame-glow: var(--sol-400);
+  --display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+  --text: 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: #0e1511; --surface: #151f1a; --ink: #e8f0ea; --body: #b9c8bf; --muted: #93a69b;
+  --line: #2a3830; --line-strong: #3b4b42; --scrim: #0b140fb3;
+  --accent: #6fbf9a; --accent-deep: #a6e0c3; --accent-wash: #1a2a22; --accent-edge: #2a4436;
+  --accent-soft: #1f3a2b; --accent-soft-2: #183024; --accent-bright: #9fe0b8; --accent-ink-soft: #cfe6d8;
+  --success: #7fd6a3;
+  --gold: #e0b04a; --gold-wash: #2a2415;
+  --promise: #e0b03a; --promise-edge: #b8901f; --promise-ink: #1d1604;
+  --sun-wash: #2e2710; --sun-banner: #2e2710; --sun-edge: #5a4a1a; --sun-ink: #f3e2b0; --sun-strong: #f0c86a;
+  --commit: #d9661f; --commit-deep: #7a3108; --commit-soft: #5a3420; --commit-soft-deep: #44271a;
+  --warn: #f09a78; --warn-wash: #2c1b14;
+  --lip-primary: #0a1a12; --lip-secondary: #26332c; --lip-sun: #7a5a0c;
+  --area-read: #6fbf9a; --area-focus: #e0b04a; --area-move: #e07a3a; --area-rescue: #7fb3e6; --rescue-wash: #172533;
+  --area-food: #7fb3e6; --area-habit: #a7b5ad;
+  --shadow-float: 0 10px 30px #0008; --flame: #f08a3a; --flame-glow: #f6c443;
+}
