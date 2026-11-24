@@ -10,6 +10,7 @@ import './brote.css'
 import './v4.css'
 import './v5.css'
 import './v6.css'
+import './v7.css'
 // Último: los tokens de marca le ganan a cualquier definición vieja.
 import './tokens.css'
 import { applyTheme, watchSystemTheme } from './lib/theme'

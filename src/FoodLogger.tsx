@@ -97,7 +97,7 @@ export function FoodLogger({ data, commit, slot: initial, growth, onClose, onMes
         <input className="text-input food-search" type="search" inputMode="search" placeholder="Huevo, tacos, plátano" value={query} onChange={e => setQuery(e.target.value)} aria-label="Buscar alimento" />
         {!query.trim() && <p className="food-hint">Lo más común</p>}
         <div className="food-results">{results.map(f => <button key={f.id} type="button" onClick={e => add(f, e)}>
-          <span><strong>{f.name}</strong><small>{f.unit}{growth ? '' : ` · ${f.kcal} kcal`}</small></span><i aria-hidden="true">+</i></button>)}
+          <span><strong>{f.name}</strong><small>{f.unit}{f.estimated ? ' · Estimado' : f.source ? ' · Etiqueta del fabricante' : ''}{growth ? '' : ` · ${f.kcal} kcal`}</small></span><i aria-hidden="true">+</i></button>)}
           {query.trim() && !results.length && <p className="food-empty">No está en la lista. Usa A ojo o Etiqueta.</p>}
         </div>
       </>}
@@ -114,7 +114,7 @@ export function FoodLogger({ data, commit, slot: initial, growth, onClose, onMes
         <input className="text-input" placeholder="Qué es" value={label.name} maxLength={80} onChange={e => setLabel(l => ({ ...l, name: e.target.value }))} aria-label="Nombre" />
         <div className="food-label-nums">
           <label>Proteína (g)<input className="text-input" inputMode="decimal" value={label.protein} onChange={e => setLabel(l => ({ ...l, protein: e.target.value.replace(/[^\d.]/g, '') }))} /></label>
-          <label>{growth ? 'Calorías, si vienen' : 'Calorías'}<input className="text-input" inputMode="numeric" value={label.kcal} onChange={e => setLabel(l => ({ ...l, kcal: e.target.value.replace(/\D/g, '') }))} /></label>
+          {!growth && <label>Calorías<input className="text-input" inputMode="numeric" value={label.kcal} onChange={e => setLabel(l => ({ ...l, kcal: e.target.value.replace(/\D/g, '') }))} /></label>}
         </div>
         <button className="secondary-button" disabled={!label.name.trim() || (!Number(label.kcal) && !Number(label.protein))}>Al plato</button>
       </form>}

@@ -6,6 +6,7 @@ import { Card } from './ui'
 import { Icon } from './Icons'
 import { haptic } from './lib/haptic'
 import { reward } from './juice'
+import { StretchPhoto } from './StretchPhoto'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Message = (t: string, undo?: () => void) => void
@@ -113,6 +114,8 @@ function StretchPlayer({ when, commit, onMessage, streak, onClose }: { when: Str
       <span className="eyebrow">ESTIRAMIENTO · {r.title.toUpperCase()}</span>
       <h2>{mins} minutos para moverte mejor</h2>
       <p>{r.why}</p>
+      <p className="hint">Si duele, para y avisa a un adulto. No fuerces las rodillas ni la espalda baja.</p>
+      <p className="hint">{r.rounds === 2 ? 'Dos vueltas. Suelta la postura entre cada paso.' : 'Movimientos suaves, sin sostener tensión.'}</p>
       <ol className="st-list">{r.moves.filter(m => !short || steps.some(s => s.name === m.name)).map(m => <li key={m.name}><span>{m.name}</span><small>{m.sides ? `${m.seconds} s por lado` : `${m.seconds} s`}</small></li>)}</ol>
       <div className="st-length" role="group" aria-label="Duración">
         <button type="button" className={!short ? 'on' : ''} aria-pressed={!short} onClick={() => { setShort(false); setLeft(stepsOf(when)[0].seconds) }}>Completa · {Math.round(totalSeconds(stepsOf(when)) / 60)} min</button>
@@ -125,11 +128,14 @@ function StretchPlayer({ when, commit, onMessage, streak, onClose }: { when: Str
     {started && !done && <div className="st-play">
       <span className="eyebrow">{i + 1} DE {steps.length}{step.side ? ` · ${step.side.toUpperCase()}` : ''}</span>
       <h2 key={i}>{step.name}</h2>
+      <StretchPhoto move={step} />
+      <p className="hint">{step.muscle}. {step.why} Vuelta {step.round}.</p>
       <div className="st-ring" role="timer" aria-label={`${Math.ceil(left)} segundos`}>
         <svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" className="st-ring-bg" /><circle cx="60" cy="60" r="52" className="st-ring-fg" style={{ strokeDasharray: `${pct * 326.7} 326.7` }} /></svg>
         <b>{Math.max(0, Math.ceil(left))}</b>
       </div>
       <p className="st-how">{step.how}</p>
+      <small>Sin dolor ni rebotes. Si duele, para y avisa a un adulto.</small>
       <p className="st-next">{next ? <>Sigue: <strong>{next.name}{next.side && next.name === step.name ? ', otro lado' : ''}</strong></> : 'Última. Respira largo.'}</p>
       <div className="st-controls">
         <button type="button" className="st-ctl" onClick={() => jump(i - 1)} disabled={i === 0} aria-label="Anterior">‹</button>
@@ -165,7 +171,7 @@ export function StretchCard({ data, mode }: { data: AppData; mode: 'hoy' | 'entr
     <button type="button" className="stretch-main" onClick={() => openStretch(main)}>
       <span className="st-badge"><Icon name="estirar" size={26} /></span>
       <span><span className="eyebrow">ESTIRAMIENTO · {r.title.toUpperCase()}</span>
-        <strong>{did.has(main) ? 'Hecho hoy. ¿Otra vuelta?' : `${mins} minutos y ${main === 'noche' ? 'duermes mejor' : 'despiertas el cuerpo'}`}</strong>
+        <strong>{did.has(main) ? 'Hecho hoy. ¿Otra vuelta?' : `${mins} minutos para ${main === 'noche' ? 'cerrar el día' : 'despertar el cuerpo'}`}</strong>
         <small>{streak > 1 ? `${streak} días seguidos estirando` : streak === 1 ? 'Primer día de tu racha estirando' : 'Guiado, con reloj. Solo sigue la pantalla.'}</small></span>
       {did.has(main) ? <i className="st-check"><Icon name="check" size={18} /></i> : <i className="st-play-ico" aria-hidden="true">▶</i>}
     </button>

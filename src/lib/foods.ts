@@ -6,11 +6,35 @@
  */
 import type { FoodGroup, MealItem } from './model'
 
-export type Food = { id: string; name: string; unit: string; kcal: number; protein: number; group: FoodGroup; words?: string }
+export type Food = { id: string; name: string; unit: string; kcal: number; protein: number; group: FoodGroup; words?: string; estimated?: boolean; source?: string }
 
 const f = (id: string, name: string, unit: string, kcal: number, protein: number, group: FoodGroup, words?: string): Food => ({ id, name, unit, kcal, protein, group, words })
 
 export const FOODS: Food[] = [
+  // Etiqueta mexicana del fabricante, consultada 23-nov-2026. No confundir mini de 30 g con barra de 45 g.
+  // https://www.thewildfoods.com.mx/cdn/shop/files/tablaminicacahuate.jpg?v=1771208901&width=480
+  { ...f('wild-mini', 'Wild Protein Mini chocolate cacahuate', 'barra (30 g)', 115, 10.3, 'proteina', 'barrita wild foods mini'), source: 'https://www.thewildfoods.com.mx/products/wild-protein-mini-chocolate-cacahate-12-unidades' },
+  // https://www.yoplait.com.mx/producto/yoghurt-griego-batido-natural/ por 100 g: 84 kcal, 7.3 g proteína.
+  { ...f('yoplait-natural', 'Yoplait griego batido natural', 'porción (100 g)', 84, 7.3, 'lacteo'), source: 'https://www.yoplait.com.mx/producto/yoghurt-griego-batido-natural/' },
+  // https://www.yoplait.com.mx/producto/yoghurt-griego-batido-fresa/ por 100 g: 78 kcal, 6.2 g. Envase de 145 g.
+  { ...f('yoplait-fresa', 'Yoplait griego batido fresa', 'vasito (145 g)', 113, 9, 'lacteo', 'yoplait sabor'), source: 'https://www.yoplait.com.mx/producto/yoghurt-griego-batido-fresa/' },
+  // No se verificó etiqueta Member's Mark. Sam's lista Progourmet 90 g; no se atribuyen sus valores a otra marca.
+  // Estimación de receta: masa, queso y elote. Sustituir usando la etiqueta del envase real.
+  { ...f('empanada-elote', 'Empanada de queso con elote, estimado', 'pieza mediana (90 g)', 240, 7, 'platillo', "sams sam's members mark progourmet"), estimated: true },
+  // Básicos nuevos: promedios aproximados, no etiquetas de marca. Referencia general: https://fdc.nal.usda.gov/
+  { ...f('granola', 'Granola', 'puñito (30 g)', 140, 3, 'cereal'), estimated: true },
+  { ...f('camote', 'Camote cocido', 'pieza chica (130 g)', 112, 2, 'cereal'), estimated: true },
+  { ...f('amaranto', 'Amaranto inflado', 'taza (28 g)', 105, 4, 'cereal'), estimated: true },
+  { ...f('pepitas', 'Pepitas de calabaza', 'puñito (30 g)', 170, 9, 'grasa'), estimated: true },
+  { ...f('pasas', 'Pasas', 'puñito (30 g)', 90, 1, 'fruta'), estimated: true },
+  { ...f('requeson', 'Requesón', 'media taza (100 g)', 140, 12, 'lacteo'), estimated: true },
+  { ...f('sardinas', 'Sardinas', 'porción escurrida (100 g)', 208, 25, 'proteina'), estimated: true },
+  { ...f('hummus', 'Hummus de garbanzo', '2 cucharadas (30 g)', 70, 2, 'leguminosa'), estimated: true },
+  // Combinaciones de las porciones ya existentes. La preparación real puede variar.
+  { ...f('avena-leche', 'Avena preparada con leche', 'tazón', 300, 13, 'platillo', 'desayuno'), estimated: true }, // avena 150 + leche 150
+  { ...f('mollete', 'Mollete con frijoles y panela', 'bolillo completo', 400, 19, 'platillo'), estimated: true }, // 170 + 130 + 100
+  { ...f('huevo-frijoles', 'Huevos con frijoles', '2 huevos y media taza', 259, 20.1, 'platillo'), estimated: true }, // 144 + 115
+  { ...f('yogur-fruta-granola', 'Yogur con plátano y granola', 'tazón', 345, 21.3, 'platillo'), estimated: true }, // 100 + 105 + 140
   // Proteína
   f('huevo', 'Huevo', 'pieza', 72, 6.3, 'proteina', 'estrellado revuelto cocido'),
   f('pollo', 'Pechuga de pollo', 'palma (100 g)', 165, 31, 'proteina', 'asada plancha'),

@@ -31,6 +31,7 @@ No hay otra suite. Si agregas lógica, agrega su grupo en `checks/features.cjs` 
 ## Decisiones cerradas (no las deshagas ni las propongas otra vez)
 
 - Comida (v6, 22-nov): a menores de 18 **nunca** se les muestran calorías ni metas de déficit (modo crecimiento: proteína por comida, frutas y verduras, aviso si comen de menos). El motor completo (Mifflin, fase por cintura, gasto calibrado) es solo para 18+. La edad sale de `settings.age`. Detalle y fuentes en `docs/COMIDA.md`.
+  - **Revisión v7, 23-nov (decisión de Gael, reemplaza lo de arriba para menores):** sí se muestran calorías como **PISO** (gasto IOM 2005 para adolescentes, que ya incluye crecer, más 300 kcal si la meta es subir, más 150 si en 4 semanas el peso no sube). Nunca techo, nunca rojo, nunca "te pasaste", nunca meta de déficit ni de bajar para menores. Las pruebas lo imponen (`growthFloor` en `nutrition.ts`).
 - Coach de fuerza: método de Juanma Arbeláez adaptado a 13 años y fútbol. Sin contar calorías, sin creatina, al fallo técnico solo la última serie. El check-in con dolor de pecho bloquea el plan del día y pide avisar a un adulto.
 - Gamificación: celebraciones solo por lo ganado, nunca recompensas al azar.
 - Nada de imágenes de ejercicios hechas con IA (deforman la técnica).

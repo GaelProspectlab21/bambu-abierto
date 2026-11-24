@@ -4,6 +4,7 @@ import { currentWeight, dayTotals, mealTotals, PHASE_LABEL, planFor, shiftDay, S
 import { FoodLogger, itemLine } from './FoodLogger'
 import { Card, Chips, Heading, fmtDay } from './ui'
 import { Icon } from './Icons'
+import { FoodCheckin } from './FoodCheckin'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Props = { data: AppData; commit: Commit; onMessage: (t: string, undo?: () => void) => void }
@@ -21,6 +22,11 @@ function Meter({ label, value, target, unit = '' }: { label: string; value: numb
 function GrowthToday({ data, plan }: { data: AppData; plan: GrowthPlan }) {
   const t = dayTotals(data, dateKey())
   return <Card className="food-today">
+    {plan.floor && <>
+      <Meter label="Energía para crecer" value={t.kcal} target={plan.floor.kcal} unit=" kcal" />
+      <Meter label="Proteína" value={Math.round(t.protein)} target={plan.floor.protein} unit=" g" />
+      <p className="food-say">{t.kcal >= plan.floor.kcal ? 'Ya llegaste a tu piso. Lo extra también suma para crecer.' : `Te faltan ${plan.floor.kcal - t.kcal} kcal para tu piso de hoy.`}</p>
+    </>}
     <Meter label="Comidas con proteína" value={t.proteinMeals} target={plan.proteinMealsTarget} />
     <Meter label="Frutas y verduras" value={t.produce} target={plan.produceTarget} />
     {plan.perMealProtein && <p className="food-note">Cada comida con unos {plan.perMealProtein} g de proteína: una palma de carne o pollo, dos huevos con frijoles, o un vaso de leche con yogur.</p>}
@@ -42,7 +48,12 @@ function AdultToday({ data, plan }: { data: AppData; plan: AdultPlan }) {
 function PlanCard({ plan }: { plan: GrowthPlan | AdultPlan }) {
   if (plan.mode === 'crecimiento') return <Card tone="quiet" className="food-plan">
     <h2>Modo crecimiento</h2>
-    <p>Tu cuerpo está creciendo y eso ya gasta muchísima energía. A tu edad no hay déficit ni conteo de calorías: hay combustible suficiente, proteína en cada comida y buen sueño. Así se construye el físico que vas a tener toda la vida.</p>
+    {plan.floor ? <ul className="food-facts">
+      <li><span>Tu gasto</span><b>{plan.floor.eer} kcal</b><small>{plan.floor.level}. Fórmula para adolescentes (IOM 2005) que ya incluye lo que gastas creciendo.</small></li>
+      <li><span>Tu piso</span><b>{plan.floor.kcal} kcal</b><small>{plan.floor.why} Es un mínimo, no un límite.</small></li>
+      <li><span>Proteína</span><b>{plan.floor.protein} g o más</b><small>Repartida en 4 comidas.</small></li>
+    </ul> : <p className="food-note">Pon tu peso y estatura abajo y te calculo tu piso de energía para crecer.</p>}
+    <p>Tu cuerpo necesita alimento para crecer, aprender y jugar. Come variado, escucha tu hambre y procura descansar bien.</p>
     <p className="food-note">Si comes poco para lo que te mueves, bambú te avisa. Nunca te va a pedir comer menos. Si quieres un plan más fino, que lo arme un nutriólogo con tus papás.</p>
   </Card>
   const rate = (v: number) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(2).replace(/0$/, '')}%`
@@ -102,6 +113,7 @@ function BodyInputs({ data, commit, growth }: { data: AppData; commit: Commit; g
     </div>
     <button type="button" className="secondary-button" disabled={!draft.weight && !draft.height && !draft.waist} onClick={save}>Guardar medidas</button>
     <Chips label="Sexo (cambia la fórmula)" value={n.sex} onChange={v => setN({ sex: v })} options={[['h', 'Hombre'], ['m', 'Mujer']]} />
+    {growth && <Chips label="Tu meta" value={n.goal === 'musculo' || n.goal === 'ambos' ? 'musculo' : 'salud'} onChange={v => setN({ goal: v as NutritionGoal })} options={[['musculo', 'Subir de peso y músculo'], ['salud', 'Crecer sano']]} />}
     {!growth && <>
       <Chips label="Tu meta" value={n.goal} onChange={v => setN({ goal: v as NutritionGoal })} options={[['definir', 'Verme más marcado'], ['musculo', 'Más músculo'], ['ambos', 'Las dos'], ['salud', 'Salud y energía']]} />
       <Chips label="Años entrenando fuerza" value={n.trainingYears} onChange={v => setN({ trainingYears: v })} options={[[0, 'Menos de 1'], [1, '1 a 3'], [3, 'Más de 3']]} />
@@ -134,9 +146,10 @@ export function FoodPage({ data, commit, onMessage }: Props) {
     if (meal) onMessage('Comida borrada.', () => commit(d => ({ ...d, meals: [...d.meals, meal] })))
   }
   return <>
-    <Heading eyebrow={growth ? 'MODO CRECIMIENTO' : 'MÉTODO BAMBÚ'} title="Comida" text={growth ? 'Combustible para crecer y jugar. Registra en segundos, sin contar calorías.' : 'Lo que no se mide no se mejora. Registra en segundos; el plan se ajusta solo.'} />
+    <Heading eyebrow={growth ? 'MODO CRECIMIENTO' : 'MÉTODO BAMBÚ'} title="Comida" text={growth ? 'Combustible para crecer y jugar. Las calorías son tu piso, nunca tu techo.' : 'Lo que no se mide no se mejora. Registra en segundos; el plan se ajusta solo.'} />
     <button type="button" className="food-big" onClick={() => setOpen(now)}><Icon name="mas-grande" size={26} /><span><strong>Registrar {SLOT_LABEL[now].toLowerCase()}</strong><small>Lo de siempre en un toque</small></span></button>
     {growth ? <GrowthToday data={data} plan={plan as GrowthPlan} /> : <AdultToday data={data} plan={plan as AdultPlan} />}
+    {growth && <FoodCheckin />}
     {meals.length > 0 && <Card><h2>Hoy</h2><ul className="food-list">{meals.map(m => {
       const t = mealTotals(m)
       return <li key={m.id}><span><strong>{SLOT_LABEL[m.slot]}</strong><small>{m.items.map(i => i.name.toLowerCase()).join(', ')}</small></span>
@@ -146,7 +159,7 @@ export function FoodPage({ data, commit, onMessage }: Props) {
     <Week data={data} plan={plan} />
     <PlanCard plan={plan} />
     <BodyInputs data={data} commit={commit} growth={growth} />
-    <Method />
-    {open && <FoodLogger data={data} commit={commit} slot={open} growth={growth} onClose={() => setOpen(null)} onMessage={onMessage} />}
+    {!growth && <Method />}
+    {open && <FoodLogger data={data} commit={commit} slot={open} growth={growth && !(plan as GrowthPlan).floor} onClose={() => setOpen(null)} onMessage={onMessage} />}
   </>
 }

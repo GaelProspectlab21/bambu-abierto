@@ -7,6 +7,9 @@ import { ExerciseFigure, RestTimer, SetLogger, SwapPicker, type Commit, type OnM
 import { BroteArt } from './Brote'
 import { celebrate, mmss } from './ui'
 import { plural } from './lib/text'
+import { exercise, type Muscle } from './lib/exercises'
+import { restMobility, type StretchMove } from './lib/stretch'
+import { StretchPhoto } from './StretchPhoto'
 
 /**
  * La sesión guiada: una serie a la vez, como una pregunta por pantalla. Lo que toca sale de
@@ -28,6 +31,10 @@ export function SessionRunner({ data, commit, onMessage, grouped, express, now, 
   }, [step, total, now, started])
   const pct = total ? Math.round(done / total * 100) : 0
   const after = step ? queue.slice(queue.indexOf(step) + 1).find(s => s.item.exercise.id !== step.item.exercise.id || s.set > step.set) : undefined
+  const until = data.activeWorkout?.restUntil
+  const lastSet = data.sets.filter(s => s.day === today).at(-1)
+  const lastExercise = lastSet ? exercise(lastSet.exercise) : undefined
+  const mobility = restMobility(Object.keys(lastExercise?.muscles ?? {}) as Muscle[], Object.keys(step?.item.exercise.muscles ?? {}) as Muscle[])
 
   return <section className="runner" aria-label="Sesión guiada">
     <div className="runner-top">
@@ -36,6 +43,7 @@ export function SessionRunner({ data, commit, onMessage, grouped, express, now, 
       <span className="runner-clock">{mmss((now - started) / 1000)}</span>
     </div>
     <RestTimer data={data} commit={commit} now={now} next={step ? `${step.item.exercise.name}, serie ${step.set}` : undefined} />
+    {until && until > now && <RestMobility key={until} move={mobility} />}
     {step ? <article className="runner-card" key={`${step.item.exercise.id}-${step.set}`}>
       <span className="eyebrow">{SLOT_LABEL[step.item.slot].toUpperCase()} · SERIE {step.set} DE {step.item.sets}</span>
       <h2>{step.item.exercise.name}</h2>
@@ -62,6 +70,17 @@ export function SessionRunner({ data, commit, onMessage, grouped, express, now, 
         <button type="button" className="primary-button wide" onClick={onEnd}>Terminar sesión <span>✓</span></button>
       </article>}
   </section>
+}
+
+function RestMobility({ move }: { move: StretchMove }) {
+  const [skipped, setSkipped] = useState(false)
+  if (skipped) return null
+  return <details className="rest-mobility">
+    <summary>Opcional durante el descanso · {move.seconds} s</summary>
+    <strong>{move.name}</strong><StretchPhoto move={move} compact />
+    <p>{move.how}</p><p className="hint">{move.muscle}. {move.why} Si duele, para.</p>
+    <button type="button" className="quiet-button" onClick={() => setSkipped(true)}>Prefiero descansar</button>
+  </details>
 }
 
 function doneLine(data: AppData, today: string): string {

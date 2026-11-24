@@ -166,7 +166,10 @@ export function decidePhase(goal: NutritionGoal | undefined, whtr: number | unde
 export type GrowthPlan = {
   mode: 'crecimiento'; proteinMealsTarget: number; produceTarget: number; perMealProtein: number | null
   fuel: 'bajo' | 'bien' | 'sin-datos'; message: string
+  /** Piso de energía para crecer: nunca techo, nunca déficit. null si falta peso o estatura. */
+  floor: GrowthFloor | null
 }
+export type GrowthFloor = { kcal: number; protein: number; eer: number; extra: number; level: string; why: string }
 export type AdultPlan = {
   mode: 'adulto'; missing: string[]; phase: Phase | null; why: string
   kcal: number | null; protein: number | null; fatMin: number | null; tdee: Tdee | null
@@ -183,6 +186,43 @@ export function planFor(data: AppData, now = Date.now()): Plan {
   return age < 18 ? growthPlan(data, today, weight, height) : adultPlan(data, today, weight, height)
 }
 
+// ── Piso de crecimiento (menores de 18) ──────────────────────────────────
+/**
+ * Gasto estimado para niños y adolescentes de 9 a 18 años, IOM 2005 (Dietary Reference Intakes for
+ * Energy): ya incluye los 25 kcal diarios del costo de crecer. PA es el coeficiente de actividad.
+ */
+export function eerTeen(sex: 'h' | 'm', age: number, kg: number, cm: number, pa: number): number {
+  const m = cm / 100
+  return sex === 'm' ? 135.3 - 30.8 * age + pa * (10 * kg + 934 * m) + 25 : 88.5 - 61.9 * age + pa * (26.7 * kg + 903 * m) + 25
+}
+const PA_LEVELS = { h: [1, 1.13, 1.26, 1.42], m: [1, 1.16, 1.31, 1.56] } as const
+const PA_NAMES = ['Poco activo', 'Algo activo', 'Activo', 'Muy activo']
+/** Días activos por semana: lo registrado en 14 días o los días de fútbol de tus ajustes, lo que sea mayor. */
+export function activeDaysPerWeek(data: AppData, today: string): number {
+  const from = shiftDay(today, -14), days = new Set<string>()
+  for (const s of data.sets) if (s.day > from && s.day <= today) days.add(s.day)
+  for (const a of data.activities) if (a.kind === 'football' && a.day > from && a.day <= today) days.add(a.day)
+  return Math.max(days.size / 2, data.settings.footballDays.length)
+}
+export function growthFloor(data: AppData, today: string, weight: number | undefined, height: number | undefined): GrowthFloor | null {
+  const age = data.settings.age
+  if (!weight || !height || age < 9) return null
+  const sex = data.settings.nutrition?.sex ?? 'h'
+  const perWeek = activeDaysPerWeek(data, today)
+  const idx = perWeek >= 6 ? 3 : perWeek >= 2 ? 2 : 1
+  const eer = Math.round(eerTeen(sex, Math.min(age, 18), weight, height, PA_LEVELS[sex][idx]))
+  const goal = data.settings.nutrition?.goal
+  const gaining = goal === 'musculo' || goal === 'ambos'
+  // Si quieres subir: un extra moderado. Si en 4 semanas tu peso no sube, el extra crece un poco.
+  const slope = gaining ? weightSlope(data, shiftDay(today, -28), today) : null
+  const stuck = slope !== null && slope <= 0
+  const extra = gaining ? 300 + (stuck ? 150 : 0) : 0
+  const why = !gaining ? 'Lo mínimo para crecer, aprender y jugar. Pasarlo está bien.'
+    : stuck ? 'En 4 semanas tu peso no subió, así que tu piso subió 150 kcal.'
+      : 'Lo que gastas creciendo y jugando, más 300 kcal para subir de peso poco a poco.'
+  return { kcal: eer + extra, protein: Math.round(weight * 1.2), eer, extra, level: PA_NAMES[idx], why }
+}
+
 function growthPlan(data: AppData, today: string, weight: number | undefined, height: number | undefined): GrowthPlan {
   const t = dayTotals(data, today)
   const perMealProtein = weight ? Math.round(weight * 0.3) : null
@@ -191,7 +231,8 @@ function growthPlan(data: AppData, today: string, weight: number | undefined, he
   let fuel: GrowthPlan['fuel'] = 'sin-datos'
   const yesterday = shiftDay(today, -1)
   const y = dayTotals(data, yesterday)
-  if (weight && height && y.meals >= 3) {
+  const incomplete = data.meals.some(m => m.day === yesterday && m.items.some(i => i.kcal <= 0))
+  if (weight && height && y.meals >= 3 && !incomplete) {
     const rest = 11.1 * weight + 8.4 * height - (data.settings.nutrition?.sex === 'm' ? 537 : 340)
     const active = data.sets.some(s => s.day === yesterday) || data.activities.some(a => a.day === yesterday && a.kind === 'football')
     fuel = y.kcal < rest * (active ? 1.75 : 1.55) * 0.75 ? 'bajo' : 'bien'
@@ -202,7 +243,7 @@ function growthPlan(data: AppData, today: string, weight: number | undefined, he
     : t.meals === 0 ? 'Registra tu primera comida del día. Un toque y cuenta.'
       : left === 0 ? 'Cuatro comidas con proteína. Eso es lo que construye músculo a tu edad.'
         : `Te ${left === 1 ? 'falta 1 comida' : `faltan ${left} comidas`} con proteína. Huevo, pollo, frijoles, leche o yogur.`
-  return { mode: 'crecimiento', proteinMealsTarget: 4, produceTarget: 5, perMealProtein, fuel, message }
+  return { mode: 'crecimiento', proteinMealsTarget: 4, produceTarget: 5, perMealProtein, fuel, message, floor: growthFloor(data, today, weight, height) }
 }
 
 function adultPlan(data: AppData, today: string, weight: number | undefined, height: number | undefined): AdultPlan {

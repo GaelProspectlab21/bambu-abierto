@@ -458,7 +458,9 @@ async function syncChecks() {
   } finally { console.warn = quiet }
   ok('sincronización: datos antes que cursor, resultado explícito y refresco sin pisar lo pendiente')
 }
-const { binauralWav } = moduleOf('binaural')
+const { binauralWav, AUDIO_PRESETS, LOOP_SECONDS } = moduleOf('binaural')
+assert.deepEqual(AUDIO_PRESETS.map(p => [p.name, p.beat]), [['Leer', 10], ['Calma', 6], ['Enfoque', 14]])
+assert.ok(LOOP_SECONDS >= 30 && LOOP_SECONDS <= 60)
 for (const beat of [6, 10, 14]) {
   const wav = binauralWav(beat), v = new DataView(wav)
   assert.equal(Buffer.from(wav).toString('ascii', 0, 4), 'RIFF')
@@ -468,8 +470,8 @@ for (const beat of [6, 10, 14]) {
   assert.equal(v.getUint32(40, true), wav.byteLength - 44)
   for (let channel = 0; channel < 2; channel++) {
     let crossings = 0
-    for (let i = 1; i < 88200; i++) if (v.getInt16(44 + i * 4 + channel * 2, true) > 0 && v.getInt16(44 + (i - 1) * 4 + channel * 2, true) <= 0) crossings++
-    assert.equal(crossings, 2 * (220 + channel * beat))
+    for (let i = 1; i < 44100 * LOOP_SECONDS; i++) if (v.getInt16(44 + i * 4 + channel * 2, true) > 0 && v.getInt16(44 + (i - 1) * 4 + channel * 2, true) <= 0) crossings++
+    assert.equal(crossings, LOOP_SECONDS * (200 + channel * beat))
     assert.equal(v.getInt16(44 + channel * 2, true), 0)
     assert.ok(Math.abs(v.getInt16(wav.byteLength - 4 + channel * 2, true)) < 340)
   }
@@ -845,7 +847,7 @@ ok('versículos sueltos se suman al capítulo y el coach arranca en el escalón 
     const short = totalSeconds(stepsOf(w, true))
     assert.ok(short >= 120 && short < 180, `${w}: la versión sin ganas ronda los 2 minutos (dura ${short} s)`)
   }
-  assert.equal(stepsOf('noche').filter(s => s.name === 'Flexor de cadera').length, 2, 'lo que va por lado se hace de los dos lados')
+  assert.equal(stepsOf('noche').filter(s => s.name === 'Flexor de cadera').length, 4, 'lo que va por lado se hace de los dos lados')
   const base = normalizeData({ ...EMPTY_DATA })
   const day = '2026-11-22'
   const rows = [stretchRow('manana', 270, day), stretchRow('noche', 480, day), stretchRow('noche', 480, day), stretchRow('noche', 480, '2026-11-21')]
@@ -874,9 +876,10 @@ ok('estiramiento: dura lo prometido, sobrevive al guardarse, suma su voto y llev
   const LEGACY = { 'app.css': 157, 'brote.css': 158, 'features.css': 51, 'index.css': 180 }
   for (const [f, max] of Object.entries(LEGACY)) assert.ok(hex(css(f)) <= max, `${f} subió de ${max} colores sueltos: usa tokens`)
   // Todo token usado existe: un var(--mal-escrito) en CSS falla en silencio.
-  const all = ['tokens.css', 'v4.css', 'v5.css', 'v6.css', 'app.css', 'brote.css', 'features.css', 'index.css'].map(css).join('\n')
+  assert.equal(hex(css('v7.css')), 0)
+  const all = ['v7.css', 'tokens.css', 'v4.css', 'v5.css', 'v6.css', 'app.css', 'brote.css', 'features.css', 'index.css'].map(css).join('\n')
   const defined = new Set([...all.matchAll(/(--[\w-]+)\s*:/g)].map(m => m[1]))
-  const used = [...css('v4.css').matchAll(/var\((--[\w-]+)/g), ...css('v5.css').matchAll(/var\((--[\w-]+)/g), ...css('v6.css').matchAll(/var\((--[\w-]+)/g), ...css('tokens.css').matchAll(/var\((--[\w-]+)/g)].map(m => m[1])
+  const used = [...css('v7.css').matchAll(/var\((--[\w-]+)/g), ...css('v4.css').matchAll(/var\((--[\w-]+)/g), ...css('v5.css').matchAll(/var\((--[\w-]+)/g), ...css('v6.css').matchAll(/var\((--[\w-]+)/g), ...css('tokens.css').matchAll(/var\((--[\w-]+)/g)].map(m => m[1])
   const missing = [...new Set(used.filter(t => !defined.has(t) && t !== '--p'))]
   assert.deepEqual(missing, [], 'tokens usados que no existen')
   // El nombre se escribe igual en todos lados: bambú, en minúscula y con acento.
@@ -1008,7 +1011,7 @@ ok('Biblia católica: 73 libros en su orden, Tobías sobrevive al guardarse y el
 }
 ok('comida: totales, nube, modo crecimiento sin calorías, fase por cintura, gasto calibrado con tu cuerpo, apretar tuercas y versículos')
 
-require('./share-auth.cjs')().then(() => syncChecks()).then(() => console.log(`PASS ${passed.length} grupos:\n - ${passed.join('\n - ')}`)).catch(error => { console.error(error); process.exit(1) })
+require('./share-auth.cjs')().then(() => audioChecks()).then(() => syncChecks()).then(() => console.log(`PASS ${passed.length} grupos:\n - ${passed.join('\n - ')}`)).catch(error => { console.error(error); process.exit(1) })
 
 // NFC preserves elapsed time immediately, and a repeated finish cannot duplicate it.
 {
@@ -1031,4 +1034,134 @@ require('./share-auth.cjs')().then(() => syncChecks()).then(() => console.log(`P
   for (let i = 0; i < 20; i++) next = nfcServerAction(next, { tag: 'reading' }, 602000 + i * 1000, '2026-11-10').next
   assert.equal(next.reading.length, 1)
   assert.equal(next.reading[0].seconds, 300)
+}
+
+async function audioChecks() {
+  const { createAudioEngine } = moduleOf('audioEngine')
+  const events = {}, attributes = {}
+  let pauses = 0, plays = 0
+  const fake = { volume: 1, src: '', loop: false, setAttribute: (k, v) => attributes[k] = v, removeAttribute: k => delete fake[k], addEventListener: (name, fn) => events[name] = fn,
+    play: async () => { plays++; events.playing() }, pause: () => { pauses++; events.pause() } }
+  const engine = createAudioEngine(() => fake)
+  const unsubscribe = engine.subscribe(() => {})
+  await engine.play()
+  assert.equal(fake.loop, true); assert.ok('playsinline' in attributes)
+  assert.ok(fake.src.startsWith('blob:'))
+  unsubscribe() // simulate useSyncExternalStore cleanup when a panel unmounts
+  assert.equal(engine.getSnapshot().playing, true, 'unmount never stops the module engine')
+  assert.equal(pauses, 0, 'unmount must not pause the element')
+  events.pause()
+  assert.equal(engine.getSnapshot().interrupted, true)
+  assert.equal(plays, 1, 'no automatic retry loop during interruptions')
+  await engine.play()
+  engine.pause()
+  assert.equal(engine.getSnapshot().interrupted, false)
+  assert.equal(engine.getSnapshot().playing, false)
+  engine.setTimer(15)
+  assert.ok(engine.getSnapshot().deadline > Date.now())
+  engine.stop()
+  assert.equal(engine.getSnapshot().started, false)
+  assert.equal(engine.getSnapshot().deadline, 0)
+  for (const beat of [6, 10, 14]) {
+    const wav = binauralWav(beat, 'brown'), v = new DataView(wav)
+    for (let c = 0; c < 2; c++) {
+      const first = v.getInt16(44 + c * 2, true), last = v.getInt16(wav.byteLength - 4 + c * 2, true)
+      assert.ok(Math.abs(first - last) < 250, 'brown noise seam remains continuous')
+    }
+  }
+  // El ruido no se apaga en la costura: nivel junto al corte parecido al de la mitad del bucle.
+  {
+    const brown = new DataView(binauralWav(10, 'brown')), pure = new DataView(binauralWav(10))
+    const frames = 44100 * LOOP_SECONDS, w = 4410
+    const rms = (from, to) => { let s = 0; for (let i = from; i < to; i++) { const d = brown.getInt16(44 + i * 4, true) - pure.getInt16(44 + i * 4, true); s += d * d }; return Math.sqrt(s / (to - from)) }
+    const edge = 882, seam = Math.min(rms(0, edge), rms(frames - edge, frames)), mid = rms(frames / 2 - w * 10, frames / 2)
+    assert.ok(seam > mid * .3, `ruido junto a la costura ${seam.toFixed(0)} contra ${mid.toFixed(0)} a la mitad`)
+  }
+  // iPhone: audio.volume siempre vale 1. El volumen se hornea en el WAV y el deslizador lo regenera.
+  {
+    const ev = {}
+    const ios = { src: '', loop: false, currentTime: 0, setAttribute: () => {}, removeAttribute: () => {}, addEventListener: (n, fn) => ev[n] = fn,
+      play: async () => { ev.playing() }, pause: () => { ev.pause() } }
+    Object.defineProperty(ios, 'volume', { get: () => 1, set: () => {} })
+    const e2 = createAudioEngine(() => ios)
+    await e2.play()
+    const before = ios.src
+    e2.setVolume(15)
+    await new Promise(r => setTimeout(r, 400))
+    assert.notEqual(ios.src, before, 'en iPhone el volumen regenera el sonido')
+    assert.equal(e2.getSnapshot().playing, true)
+    e2.stop()
+  }
+  ok('audio singleton: unmount, user pause, interruption, timer, brown-noise seam and iPhone volume')
+}
+
+// v7: dynamic rest, conservative static dose and photographs with traceable licenses.
+{
+  const S = moduleOf('stretch'), science = moduleOf('science').EVIDENCE
+  const index = JSON.parse(fs.readFileSync(path.join(__dirname, '../public/estiramientos/indice.json'), 'utf8'))
+  for (const when of ['manana', 'noche']) {
+    for (const move of S.ROUTINES[when].moves) {
+      assert.equal(move.kind, when === 'manana' ? 'dynamic' : 'static')
+      assert.ok(move.seconds >= 10 && move.seconds <= 30)
+      assert.ok(science.some(e => e.id === move.evidence))
+      assert.ok(move.muscle && move.why)
+      for (const img of index[move.photo].images) {
+        assert.equal(img.license, 'Unlicense'); assert.ok(img.source.startsWith('https://'))
+        const bytes = fs.readFileSync(path.join(__dirname, '../public/estiramientos', img.file))
+        assert.equal(bytes[0], 255); assert.equal(bytes[1], 216)
+      }
+    }
+  }
+  for (const loaded of [[], ['pecho'], ['cuadriceps'], ['isquios']]) {
+    for (const next of [[], ['hombros'], ['pantorrillas']]) {
+      const m = S.restMobility(loaded, next)
+      assert.equal(m.kind, 'dynamic', 'rest suggestion must never be static')
+      assert.ok(m.seconds >= 20 && m.seconds <= 30)
+      assert.ok(index[m.photo])
+    }
+  }
+  assert.equal(S.ROUTINES.noche.rounds, 2)
+  ok('v7 stretch: dose, dynamic rest, evidence and real photo files')
+}
+
+// v7 food: manufacturer portions, safe habits and adult-only UI gates.
+{
+  const F = moduleOf('foods'), N = moduleOf('nutrition'), C = moduleOf('foodCheckin')
+  assert.equal(new Set(F.FOODS.map(f => f.id)).size, F.FOODS.length)
+  assert.equal(F.foodById('wild-mini').protein, 10.3)
+  assert.equal(F.foodById('wild-mini').kcal, 115)
+  assert.equal(F.foodById('yoplait-natural').protein, 7.3)
+  assert.equal(F.foodById('yoplait-fresa').kcal, Math.round(78 * 1.45))
+  assert.equal(F.foodById('empanada-elote').estimated, true)
+  for (const hunger of ['normal', 'often', 'little']) for (const breakfast of ['yes', 'sometimes', 'no']) for (const energy of ['good', 'low', 'rest']) {
+    const advice = C.foodCheckinAdvice({ hunger, breakfast, energy }).join(' ')
+    assert.doesNotMatch(advice, /kcal|calor|IMC|percentil|techo|bajar de peso|subir de peso/)
+    if (energy === 'low' || hunger === 'little') assert.match(advice, /pediatra/)
+  }
+  for (const age of [5, 13, 17]) for (const goal of ['definir', 'musculo', 'ambos', 'salud']) {
+    const d = normalizeData({ ...EMPTY_DATA, settings: { age, nutrition: { sex: 'h', goal } }, body: [{ day: '2026-11-22', weightKg: 50, heightCm: 160, waistCm: 90 }] })
+    const p = N.planFor(d)
+    assert.equal(p.mode, 'crecimiento')
+    for (const key of ['kcal', 'phase', 'rate', 'tdee']) assert.equal(key in p, false, 'minor must not receive weight or calorie targets')
+  }
+  const page = fs.readFileSync(path.join(__dirname, '../src/FoodPage.tsx'), 'utf8')
+  assert.ok(page.includes('{!growth && <Method />}'), 'adult method must be hidden for minors')
+  // Decisión de Gael 23-nov: menores ven un PISO de energía (nunca techo ni déficit).
+  assert.ok(Math.abs(N.eerTeen('h', 13, 45, 160, 1.26) - 2643.1) < 0.5, 'EER IOM 2005 contra el cálculo a mano')
+  assert.ok(Math.abs(N.eerTeen('m', 13, 45, 160, 1.31) - 2307.1) < 0.5, 'EER IOM 2005 mujer')
+  for (const goal of ['definir', 'musculo', 'ambos', 'salud', undefined]) {
+    const flat = [0, 7, 14, 21, 27].map(k => ({ day: N.shiftDay('2026-11-22', -k), weightKg: 45, heightCm: 160 }))
+    const d = normalizeData({ ...EMPTY_DATA, settings: { age: 13, footballDays: [1, 3, 5], nutrition: { sex: 'h', goal } }, body: flat })
+    const f = N.planFor(d, Date.parse('2026-11-22T12:00:00')).floor
+    assert.ok(f && f.kcal >= f.eer && f.extra >= 0, 'el piso nunca baja del gasto')
+    assert.equal(f.extra, goal === 'musculo' || goal === 'ambos' ? 450 : 0, 'sin subir en 4 semanas, el extra crece; nunca para bajar')
+    assert.doesNotMatch(f.why, /bajar|déficit|pasaste|exceso|demasiad/)
+  }
+  assert.ok(page.includes('<BodyInputs data={data} commit={commit} growth={growth} />'), 'un menor registra peso y estatura')
+  assert.doesNotMatch(page.slice(page.indexOf('function GrowthToday'), page.indexOf('function AdultToday')), /pasaste|Te quedan|exceso/, 'pasar el piso nunca es malo')
+  const logger = fs.readFileSync(path.join(__dirname, '../src/FoodLogger.tsx'), 'utf8')
+  const item = { name: 'Label protein only', qty: 1, unit: 'portion', kcal: 0, protein: 12, group: 'proteina' }
+  const data = normalizeData({ ...EMPTY_DATA, settings: { age: 13 }, body: [{ day: '2026-11-22', weightKg: 50, heightCm: 160 }], meals: [1,2,3].map(i => ({ id: String(i), day: '2026-11-21', at: i, slot: 'comida', items: [item] })) })
+  assert.equal(N.planFor(data, Date.parse('2026-11-22T12:00:00')).fuel, 'sin-datos', 'unknown energy is not undereating')
+  ok('v7 food: labels, habits, incomplete entries and minor protections')
 }

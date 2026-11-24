@@ -1,0 +1,49 @@
+/* Dedicated dock above navigation; modal sheets stay above it. */
+.audio-mini { position: fixed; z-index: 19; bottom: calc(88px + env(safe-area-inset-bottom)); left: 12px; right: 12px; max-width: 480px; margin-inline: auto; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); }
+.audio-mini > span { flex: 1; min-width: 0; font-size: 14px; }
+.audio-mini small { display: block; color: var(--muted); font-size: 13px; }
+.audio-mini button { flex: 0 0 44px; min-height: var(--tap); border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface); color: var(--ink); font-size: 20px; }
+body:has(.audio-mini) .companion:not(.companion-inline) { display: none; }
+body:has(.audio-mini) main { padding-bottom: calc(180px + env(safe-area-inset-bottom)); }
+body:has([aria-modal='true']) .audio-mini { visibility: hidden; }
+@media (min-width: 701px) { .audio-mini { bottom: 20px; } }
+.stretch-photo { margin: 0; width: 100%; }
+.stretch-photo > div { display: flex; justify-content: center; gap: 8px; }
+.stretch-photo img { width: 0; flex: 1; min-width: 0; max-width: 240px; height: 150px; object-fit: contain; border-radius: var(--radius-s); background: var(--surface); }
+.stretch-photo figcaption { color: var(--muted); font-size: 13px; line-height: 1.4; margin-top: 4px; }
+.stretch-photo a { color: var(--accent-deep); }
+.stretch-photo.compact img { height: 100px; }
+.st-play { justify-content: flex-start; padding-block: 12px; }
+.st-play > * { flex-shrink: 0; }
+.st-play .st-ring { width: 120px; margin: 0; }
+.st-play .st-ring b { font-size: 38px; }
+.st-play .st-how { font-size: 15px; }
+.st-dots { flex-wrap: wrap; }
+.rest-mobility { padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.rest-mobility summary { min-height: var(--tap); display: flex; align-items: center; cursor: pointer; }
+.rest-mobility p { font-size: 14px; }
+.food-checkin-options { display: grid; gap: 8px; }
+.food-checkin li { margin-block: 8px; color: var(--body); }
+
+/* The transition wrapper must participate in layout: its children were touching. */
+.section-in { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--section-gap); align-content: start; }
+.section-in > * { min-width: 0; }
+.live-bar button { display: grid; grid-template-columns: minmax(0, 1fr) auto; padding-block: 12px; background: var(--accent-wash); color: var(--ink); border: 1px solid var(--accent-edge); }
+.live-bar strong { white-space: nowrap; overflow-wrap: normal; }
+.today-habits .habit-list { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); }
+.today-habits .habit-row { grid-template-columns: 30px minmax(0, 1fr); }
+.ts-tile small { font-size: 13px; }
+.plus-tip { position: static; transform: none; white-space: normal; animation: none; box-shadow: none; background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.plus-tip::after { display: none; }
+.companion.companion-inline { position: static; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.companion-inline .companion-label { color: var(--body); font-size: 14px; }
+.companion-inline .companion-fab { grid-column: 2; grid-row: 1; width: 48px; height: 48px; }
+.companion-inline .companion-fab .brote-art { width: 42px; height: 42px; }
+.companion-inline .companion-panel { grid-column: 1 / -1; grid-row: 2; width: 100%; box-shadow: none; border-radius: var(--radius-s); }
+body:has([aria-modal='true']) .companion:not(.companion-inline), body:has(.more-sheet) .audio-mini { visibility: hidden; }
+body:has(.more-sheet) .companion:not(.companion-inline) { visibility: hidden; }
+.ql-sheet { max-height: 88dvh; overscroll-behavior: contain; }
+body:has(.runner) .companion:not(.companion-inline) { display: none; }
+.rest-timer { flex-wrap: wrap; }
+.rest-timer > span { flex: 1 1 120px; min-width: 0; }
+.rest-timer strong, .rest-timer button { white-space: nowrap; flex-shrink: 0; }

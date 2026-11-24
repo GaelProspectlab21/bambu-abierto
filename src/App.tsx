@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { AuthScreen } from './AuthScreen'
 import { NightPage } from './Night'
 import { Companion } from './Companion'
+import { AudioMiniPlayer } from './BinauralAudio'
 import { Onboarding } from './Onboarding'
 import { TodayPage, type Section } from './TodayPage'
 import { ReadingPage, freshReading } from './ReadingPage'
@@ -566,6 +567,7 @@ export default function App() {
           {section === 'Historial' && <HistoryPage data={data} go={s => go(s as Section)} />}
           {section === 'Ajustes' && <SettingsPage data={data} commit={commit} onMessage={message} status={status} cloud={cloudConfigured} onExport={exportBackup} onImport={f => void importBackup(f)} onResync={() => void resync()} onSignOut={() => void signOut()} onDeleteAccount={deleteAccount} />}
         </div></Guard>}
+        {plusTip && !quickOpen && section === 'Hoy' && <button type="button" className="plus-tip" onClick={openQuick}><strong>Todo se registra con el botón +.</strong><span>Un toque y cuenta. Pruébalo.</span></button>}
         {!lost && <PageVerse page={section} data={data} />}
         <footer className="foot">Lo que repites echa raíces.</footer>
       </div>
@@ -582,9 +584,9 @@ export default function App() {
       })()}
     </nav>
     {moreOpen && <div className={`more-sheet ${moreOnTop ? 'from-top' : ''}`} role="menu">{nav.filter(n => !n.mobile).map(n => <button key={n.id} role="menuitem" onClick={() => go(n.id)}><Icon name={n.icon} size={22} />{n.id}</button>)}</div>}
-    {plusTip && !quickOpen && section === 'Hoy' && <button type="button" className="plus-tip" onClick={openQuick}><strong>Todo se registra aquí.</strong><span>Un toque y cuenta. Pruébalo.</span></button>}
     {quickOpen && <QuickLog data={data} commit={commit} onClose={() => setQuickOpen(false)} go={go} onMessage={message} startRescue={quickRescue} />}
-    {!lost && <Companion data={data} section={section} go={s => go(s as Section)} commit={commit} now={Date.now()} cloud={cloudConfigured} />}
+    {!lost && section !== 'Hoy' && <Companion data={data} section={section} go={s => go(s as Section)} commit={commit} now={Date.now()} cloud={cloudConfigured} />}
+    <AudioMiniPlayer />
     <StretchHost data={data} commit={commit} onMessage={message} boot={BOOT_STRETCH} />
     <CelebrationLayer />
     {toast && <div key={toast.id} className={`toast ${toast.tone === 'error' ? 'toast-error' : ''}`} role={toast.tone === 'error' ? 'alert' : 'status'}>{toast.tone === 'error' && <i aria-hidden="true">!</i>}<span>{toast.text}</span>{toast.undo && <button onClick={() => { toast.undo?.(); setToast(null) }}>{toast.action ?? 'Deshacer'}</button>}</div>}

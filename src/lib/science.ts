@@ -5,6 +5,15 @@
 export type Evidence = { id: string; rule: string; why: string; study: string; url: string }
 
 export const EVIDENCE: Evidence[] = [
+  { id: 'stretch-dose', rule: 'Tensión cómoda, sin dolor. Por la noche, 20 s y dos vueltas.',
+    why: 'ACSM propone 10 a 30 s y 2 a 4 repeticiones para adultos. Usamos una dosis suave, no una receta pediátrica. Sin rebotes, sin empujar rodillas ni espalda. Si duele, para y avisa a un adulto.',
+    study: 'Garber y cols., posición ACSM, Medicine & Science in Sports & Exercise, 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21694556/' },
+  { id: 'stretch-dynamic', rule: 'Antes de entrenar, movilidad dinámica. El estiramiento sostenido va al final.',
+    why: 'La revisión encontró más pérdida inmediata de rendimiento con 60 s o más de estiramiento estático por músculo. Entre series solo ofrecemos movilidad fácil y opcional. No demuestra que cada postura prevenga lesiones.',
+    study: 'Behm y cols., Applied Physiology, Nutrition, and Metabolism, 2016', url: 'https://pubmed.ncbi.nlm.nih.gov/26642915/' },
+  { id: 'fifa11', rule: 'En fútbol, sigue el calentamiento completo de tu entrenador.',
+    why: 'FIFA 11+ combina carrera, fuerza y equilibrio. El ensayo en futbolistas de 13 a 17 años encontró menos lesiones. Estirar aductores y cadera no sustituye ese programa ni demuestra por sí solo prevención.',
+    study: 'Soligard y cols., BMJ, 2008', url: 'https://www.bmj.com/content/337/bmj.a2469' },
   { id: 'iversen', rule: 'Con poco tiempo, cuida las series de la semana, no los días.',
     why: 'Con 4 series duras por músculo a la semana ya hay progreso. Juntar ejercicios opuestos (empuje con jalón) corta el tiempo casi a la mitad sin perder series. Por eso existe el modo exprés.',
     study: 'Iversen y cols., Sports Medicine, 2021', url: 'https://pubmed.ncbi.nlm.nih.gov/34125411/' },

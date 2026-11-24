@@ -20,6 +20,7 @@ import { StretchCard } from './Stretch'
 import { HabitNudge } from './PageExtras'
 import { dayTotals, planFor } from './lib/nutrition'
 import { OPEN_MEAL_KEY } from './FoodPage'
+import { Companion } from './Companion'
 
 type Commit = (update: (d: AppData) => AppData) => void
 
@@ -78,8 +79,9 @@ export function TodayPage({ data, commit, go, onMessage }: { data: AppData; comm
   const activeHabitsCount = data.settings.habits.filter(h => !h.archived).length
   const step = useMemo(() => nextStep(data, now), [data, Math.floor(now / 60000)]) // eslint-disable-line react-hooks/exhaustive-deps
   return <>
-    <TopStats data={data} go={go} />
     <Hero data={data} step={step} now={now} go={s => go(s as Section)} commit={commit} onMessage={onMessage} />
+    <TopStats data={data} go={go} />
+    <Companion inline data={data} section="Hoy" go={s => go(s as Section)} commit={commit} now={now} cloud={cloudConfigured} />
     <NeverTwice data={data} go={go} />
     {mod.training && <StretchCard data={data} mode="hoy" />}
     {hour < 21 && <PromiseCard data={data} commit={commit} />}

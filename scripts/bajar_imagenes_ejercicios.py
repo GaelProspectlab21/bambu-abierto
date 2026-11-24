@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import argparse
 from pathlib import Path
 
 import requests
@@ -52,6 +53,36 @@ MAP: dict[str, tuple[str, str]] = {
 }
 log = logging.getLogger("imagenes")
 
+# Posturas revisadas contra sus fotografías, no solo contra el nombre del catálogo.
+STRETCH_MAP = {
+    'gato': 'Cat_Stretch', 'cadera': 'Standing_Hip_Circles',
+    'tobillo': 'Ankle_Circles', 'brazos': 'Arm_Circles',
+    'pecho': 'Dynamic_Chest_Stretch', 'pierna': 'Front_Leg_Raises',
+    'hombros': 'Shoulder_Circles', 'flexor': 'Kneeling_Hip_Flexor',
+    'isquios': '90_90_Hamstring', 'gluteo': 'Ankle_On_The_Knee',
+    'cuadriceps': 'On_Your_Side_Quad_Stretch', 'aductores': 'Groin_and_Back_Stretch',
+    'nino': 'Childs_Pose',
+}
+
+
+def stretches() -> None:
+    out = OUT.parent / 'estiramientos'
+    out.mkdir(parents=True, exist_ok=True)
+    index = {}
+    for ours, theirs in STRETCH_MAP.items():
+        images = []
+        for frame in (0, 1):
+            url = f'{BASE}/{theirs}/{frame}.jpg'
+            name = f'{ours}-{frame}.jpg'
+            target = out / name
+            if not target.exists():
+                target.write_bytes(fetch(url))
+            images.append({'file': name, 'source': url, 'author': 'Free Exercise DB, autor individual no indicado',
+                           'license': 'Unlicense', 'licenseUrl': 'https://github.com/yuhonas/free-exercise-db/blob/main/LICENSE.md'})
+        index[ours] = {'exercise': theirs, 'images': images}
+    (out / 'indice.json').write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding='utf-8')
+    log.info('%d posturas con dos fotos reales', len(index))
+
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=8), reraise=True)
 def fetch(url: str) -> bytes:
@@ -78,4 +109,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--estiramientos', action='store_true', help='Descarga solo las posturas de movilidad y flexibilidad')
+    if parser.parse_args().estiramientos:
+        logging.basicConfig(level=logging.INFO, format='%(message)s')
+        stretches()
+    else:
+        main()
