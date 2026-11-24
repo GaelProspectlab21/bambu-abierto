@@ -15,9 +15,9 @@ import { makeId, type Activity, type AppData } from './model'
 export const PAUSE_PREFIX = 'Pausa:'
 export type PauseApp = { id: string; name: string; scheme: string }
 export const PAUSE_APPS: PauseApp[] = [
+  { id: 'youtube', name: 'YouTube', scheme: 'youtube://' },
   { id: 'instagram', name: 'Instagram', scheme: 'instagram://' },
   { id: 'tiktok', name: 'TikTok', scheme: 'snssdk1233://' },
-  { id: 'youtube', name: 'YouTube', scheme: 'youtube://' },
   { id: 'x', name: 'X', scheme: 'twitter://' },
   { id: 'whatsapp', name: 'WhatsApp', scheme: 'whatsapp://' },
   { id: 'snapchat', name: 'Snapchat', scheme: 'snapchat://' },

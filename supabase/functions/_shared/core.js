@@ -2415,6 +2415,11 @@ function testNote() {
 var PAUSE_PREFIX = "Pausa:";
 var PAUSE_APPS = [
 	{
+		id: "youtube",
+		name: "YouTube",
+		scheme: "youtube://"
+	},
+	{
 		id: "instagram",
 		name: "Instagram",
 		scheme: "instagram://"
@@ -2423,11 +2428,6 @@ var PAUSE_APPS = [
 		id: "tiktok",
 		name: "TikTok",
 		scheme: "snssdk1233://"
-	},
-	{
-		id: "youtube",
-		name: "YouTube",
-		scheme: "youtube://"
 	},
 	{
 		id: "x",

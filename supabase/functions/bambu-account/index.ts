@@ -33,7 +33,7 @@ Deno.serve(async req => {
     const { data: auth, error: authError } = await db.auth.getUser(jwt)
     if (authError || !auth.user) return reply(401, { ok: false, error: 'Necesitas iniciar sesión.' })
     const user = auth.user
-    const body = await req.json().catch(() => ({})) as { action?: unknown; confirmation?: unknown }
+    const body = await req.json().catch(() => ({})) as { action?: unknown; confirmation?: unknown; target?: unknown }
 
     if (body.action === 'export') {
       const [records, legacy, subs, keys, events] = await Promise.all([
@@ -58,6 +58,36 @@ Deno.serve(async req => {
       const { error: delError } = await db.auth.admin.deleteUser(user.id)
       if (delError) throw new Error(`deleteUser: ${delError.message}`)
       return reply(200, { ok: true, deleted: true })
+    }
+
+    // ── Solo la cuenta dueña (bambu_admins): ver y borrar cuentas de amigos ──
+    if (body.action === 'admin-list' || body.action === 'admin-delete') {
+      const { data: isAdmin } = await db.from('bambu_admins').select('user_id').eq('user_id', user.id).maybeSingle()
+      if (!isAdmin) return reply(403, { ok: false, error: 'Solo la cuenta dueña puede hacer esto.' })
+      const { data: admins } = await db.from('bambu_admins').select('user_id')
+      const adminIds = new Set((admins ?? []).map(a => a.user_id as string))
+
+      if (body.action === 'admin-list') {
+        const { data: list, error } = await db.auth.admin.listUsers({ page: 1, perPage: 200 })
+        if (error) throw new Error(`listUsers: ${error.message}`)
+        const accounts = await Promise.all(list.users.map(async u => {
+          const { data: profile } = await db.from('bambu_records').select('payload').eq('user_id', u.id).eq('collection', 'meta').eq('id', 'profile').maybeSingle()
+          const { count } = await db.from('bambu_records').select('id', { count: 'exact', head: true }).eq('user_id', u.id)
+          const name = (profile?.payload as { value?: { name?: string } } | null)?.value?.name ?? null
+          return { id: u.id, email: u.email ?? null, name, createdAt: u.created_at, lastSignIn: u.last_sign_in_at ?? null, records: count ?? 0, owner: adminIds.has(u.id) }
+        }))
+        return reply(200, { ok: true, accounts })
+      }
+
+      const target = typeof body.target === 'string' ? body.target : ''
+      if (!/^[0-9a-f-]{36}$/.test(target)) return reply(400, { ok: false, error: 'Cuenta inválida.' })
+      if (body.confirmation !== 'BORRAR') return reply(400, { ok: false, error: 'Escribe BORRAR para confirmar.' })
+      if (adminIds.has(target)) return reply(403, { ok: false, error: 'Una cuenta dueña no se borra desde la app.' })
+      const { error: recError } = await db.from('bambu_records').delete().eq('user_id', target)
+      if (recError) throw new Error(`records: ${recError.message}`)
+      const { error: delError } = await db.auth.admin.deleteUser(target)
+      if (delError) throw new Error(`deleteUser: ${delError.message}`)
+      return reply(200, { ok: true, deleted: target })
     }
 
     return reply(400, { ok: false, error: 'Acción desconocida.' })

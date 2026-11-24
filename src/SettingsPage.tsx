@@ -4,6 +4,9 @@ import { accountCapabilities, cloudAvailable, localOnly, setLocalOnly, supabase 
 import { activeHabits, modulesOf, type AppData, type Modules } from './lib/model'
 import { NFC_TAGS, nfcUrl, type NfcAction } from './lib/nfc'
 import { PauseSetup } from './PauseSetup'
+import { AdminAccounts } from './AdminAccounts'
+import { clearAccountStorage } from './lib/storage'
+import { clearOwnPhotos } from './lib/photos'
 import type { SyncStatus } from './lib/sync'
 import { HabitEditor } from './HabitsPage'
 import { RemindersCard } from './RemindersCard'
@@ -109,6 +112,7 @@ export function SettingsPage({ data, commit, onMessage, status, cloud, onExport,
       {key && <p className="hint">Quien lea una de tus etiquetas puede marcar estas acciones en tu cuenta, nada más. Si pierdes una: <button className="quiet-button inline" onClick={() => void rotate()}>Cambiar la llave</button></p>}
       <details><summary>Cómo grabar una etiqueta</summary><ol className="steps"><li>Instala NFC Tools en el iPhone.</li><li>Escribir, Agregar un registro, URL, y pega el enlace.</li><li>Escribir y acerca la etiqueta a la parte de arriba del iPhone.</li><li>Prueba una etiqueta antes de grabar las demás.</li><li>La etiqueta abre Safari y muestra "Hecho". Ciérralo y abre Bambú desde el ícono: ya lo tiene.</li></ol></details>
     </Card> : <Card><h2>Sincronización, etiquetas y avisos</h2><p>Necesitas una cuenta para sincronizar, usar etiquetas NFC y recibir recordatorios.</p></Card>}
+    {cloud && <AdminAccounts onMessage={onMessage} />}
     {cloud && <PauseSetup keyValue={key} onCopy={url => { if (!navigator.clipboard) { onMessage(url); return } navigator.clipboard.writeText(url).then(() => onMessage('Enlace copiado. Pégalo en la acción Abrir URL de tu atajo Bambú Pausa.')).catch(() => onMessage(url)) }} />}
     {modulesOf(data.settings).training && <Card><h2>Entrenamiento</h2>
       <label className="field-label">¿Qué días juegas fútbol?</label>
@@ -134,6 +138,7 @@ export function SettingsPage({ data, commit, onMessage, status, cloud, onExport,
       <p className="hint">{plural(data.reading.length, 'lectura', 'lecturas')} · {plural(data.bible.length, 'capítulo', 'capítulos')} · {plural(data.focus.length, 'bloque', 'bloques')} · {plural(data.sets.length, 'serie', 'series')} · {plural(data.tasks.length, 'tarea', 'tareas')}</p>
     </Card>
     <Card><h2>Tus datos</h2><p>Descarga tus registros y las fotos de este teléfono. Con cuenta, también incluye los datos guardados en la nube.</p><button className="secondary-button" disabled={accountBusy} onClick={() => void downloadData()}>Descargar mis datos</button>
+      {!cloud && localOnly() && <details><summary>Borrar este perfil</summary><p>Este perfil vive solo en este navegador. Se borran sus datos y sus fotos de aquí. Tu cuenta en la nube, si tienes, no se toca.</p><label className="field-label">Escribe BORRAR<input className="text-input" value={deleteText} autoComplete="off" onChange={e => setDeleteText(e.target.value)} /></label><button className="secondary-button" disabled={deleteText !== 'BORRAR'} onClick={() => { if (!window.confirm('Se borra este perfil sin cuenta y todo lo que guardó en este navegador. ¿Seguro?')) return; void Promise.allSettled([clearOwnPhotos(), clearAccountStorage('local')]).then(() => { setLocalOnly(false); window.location.reload() }) }}>Borrar este perfil</button></details>}
       {cloud && <details><summary>Borrar mi cuenta</summary><p>Se borran tu cuenta y sus registros en la nube. En este teléfono también se borran tus fotos. Borra los datos de bambú en tus otros dispositivos para quitar sus copias locales.</p><label className="field-label">Escribe BORRAR<input className="text-input" value={deleteText} autoComplete="off" onChange={e => setDeleteText(e.target.value)} /></label><button className="secondary-button" disabled={accountBusy || deleteText !== 'BORRAR'} onClick={() => void deleteAccount()}>Borrar mi cuenta para siempre</button></details>}
     </Card>
     <Card><h2>En tu inicio</h2><p>iPhone: abre bambú en Safari, Compartir, Añadir a pantalla de inicio. Abre siempre desde ese ícono.</p><p>Android: abre bambú en Chrome, menú de tres puntos, Instalar app o Agregar a pantalla principal.</p>{cloud && <button className="quiet-button" onClick={onSignOut}>Cerrar sesión</button>}</Card>

@@ -65,3 +65,9 @@ body:has(.runner) .companion:not(.companion-inline) { display: none; }
 .pause-setup code { display: block; overflow-wrap: anywhere; font-size: 12px; }
 .pause-setup ol { padding-left: 20px; display: grid; gap: 6px; }
 @media (prefers-reduced-motion: reduce) { .pause-orb { transition: none; } }
+.st-steps { margin: 0; padding-left: 22px; display: grid; gap: 6px; text-align: left; color: var(--ink); line-height: 1.4; }
+.st-feel { margin: 0; color: var(--accent); font-weight: 600; font-size: 14px; }
+.admin-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.admin-list li { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-s); }
+.admin-list small { display: block; color: var(--muted); overflow-wrap: anywhere; }
+.admin-confirm { display: grid; gap: 8px; }

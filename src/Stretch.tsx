@@ -134,8 +134,9 @@ function StretchPlayer({ when, commit, onMessage, streak, onClose }: { when: Str
         <svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" className="st-ring-bg" /><circle cx="60" cy="60" r="52" className="st-ring-fg" style={{ strokeDasharray: `${pct * 326.7} 326.7` }} /></svg>
         <b>{Math.max(0, Math.ceil(left))}</b>
       </div>
-      <p className="st-how">{step.how}</p>
-      <small>Sin dolor ni rebotes. Si duele, para y avisa a un adulto.</small>
+      {step.steps ? <ol className="st-steps">{step.steps.map(x => <li key={x}>{x}</li>)}</ol> : <p className="st-how">{step.how}</p>}
+      {step.feel && <p className="st-feel">Lo sientes en {step.feel}. Tensión sí, dolor no.</p>}
+      <small>Sin rebotes. Si algo duele, para.</small>
       <p className="st-next">{next ? <>Sigue: <strong>{next.name}{next.side && next.name === step.name ? ', otro lado' : ''}</strong></> : 'Última. Respira largo.'}</p>
       <div className="st-controls">
         <button type="button" className="st-ctl" onClick={() => jump(i - 1)} disabled={i === 0} aria-label="Anterior">‹</button>
