@@ -15,6 +15,7 @@ import { activeHabits, makeId, type AppData } from './model'
 import { finishReading, readingSeconds } from './readingSession'
 import type { NfcAction } from './nfc'
 import { verdict } from './measure'
+import { pauseActivity, pauseApp, pauseStats } from './pause'
 
 export type NfcResult = { next: AppData; title: string; text: string; open?: boolean }
 /** iPhone a veces lee la etiqueta dos veces seguidas: lo de menos de 8 s se toma como el mismo toque. */
@@ -51,6 +52,16 @@ export function nfcServerAction(data: AppData, action: NfcAction, now: number, d
     const reflection = n.reflection?.trim().slice(0, 600) || undefined
     return { next: { ...data, checkins: [...data.checkins.filter(c => c.day !== day), { ...row, id: day, day, capacity, given, ...(reflection ? { reflection } : {}) }] },
       title: `Noche registrada: ${given}% de ${capacity}%`, text: verdict(capacity, given).text }
+  }
+  if (action.tag === 'pause') {
+    const app = pauseApp(action.app), outcome = action.outcome
+    if (!outcome) return { next: data, title: 'Pausa', text: `Antes de ${app.name}, respira.` }
+    const next = { ...data, activities: [...data.activities, pauseActivity(day, app, outcome)] }
+    const s = pauseStats(next, day)
+    const tally = `Hoy: ${s.resisted} de ${s.total} ${s.total === 1 ? 'vez' : 'veces'} elegiste otra cosa.`
+    return outcome.kind === 'resistida'
+      ? { next, title: 'Elegiste tu vida real', text: `${tally} Tu yo de la noche te lo agradece.` }
+      : { next, title: `Pase de ${outcome.minutes} min`, text: `${tally} Entra con intención y sal cuando acabes.` }
   }
   if (action.tag === 'habit') {
     const habit = activeHabits(data.settings).find(h => h.id === action.habit)

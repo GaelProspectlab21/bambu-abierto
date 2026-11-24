@@ -47,3 +47,21 @@ body:has(.runner) .companion:not(.companion-inline) { display: none; }
 .rest-timer { flex-wrap: wrap; }
 .rest-timer > span { flex: 1 1 120px; min-width: 0; }
 .rest-timer strong, .rest-timer button { white-space: nowrap; flex-shrink: 0; }
+
+/* Pausa antes de las apps: orbe que respira y se llena mientras lo mantienes. */
+.pause-card { gap: 12px; }
+.pause-eyebrow { margin: 0; color: var(--muted); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+.pause-orb { --p: 0; width: 200px; height: 200px; margin: 8px 0; border-radius: 50%; border: 0; display: grid; place-items: center; color: var(--on-accent); font-size: 20px; font-weight: 600; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  background: radial-gradient(circle at 50% 40%, var(--accent) 0 55%, var(--accent-deep) 100%);
+  box-shadow: 0 0 0 calc(var(--p) * 16px) var(--accent-edge), 0 0 0 calc(var(--p) * 16px + 3px) var(--accent);
+  transform: scale(.86); transition: transform 4s ease-in-out, box-shadow 120ms linear; }
+.pause-orb[data-in='1'] { transform: scale(1); }
+.pause-choices { width: 100%; display: grid; gap: 10px; }
+.pause-minutes { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pause-swaps { width: 100%; list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; text-align: left; }
+.pause-swaps li > * { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface); color: var(--ink); text-decoration: none; }
+.pause-swaps li > a { border-color: var(--accent-edge); background: var(--accent-wash); }
+.pause-swaps small { color: var(--body); }
+.pause-setup code { display: block; overflow-wrap: anywhere; font-size: 12px; }
+.pause-setup ol { padding-left: 20px; display: grid; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { .pause-orb { transition: none; } }

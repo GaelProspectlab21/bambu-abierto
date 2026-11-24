@@ -2399,11 +2399,118 @@ function testNote() {
 	};
 }
 //#endregion
+//#region src/lib/pause.ts
+/**
+* Pausa antes de las apps (estilo Opal, sin app nativa).
+*
+* Cómo funciona: una automatización de Atajos de iOS ("Al abrir Instagram") abre este enlace en
+* Safari con tu llave, igual que una etiqueta NFC. Bambú te para unos segundos, te pregunta a qué
+* venías y anota el resultado en tu cuenta. Si eliges entrar, el botón corre el atajo "Bambú Pase",
+* que guarda la hora de vencimiento y abre la app: mientras el pase sigue vivo, la automatización
+* no vuelve a frenarte (así no hay ciclo infinito).
+*
+* Se guarda como actividad 'other' con nota "Pausa: ...", igual que el rescate: no cambia la forma
+* de ningún registro.
+*/
+var PAUSE_PREFIX = "Pausa:";
+var PAUSE_APPS = [
+	{
+		id: "instagram",
+		name: "Instagram",
+		scheme: "instagram://"
+	},
+	{
+		id: "tiktok",
+		name: "TikTok",
+		scheme: "snssdk1233://"
+	},
+	{
+		id: "youtube",
+		name: "YouTube",
+		scheme: "youtube://"
+	},
+	{
+		id: "x",
+		name: "X",
+		scheme: "twitter://"
+	},
+	{
+		id: "whatsapp",
+		name: "WhatsApp",
+		scheme: "whatsapp://"
+	},
+	{
+		id: "snapchat",
+		name: "Snapchat",
+		scheme: "snapchat://"
+	},
+	{
+		id: "juegos",
+		name: "tus juegos",
+		scheme: ""
+	}
+];
+var PASS_MINUTES = [
+	5,
+	10,
+	15
+];
+function pauseApp(id) {
+	return PAUSE_APPS.find((a) => a.id === id) ?? {
+		id: "otra",
+		name: "esa app",
+		scheme: ""
+	};
+}
+/** `o=r` resististe, `o=p10` pase de 10 minutos. Cualquier otra cosa no anota nada. */
+function parseOutcome(o) {
+	if (o === "r") return { kind: "resistida" };
+	const m = /^p(\d{1,2})$/.exec(o ?? "");
+	const minutes = m ? Number(m[1]) : 0;
+	return PASS_MINUTES.includes(minutes) ? {
+		kind: "pase",
+		minutes
+	} : void 0;
+}
+function pauseNote(app, outcome) {
+	return `${PAUSE_PREFIX} ${app.id} · ${outcome.kind === "resistida" ? "resistida" : `pase ${outcome.minutes} min`}`;
+}
+function pauseActivity(day, app, outcome) {
+	return {
+		id: `pause:${makeId()}`,
+		day,
+		kind: "other",
+		note: pauseNote(app, outcome)
+	};
+}
+function pauseStats(data, day) {
+	const rows = data.activities.filter((a) => a.day === day && a.kind === "other" && a.note?.startsWith("Pausa:"));
+	return {
+		total: rows.length,
+		resisted: rows.filter((a) => a.note?.endsWith("resistida")).length
+	};
+}
+//#endregion
 //#region src/lib/nfc.ts
+/**
+* Etiquetas NFC. Cada etiqueta guarda solo un enlace (sin cuenta ni contraseña). Al
+* acercar el teléfono, el sistema abre el enlace y Bambú decide qué hacer según tu estado:
+* si no hay sesión la empieza, si hay una abierta la cierra. Así una sola etiqueta sirve
+* para el inicio y el final.
+*/
 function parseNfc(search) {
 	const params = new URLSearchParams(search);
 	if (params.get("quick") === "read") return { tag: "reading" };
 	const tag = params.get("nfc");
+	if (tag === "pause") {
+		const app = (params.get("app") ?? "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20);
+		const outcome = parseOutcome(params.get("o"));
+		return {
+			tag: "pause",
+			app: app || "otra",
+			...outcome ? { outcome } : {}
+		};
+	}
 	if (tag === "habit") {
 		const habit = (params.get("h") ?? "").slice(0, 40);
 		return habit ? {
@@ -2562,6 +2669,29 @@ function nfcServerAction(data, action, now, day) {
 			},
 			title: `Noche registrada: ${given}% de ${capacity}%`,
 			text: verdict(capacity, given).text
+		};
+	}
+	if (action.tag === "pause") {
+		const app = pauseApp(action.app), outcome = action.outcome;
+		if (!outcome) return {
+			next: data,
+			title: "Pausa",
+			text: `Antes de ${app.name}, respira.`
+		};
+		const next = {
+			...data,
+			activities: [...data.activities, pauseActivity(day, app, outcome)]
+		};
+		const s = pauseStats(next, day);
+		const tally = `Hoy: ${s.resisted} de ${s.total} ${s.total === 1 ? "vez" : "veces"} elegiste otra cosa.`;
+		return outcome.kind === "resistida" ? {
+			next,
+			title: "Elegiste tu vida real",
+			text: `${tally} Tu yo de la noche te lo agradece.`
+		} : {
+			next,
+			title: `Pase de ${outcome.minutes} min`,
+			text: `${tally} Entra con intención y sal cuando acabes.`
 		};
 	}
 	if (action.tag === "habit") {

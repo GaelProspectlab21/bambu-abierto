@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { accountCapabilities, cloudAvailable, localOnly, setLocalOnly, supabase } from './lib/supabase'
 import { activeHabits, modulesOf, type AppData, type Modules } from './lib/model'
 import { NFC_TAGS, nfcUrl, type NfcAction } from './lib/nfc'
+import { PauseSetup } from './PauseSetup'
 import type { SyncStatus } from './lib/sync'
 import { HabitEditor } from './HabitsPage'
 import { RemindersCard } from './RemindersCard'
@@ -108,6 +109,7 @@ export function SettingsPage({ data, commit, onMessage, status, cloud, onExport,
       {key && <p className="hint">Quien lea una de tus etiquetas puede marcar estas acciones en tu cuenta, nada más. Si pierdes una: <button className="quiet-button inline" onClick={() => void rotate()}>Cambiar la llave</button></p>}
       <details><summary>Cómo grabar una etiqueta</summary><ol className="steps"><li>Instala NFC Tools en el iPhone.</li><li>Escribir, Agregar un registro, URL, y pega el enlace.</li><li>Escribir y acerca la etiqueta a la parte de arriba del iPhone.</li><li>Prueba una etiqueta antes de grabar las demás.</li><li>La etiqueta abre Safari y muestra "Hecho". Ciérralo y abre Bambú desde el ícono: ya lo tiene.</li></ol></details>
     </Card> : <Card><h2>Sincronización, etiquetas y avisos</h2><p>Necesitas una cuenta para sincronizar, usar etiquetas NFC y recibir recordatorios.</p></Card>}
+    {cloud && <PauseSetup keyValue={key} onCopy={url => { if (!navigator.clipboard) { onMessage(url); return } navigator.clipboard.writeText(url).then(() => onMessage('Enlace copiado. Pégalo en la acción Abrir URL de tu atajo Bambú Pausa.')).catch(() => onMessage(url)) }} />}
     {modulesOf(data.settings).training && <Card><h2>Entrenamiento</h2>
       <label className="field-label">¿Qué días juegas fútbol?</label>
       <Chips multiple label="Días de fútbol" value={s.footballDays} onChange={d => set({ footballDays: s.footballDays.includes(d) ? s.footballDays.filter(x => x !== d) : [...s.footballDays, d].sort() })} options={[[1, 'Lun'], [2, 'Mar'], [3, 'Mié'], [4, 'Jue'], [5, 'Vie'], [6, 'Sáb'], [0, 'Dom']]} />

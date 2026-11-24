@@ -1165,3 +1165,24 @@ async function audioChecks() {
   assert.equal(N.planFor(data, Date.parse('2026-11-22T12:00:00')).fuel, 'sin-datos', 'unknown energy is not undereating')
   ok('v7 food: labels, habits, incomplete entries and minor protections')
 }
+
+// Pausa antes de las apps (Atajos de iOS): enlace, servidor, nota que sobrevive al limpiador, fricción.
+{
+  const P = moduleOf('pause'), day = '2026-11-23'
+  assert.deepEqual(parseNfc('?nfc=pause&app=Instagram&k=x'), { tag: 'pause', app: 'instagram' })
+  assert.deepEqual(parseNfc('?nfc=pause&app=tiktok&o=p10').outcome, { kind: 'pase', minutes: 10 })
+  assert.equal(parseNfc('?nfc=pause&app=tiktok&o=p99').outcome, undefined, 'minutos raros no anotan nada')
+  assert.equal(parseNfc('?nfc=pause&app=<script>').app, 'script')
+  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  assert.equal(nfcServerAction(base, parseNfc('?nfc=pause&app=instagram'), 1, day).next, base, 'sin decisión no escribe')
+  const r1 = nfcServerAction(base, parseNfc('?nfc=pause&app=instagram&o=r'), 1, day)
+  const r2 = nfcServerAction(r1.next, parseNfc('?nfc=pause&app=instagram&o=p5'), 2, day)
+  assert.deepEqual(P.pauseStats(r2.next, day), { total: 2, resisted: 1 })
+  assert.match(r2.text, /1 de 2 veces/)
+  // La nota viaja por registros y vuelve igual (el servidor limpia con el mismo modelo).
+  const back = applyRecords(EMPTY_DATA, diffRecords(base, r2.next, 10))
+  assert.deepEqual(P.pauseStats(normalizeData(back), day), { total: 2, resisted: 1 }, 'la pausa sobrevive al viaje por la nube')
+  assert.deepEqual([0, 1, 2, 5, 9].map(P.breathSeconds), [5, 8, 11, 20, 20], 'la respiración crece y topa en 20 s')
+  assert.match(P.passShortcutUrl(P.pauseApp('instagram'), 10), /^shortcuts:\/\/run-shortcut\?name=Bamb%C3%BA%20Pase&input=text&text=10%7Cinstagram%3A%2F%2F$/)
+  ok('pausa antes de las apps: enlace, servidor, nube y fricción')
+}

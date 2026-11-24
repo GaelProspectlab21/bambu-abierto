@@ -107,5 +107,6 @@ function NightQuick({ search, onSignIn }: { search: string; onSignIn: () => void
 }
 
 export function NfcQuick(props: { search: string; onSignIn: () => void }) {
-  return parseNfc(props.search)?.tag === 'night' ? <NightQuick {...props} /> : <NfcQuickAction {...props} />
+  const tag = parseNfc(props.search)?.tag
+  return tag === 'night' ? <NightQuick {...props} /> : <NfcQuickAction {...props} />
 }

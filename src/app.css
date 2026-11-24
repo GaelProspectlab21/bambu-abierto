@@ -43,7 +43,7 @@ body { background: var(--canvas); color: var(--ink); font-size: 16px; }
 .empty-copy { color: var(--muted); font-size: 14px; }
 
 .primary-button, .secondary-button, .quiet-button { min-height: var(--tap); font-size: 15px; border-radius: 12px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; text-decoration: none; }
-.primary-button { background: var(--accent); color: #fff; border: 1px solid var(--accent); font-weight: 650; margin: 0; }
+.primary-button { background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent); font-weight: 650; margin: 0; }
 .primary-button span { opacity: .85; font-weight: 500; }
 .primary-button:disabled { opacity: .45; cursor: not-allowed; }
 .primary-button.wide { width: 100%; justify-content: space-between; margin-top: 12px; }
@@ -68,7 +68,7 @@ details[open] summary { margin-bottom: 6px; }
 .tab.active { background: #fff; color: var(--ink); font-weight: 650; box-shadow: 0 1px 2px #0000000f; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
 .chip { min-height: 40px; padding: 0 14px; border: 1px solid #d3dcd6; border-radius: 999px; background: #fff; color: var(--ink); font-size: 14px; cursor: pointer; }
-.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .stepper { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; border: 1px solid #d3dcd6; border-radius: 14px; overflow: hidden; background: #fff; margin: 6px 0; }
 .stepper button { min-height: 60px; border: 0; background: #f2f5f3; font-size: 28px; color: var(--accent-deep); cursor: pointer; }
 .stepper button:active { background: var(--accent-wash); }

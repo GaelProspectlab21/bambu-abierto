@@ -4,11 +4,13 @@
  * si no hay sesión la empieza, si hay una abierta la cierra. Así una sola etiqueta sirve
  * para el inicio y el final.
  */
-export type NfcTag = 'reading' | 'training' | 'focus' | 'habit' | 'checkin' | 'weigh' | 'night'
-/** `night` solo viaja en la petición al servidor (nunca en el enlace): lo que marcaste en la pantalla rápida de la noche. */
-export type NfcAction = { tag: NfcTag; habit?: string; night?: { capacity: number; given: number; reflection?: string } }
+import { parseOutcome, type PauseOutcome } from './pause'
 
-export const NFC_TAGS: { tag: Exclude<NfcTag, 'habit'>; title: string; where: string; does: string }[] = [
+export type NfcTag = 'reading' | 'training' | 'focus' | 'habit' | 'checkin' | 'weigh' | 'night' | 'pause'
+/** `night` solo viaja en la petición al servidor (nunca en el enlace): lo que marcaste en la pantalla rápida de la noche. */
+export type NfcAction = { tag: NfcTag; habit?: string; night?: { capacity: number; given: number; reflection?: string }; app?: string; outcome?: PauseOutcome }
+
+export const NFC_TAGS: { tag: Exclude<NfcTag, 'habit' | 'pause'>; title: string; where: string; does: string }[] = [
   { tag: 'reading', title: 'Lectura', where: 'Pegada en tu Biblia o en el buró donde lees.', does: 'Primer toque empieza el cronómetro. Segundo toque lo para y abre tu reflexión y los capítulos.' },
   { tag: 'training', title: 'Entrenamiento', where: 'En la pared o el piso donde haces lagartijas, junto a las mini paralelas.', does: 'Primer toque abre la sesión de hoy con el plan del coach. Segundo toque la cierra con tu resumen.' },
   { tag: 'focus', title: 'Bloque de enfoque', where: 'En tu escritorio.', does: 'Sin bloque abierto: abre Tareas con tu siguiente tarea lista. Con bloque abierto: lo cierra.' },
@@ -21,6 +23,12 @@ export function parseNfc(search: string): NfcAction | null {
   const params = new URLSearchParams(search)
   if (params.get('quick') === 'read') return { tag: 'reading' }
   const tag = params.get('nfc')
+  // Pausa antes de una app (Atajos de iOS): ?nfc=pause&app=instagram, y al decidir &o=r o &o=p10.
+  if (tag === 'pause') {
+    const app = (params.get('app') ?? '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)
+    const outcome = parseOutcome(params.get('o'))
+    return { tag: 'pause', app: app || 'otra', ...(outcome ? { outcome } : {}) }
+  }
   if (tag === 'habit') {
     const habit = (params.get('h') ?? '').slice(0, 40)
     return habit ? { tag: 'habit', habit } : null
@@ -45,7 +53,7 @@ export function nfcKey(search: string): string {
 
 export function clearNfcFromUrl() {
   const url = new URL(window.location.href)
-  ;['nfc', 'quick', 'h', 'k'].forEach(key => url.searchParams.delete(key))
+  ;['nfc', 'quick', 'h', 'k', 'app', 'o'].forEach(key => url.searchParams.delete(key))
   window.history.replaceState({}, '', url.pathname + url.search + url.hash)
 }
 

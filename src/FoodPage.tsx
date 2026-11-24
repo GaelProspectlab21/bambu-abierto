@@ -54,7 +54,7 @@ function PlanCard({ plan }: { plan: GrowthPlan | AdultPlan }) {
       <li><span>Proteína</span><b>{plan.floor.protein} g o más</b><small>Repartida en 4 comidas.</small></li>
     </ul> : <p className="food-note">Pon tu peso y estatura abajo y te calculo tu piso de energía para crecer.</p>}
     <p>Tu cuerpo necesita alimento para crecer, aprender y jugar. Come variado, escucha tu hambre y procura descansar bien.</p>
-    <p className="food-note">Si comes poco para lo que te mueves, bambú te avisa. Nunca te va a pedir comer menos. Si quieres un plan más fino, que lo arme un nutriólogo con tus papás.</p>
+    <p className="food-note">Si comes poco para lo que te mueves, bambú te avisa. Nunca te va a pedir comer menos. Si quieres un plan más fino, que lo arme un nutriólogo.</p>
   </Card>
   const rate = (v: number) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(2).replace(/0$/, '')}%`
   return <Card tone="quiet" className="food-plan">

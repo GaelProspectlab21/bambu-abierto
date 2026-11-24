@@ -26,6 +26,7 @@ import { clearAccountStorage, getLocalOwnerId, setStorageScope, loadAppData, par
 import { clearOwnPhotos, setPhotoOwner } from './lib/photos'
 import { clearNfcFromUrl, isRepeatScan, parseNfc, type NfcAction } from './lib/nfc'
 import { NfcQuick } from './NfcQuick'
+import { PauseQuick } from './PauseQuick'
 import type { PersonalTask } from './lib/personal'
 import { game, rankOf } from './lib/gamification'
 import { keptToday } from './lib/vara'
@@ -147,7 +148,8 @@ export default function App() {
   const [plusTip, setPlusTip] = useState(() => { try { return localStorage.getItem('bambu.tip.plus') !== '1' } catch { return false } })
   const openQuick = useCallback(() => { setMoreOpen(false); setQuickOpen(true); setPlusTip(false); try { localStorage.setItem('bambu.tip.plus', '1') } catch { /* solo es el tip */ } }, [])
   const [toast, setToast] = useState<Toast | null>(null)
-  const [nfc, setNfc] = useState<NfcAction | null>(() => parseNfc(window.location.search))
+  // La pausa de Atajos no es una etiqueta de la app: siempre la atiende PauseQuick con la llave.
+  const [nfc, setNfc] = useState<NfcAction | null>(() => { const a = parseNfc(window.location.search); return a?.tag === 'pause' ? null : a })
   // Etiqueta con llave abierta en Safari sin sesión: la acción la hace el servidor (NfcQuick).
   const [quick, setQuick] = useState(() => parseNfc(window.location.search) ? window.location.search : '')
   const [preset, setPreset] = useState<Preset | null>(null)
@@ -520,6 +522,7 @@ export default function App() {
   if (loadFailed) return <ProblemScreen tone="error" title="No pudimos abrir tus datos." text="No los vamos a reemplazar por una lista vacía. Siguen guardados en este teléfono."><button className="primary-button" onClick={() => window.location.reload()}>Intentar otra vez</button></ProblemScreen>
   if (!ready || (cloudConfigured && !authReady)) return <LoadingScreen text="Abriendo tu espacio." />
   if (cloudConfigured && recoveryMode) return <AuthScreen recovery onRecoveryComplete={() => { window.history.replaceState({}, '', window.location.pathname + window.location.search); setRecoveryMode(false); message('Contraseña actualizada.') }} />
+  if (quick && parseNfc(quick)?.tag === 'pause') return <PauseQuick search={quick} />
   if (cloudConfigured && !session && quick) return <NfcQuick search={quick} onSignIn={() => { setQuick(''); setNfc(null) }} />
   if (cloudConfigured && !session) return <AuthScreen recovery={false} onRecoveryComplete={() => setRecoveryMode(false)} />
   if (cloudConfigured && !cloudReady && cloudError) return <ProblemScreen tone="offline" title="No llegamos a la nube." text="Revisa tu señal. Lo de este teléfono sigue intacto y se sube solo cuando vuelva la conexión."><button className="primary-button" onClick={() => setAttempt(a => a + 1)}>Reintentar</button><button className="quiet-button" onClick={signOut}>Cerrar sesión</button></ProblemScreen>
