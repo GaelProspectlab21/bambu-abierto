@@ -48,10 +48,10 @@ export function RemindersCard({ data, commit, onMessage }: { data: AppData; comm
     <h2>Te aviso solo si falta</h2>
     <p>A la hora que elijas, Bambú revisa tus registros. Si ya lo hiciste, no suena.</p>
     {state && STATE_TEXT[state] && <p className="caution">{STATE_TEXT[state]}</p>}
-    {state === 'off' && <div className="row-actions"><button className="primary-button" disabled={busy} onClick={activate}>Activar avisos en este teléfono</button></div>}
+    {state === 'off' && <div className="row-actions"><button className="primary-button" disabled={busy} aria-busy={busy} onClick={activate}>Activar avisos en este teléfono</button></div>}
     {state === 'on' && <>
       <label className="checkbox-label"><input type="checkbox" checked={r.on} onChange={() => set({ on: !r.on })} />Avisos encendidos en todos mis teléfonos</label>
-      <div className="row-actions"><button className="secondary-button" disabled={busy} onClick={test}>Probar aviso</button><button className="quiet-button" disabled={busy} onClick={off}>Apagar en este teléfono</button></div>
+      <div className="row-actions"><button className="secondary-button" disabled={busy} aria-busy={busy} onClick={test}>Probar aviso</button><button className="quiet-button" disabled={busy} aria-busy={busy} onClick={off}>Apagar en este teléfono</button></div>
     </>}
     <div className="reminder-grid">
       {FIELDS.map(f => <label key={f.key} className="field-label">{f.label} <span>{r[f.key] ? '' : '· apagado'}</span>

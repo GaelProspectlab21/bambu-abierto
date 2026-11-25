@@ -59,12 +59,12 @@ button.promise-check { cursor: pointer; }
 .kept .promise-check { background: var(--accent); border-color: var(--accent); animation: pop 260ms ease; }
 
 /* Mantén presionado: la promesa no se sella con un toque distraído. */
-.hold-button { position: relative; overflow: hidden; width: 100%; min-height: 54px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 18px; border: 0; border-radius: 14px; background: var(--commit); color: var(--on-accent); font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 0 var(--commit-deep); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.hold-button { position: relative; overflow: hidden; width: 100%; min-height: 54px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 18px; border: 0; border-radius: 14px; background: var(--commit); color: var(--on-commit); font-size: 16px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 0 var(--commit-deep); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .hold-button:disabled { background: var(--commit-soft); box-shadow: 0 4px 0 var(--commit-soft-deep); cursor: not-allowed; }
 .hold-button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--commit-deep); }
 .hold-fill { position: absolute; inset: 0 auto 0 0; background: var(--commit-deep); opacity: .55; pointer-events: none; }
 .hold-text, .hold-button > span:last-child { position: relative; }
-.hold-button.sealed { background: var(--accent); box-shadow: 0 4px 0 var(--accent-deep); }
+.hold-button.sealed { color: var(--on-accent); background: var(--accent); box-shadow: 0 4px 0 var(--accent-deep); }
 .sealed-card .section-heading { align-items: center; }
 
 .vara-card h2 { margin-bottom: 4px; }

@@ -35,7 +35,7 @@ export function WeekReportCard({ data, today = dateKey() }: { data: AppData; tod
     {r.now.promised > 0 && <p className="report-promises"><b>{r.now.kept} de {r.now.promised}</b> promesas cumplidas</p>}
     <ul className="report-wins">{r.wins.map(w => <li key={w}>{w}</li>)}</ul>
     {r.watch && <p className="report-watch"><BroteArt mood="animo" size={40} /><span>{r.watch}</span></p>}
-    <button type="button" className="secondary-button share-week" disabled={busy} onClick={async () => {
+    <button type="button" className="secondary-button share-week" disabled={busy} aria-busy={busy} onClick={async () => {
       setBusy(true)
       try {
         const blob = await weekCard(r, data.profile.name, cells.filter(c => c.show).map(c => ({ label: c.label, value: r.now[c.key] as number })))

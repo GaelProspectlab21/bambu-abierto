@@ -21,6 +21,8 @@ import { HabitNudge } from './PageExtras'
 import { dayTotals, planFor } from './lib/nutrition'
 import { OPEN_MEAL_KEY } from './FoodPage'
 import { Companion } from './Companion'
+import { HealthyProgress } from './HealthyProgress'
+import { pauseStats } from './lib/pause'
 
 type Commit = (update: (d: AppData) => AppData) => void
 
@@ -54,6 +56,7 @@ function FoodCard({ data, go }: { data: AppData; go: (s: Section) => void }) {
 export function TodayPage({ data, commit, go, onMessage }: { data: AppData; commit: Commit; go: (s: Section) => void; onMessage: (t: string, undo?: () => void) => void }) {
   const today = dateKey()
   const now = useNow(true, data.activeFocus || data.activeReading || data.activeWorkout ? 1000 : 60000)
+  const pauses = pauseStats(data, today)
   const hour = new Date().getHours()
   const plan = useMemo(() => todayPlan(data), [data])
   const reading = data.reading.filter(r => r.day === today && realReading(r))
@@ -81,8 +84,10 @@ export function TodayPage({ data, commit, go, onMessage }: { data: AppData; comm
   return <>
     <Hero data={data} step={step} now={now} go={s => go(s as Section)} commit={commit} onMessage={onMessage} />
     <TopStats data={data} go={go} />
+    {pauses.total > 0 && <p className="hint">Hoy elegiste otra cosa {plural(pauses.resisted, 'vez', 'veces')}.</p>}
     <Companion inline data={data} section="Hoy" go={s => go(s as Section)} commit={commit} now={now} cloud={cloudConfigured} />
     <NeverTwice data={data} go={go} />
+    <HealthyProgress data={data} go={go} />
     {mod.training && <StretchCard data={data} mode="hoy" />}
     {hour < 21 && <PromiseCard data={data} commit={commit} />}
     {((data.activeReading && !data.activeReading.endedAt) || data.activeFocus || (data.activeWorkout && !data.activeWorkout.endedAt)) && <div className="live-bar">

@@ -1,9 +1,10 @@
 import { DayLedger, VotesCard } from './TodayTop'
+import { PauseHistory } from './PauseHistory'
 import { WeekReportCard } from './Weekly'
 import { useMemo, useState } from 'react'
 import { dateKey, type AppData } from './lib/model'
 import { exercise } from './lib/exercises'
-import type { Quest } from './lib/gamification'
+import type { Section } from './TodayPage'
 import { ProgressGarden } from './ProgressGarden'
 import { Card, Chips, Empty, Heading, Tabs, fmtDay } from './ui'
 import { plural } from './lib/text'
@@ -135,13 +136,13 @@ function Diary({ data }: { data: AppData }) {
   </>
 }
 
-export function HistoryPage({ data, go }: { data: AppData; go: (section: Quest['go']) => void }) {
+export function HistoryPage({ data, go }: { data: AppData; go: (section: Section) => void }) {
   const [tab, setTab] = useState<Tab>(() => { try { const t = localStorage.getItem(TAB_KEY); return t === 'semana' || t === 'bambu' ? t : 'diario' } catch { return 'diario' } })
   const pick = (t: Tab) => { setTab(t); try { localStorage.setItem(TAB_KEY, t) } catch { /* solo recuerda la pestaña */ } }
   return <>
     <Heading eyebrow="HISTORIAL" title="Tu camino completo." text="Todo lo que registraste sigue aquí, aunque un día quede en blanco." />
     <div className="hist-tabs"><Tabs label="Vista del historial" value={tab} onChange={pick} options={[['diario', 'Diario'], ['semana', 'Semana'], ['bambu', 'Tu bambú']]} /></div>
-    {tab === 'diario' && <Diary data={data} />}
+    {tab === 'diario' && <><PauseHistory data={data} onSetup={() => go('Ajustes')} /><Diary data={data} /></>}
     {tab === 'semana' && <><DayLedger data={data} /><WeekReportCard data={data} /><VotesCard data={data} /></>}
     {tab === 'bambu' && <ProgressGarden data={data} go={go} />}
   </>

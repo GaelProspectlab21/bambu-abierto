@@ -1,0 +1,65 @@
+/* Contrast and layout use the same semantic tokens in both themes. */
+.eyebrow { color: var(--muted); }
+.plan-row { background: var(--surface); }
+.plan-row.done { background: var(--accent-wash); }
+.ch.read { color: var(--on-accent); }
+.ob-checklist li.done i { color: var(--on-accent); }
+.companion-fab .brote-art { max-width: 100%; }
+.habit-name, .plan-name { min-width: 0; overflow-wrap: anywhere; }
+.hero-quests { background: var(--hero-control); color: var(--on-hero); }
+.google-account { margin-top: 14px; }
+.pause-bars { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); gap: 4px; list-style: none; padding: 0; margin: 20px 0 6px; }
+.pause-bars li { min-width: 0; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+.pause-bars li > div { height: 72px; display: flex; align-items: end; border-bottom: 1px solid var(--line-strong); }
+.pause-bars i { display: block; width: 100%; background: var(--accent); border-radius: var(--radius-s) var(--radius-s) 0 0; }
+.pause-dates { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; }
+
+/* One tactile system. Holding gestures keep their dedicated touch handling. */
+button { min-height: var(--tap); min-width: var(--tap); font-weight: var(--button-weight); }
+button:not(.hold-button):not(.pause-orb), a, summary { touch-action: manipulation; }
+:is(.primary-button, .secondary-button, .focus-button, .quiet-button, .ql-chip, .ob-option, .minute-option, .chip, .tab) {
+  min-height: var(--button-height); border-radius: var(--button-radius); font-weight: var(--button-weight);
+}
+:is(.chip, .ql-chip, .minute-option) { border-radius: var(--pill); }
+:is(.primary-button, .secondary-button, .focus-button) { box-shadow: 0 var(--button-lip) 0 var(--lip-secondary); }
+.primary-button { box-shadow: 0 var(--button-lip) 0 var(--lip-primary); }
+button { transition: scale var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease); }
+button:enabled:active { scale: var(--button-press); box-shadow: none; }
+button:disabled { opacity: var(--button-disabled); cursor: not-allowed; box-shadow: none; }
+button[aria-busy='true'] { opacity: 1; cursor: progress; outline: 2px dashed var(--line-strong); outline-offset: 2px; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  button { transition: none; }
+  button:enabled:active { scale: 1; }
+}
+
+/* Short, directional feedback. Reading time is independent of motion time. */
+.sheet, .ql-sheet, .breathe-sheet { animation: v8-sheet-in var(--dur) var(--ease); }
+.sheet-backdrop, .ql-scrim { animation-duration: var(--dur-fast); animation-timing-function: var(--ease); }
+.page > *, .section-in, .ob-body, .runner-card, .nudge-card { animation-duration: var(--dur); animation-delay: 0ms; animation-timing-function: var(--ease); }
+.habit-row.done .habit-check, .plan-row.done, .quest.done i, .kept .promise-check,
+.ts-tile.bump, .ledger-bar i, .ledger-week span i, .votes-list i,
+.cel-card, .cel-card .cel-art, .st-badge.big, .st-play h2 { animation-duration: var(--dur); animation-timing-function: var(--ease); }
+.given-fill, .xpbar span, .ring, .lvl, .live-bamboo .seg { transition-duration: var(--dur); transition-timing-function: var(--ease); }
+.celebration { animation: fade-in var(--dur-fast) var(--ease); pointer-events: none; background: transparent; align-items: start; padding-top: max(16px, env(safe-area-inset-top)); }
+.celebration .cel-card { pointer-events: auto; }
+.celebration .confetti { display: none; }
+.sm-old { animation: count-out var(--dur-fast) var(--ease) forwards; }
+.sm-new { animation: count-in var(--dur) var(--ease) forwards; }
+.sm-flame, .sm-week i.on { animation-duration: var(--dur); animation-delay: 0ms !important; animation-timing-function: var(--ease); }
+.sm-rays { animation: none; }
+.juice-burst i { animation-duration: var(--dur); }
+/* Let the message stay legible, without a long moving trajectory. */
+.juice-float, .xp-float { animation: v8-number-in var(--dur) var(--ease) both; }
+@keyframes v8-sheet-in { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes v8-number-in { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .sm-old { display: none; }
+  .sm-new { position: static; transform: none; }
+}
+.google-gis { min-height: 44px; display: flex; justify-content: center; }
+.auth-links { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; }
+.auth-or { display: flex; align-items: center; gap: 12px; margin: 16px 0 4px; color: var(--muted); font-size: 13px; }
+.auth-or::before, .auth-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.auth-card .local-mode-button { width: 100%; margin-top: 12px; }

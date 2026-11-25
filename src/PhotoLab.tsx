@@ -77,7 +77,7 @@ export function PhotoLab({ data, commit, onMessage }: { data: AppData; commit: C
     <p className="hint">Una vez al mes, mañana al levantarte y con la misma luz. Con ropa deportiva ajustada basta. Se quedan en este teléfono: no suben a ninguna nube.</p>
     <Chips label="Pose" value={pose} onChange={setPose} options={POSES} />
     <input ref={input} className="visually-hidden" type="file" accept="image/*" aria-label="Elegir o tomar foto" onChange={e => void add(e.target.files?.[0])} />
-    <button className="primary-button" disabled={busy} onClick={() => input.current?.click()}>{busy ? 'Guardando' : `Tomar foto de ${POSES.find(p => p[0] === pose)![1].toLowerCase()}`} <span>＋</span></button>
+    <button className="primary-button" disabled={busy} aria-busy={busy} onClick={() => input.current?.click()}>{busy ? 'Guardando' : `Tomar foto de ${POSES.find(p => p[0] === pose)![1].toLowerCase()}`} <span>＋</span></button>
     {error && <p role="alert" className="hint">{error}</p>}
     {photos === null ? <p className="hint">Cargando fotos.</p>
       : ofPose.length === 0 ? <Empty>Aún no hay fotos de {pose}. Tu primera foto es el punto de partida.</Empty>

@@ -150,7 +150,7 @@
 .module-list { display: grid; gap: 8px; margin: 10px 0; }
 .module-row { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); text-align: left; cursor: pointer; color: var(--ink); min-height: var(--tap); }
 .module-row strong { display: block; font-size: 16px; } .module-row small { display: block; margin-top: 2px; font-size: 13px; line-height: 1.4; color: var(--body); }
-.module-check { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--line); border-radius: 8px; font-weight: 700; color: #fff; }
+.module-check { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--line); border-radius: 8px; font-weight: 700; color:var(--on-accent); }
 .module-row.on { border-color: var(--accent); background: var(--accent-wash); } .module-row.on .module-check { background: var(--accent); border-color: var(--accent); }
 .welcome-card .row-actions { margin-top: 16px; display: flex; gap: 10px; } .welcome-card .row-actions .welcome-submit { flex: 1; margin-top: 0; }
 .welcome-card .row-actions .secondary-button { width: auto; }
@@ -244,7 +244,7 @@
 
 /* ── Tareas: elegir varias y armar el bloque con Jev ──────────────────────────────── */
 .pick-btn { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--body); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-.pick-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pick-btn.on { background: var(--accent); border-color: var(--accent); color:var(--on-accent); }
 .pick-btn:disabled { opacity: .5; }
 .pick-bar { position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 7; display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--ink); color: var(--canvas); box-shadow: 0 10px 28px #0005; }
 .pick-bar .quiet-button { background: transparent; border-color: #ffffff40; color: inherit; }

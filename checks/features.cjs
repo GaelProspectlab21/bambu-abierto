@@ -40,6 +40,84 @@ const { stepsOf, totalSeconds, stretchRow, isStretch, stretchStreak, stretchedOn
 const passed = []
 const ok = (name) => passed.push(name)
 
+{
+  const { pauseHistory } = moduleOf('pauseHistory')
+  const actions = [
+    ['2026-11-11','youtube · resistida'], ['2026-11-11','youtube · resistida'],
+    ['2026-11-24','instagram · resistida'], ['2026-11-24','youtube · pase 10 min'],
+    ['2026-11-24','youtube · pase 99 min'], ['2026-11-10','youtube · pase 15 min'],
+    ['2026-11-25','youtube · resistida'],
+  ].map(([day,note],i) => ({ id:`p${i}`, day, kind:'other', note:`Pausa: ${note}` }))
+  const p = pauseHistory(normalizeData({ ...EMPTY_DATA, activities:actions }), '2026-11-24')
+  assert.equal(p.days.length, 14)
+  assert.equal(p.days[0].day, '2026-11-11')
+  assert.equal(p.days[13].day, '2026-11-24')
+  assert.equal(p.passMinutes, 10, 'only supported passes inside the window')
+  assert.equal(p.resisted, 3)
+  assert.equal(p.best.day, '2026-11-11')
+  const empty = pauseHistory(EMPTY_DATA, '2026-03-01')
+  assert.equal(empty.days[0].day, '2026-02-16')
+  assert.equal(empty.best, null)
+  assert.equal(empty.passMinutes, 0)
+  ok('v8 historial de pausa: ventana inclusiva, pases válidos, mejor día y vacío')
+}
+
+{
+  const { oauthErrorUrl, googleProviderEnabled, googleIdentityLinked } = moduleOf('oauth')
+  for (const href of ['https://b.test/?error_description=denied&error=x&ir=ajustes', 'https://b.test/?ir=ajustes#error_description=denied&error_code=bad']) {
+    assert.deepEqual(oauthErrorUrl(href), { error: true, cleanHref: '/?ir=ajustes' })
+  }
+  assert.deepEqual(oauthErrorUrl('https://b.test/?code=good#section'), { error: false, cleanHref: '/?code=good#section' })
+  assert.deepEqual(oauthErrorUrl('https://b.test/?error_description=%3Cscript%3E#section'), { error: true, cleanHref: '/#section' })
+  for (const s of [null, {}, { external: null }, { external: { google: 'true' } }, { external: { google: false } }]) assert.equal(googleProviderEnabled(s), false)
+  assert.equal(googleProviderEnabled({ external: { google: true } }), true)
+  assert.equal(googleIdentityLinked([{ provider: 'email' }]), false)
+  assert.equal(googleIdentityLinked([{ provider: 'email' }, { provider: 'google' }]), true)
+  ok('v8 Google: proveedor activo, identidades y limpieza de errores sin perder callbacks válidos')
+}
+
+{
+  const { healthyProgress } = moduleOf('healthyProgress')
+  const d = normalizeData({ ...EMPTY_DATA, reading: [
+    { id: 'a', day: '2026-11-01', minutes: 5 }, { id: 'b', day: '2026-11-01', minutes: 5 },
+    { id: 'c', day: '2026-11-02', minutes: 5 }, { id: 'e', day: '2026-11-03', minutes: 5, estimated: true },
+    { id: 'future', day: '2026-11-25', minutes: 5 }],
+    sets: [18,18,17,25].map((n,i) => ({ id: `s${i}`, at: 1000 + i, day: `2026-11-${n}`, exercise: 'pushup', reps: 5, rir: 2 })) })
+  const p = healthyProgress(d, '2026-11-24')
+  assert.equal(p.reading.total, 2)
+  assert.equal(p.reading.best, 2)
+  assert.equal(p.reading.current, 0, 'a gap does not erase the historical total')
+  assert.equal(p.strengthDays, 1, 'unique days within seven days, never future sets')
+  assert.equal(p.votes, 0)
+  ok('v8 progreso sano: conserva historia, fuerza por día y ningún premio inventado')
+}
+
+{
+  const { onboardingResult } = moduleOf('onboarding')
+  const mods = { reading: false, bible: true, training: true, focus: false, food: false }
+  const skipped = onboardingResult('  Ana  ', 13, mods, 'agua', false)
+  assert.deepEqual(skipped.firstVotes, [], 'skipping is not a recorded achievement')
+  assert.equal(skipped.name, 'Ana')
+  assert.equal(skipped.age, 13)
+  assert.equal(skipped.modules.reading, true)
+  assert.equal(skipped.trainingLevel, 1)
+  const done = onboardingResult('Ana', 14, mods, 'gratitud', true)
+  assert.deepEqual(done.firstVotes, ['gratitud'])
+  assert.deepEqual(done.habits.map(h => h.id), done.firstVotes)
+  assert.equal(mods.reading, false)
+  ok('v8 bienvenida: solo hechos confirmados, edad y nivel inicial')
+}
+
+{
+  const { soundAllowed, SOUND_NOTES } = moduleOf('sounds')
+  for (const preference of [null, '0', 'garbage']) assert.equal(soundAllowed(preference, false, false, false), false)
+  assert.equal(soundAllowed('1', false, false, false), true)
+  for (const flags of [[true,false,false], [false,true,false], [false,false,true]]) assert.equal(soundAllowed('1', ...flags), false)
+  assert.deepEqual(Object.keys(SOUND_NOTES), ['tap','complete','streak','level','error'])
+  assert.equal(new Set(Object.values(SOUND_NOTES).map(x => x.join(','))).size, 5)
+  ok('v8 sonido: consentimiento, interrupciones y cinco motivos')
+}
+
 // Rachas y lectura
 const today = '2026-11-04'
 assert.equal(streak(['2026-11-01', '2026-11-02', '2026-11-03'], today).current, 3)
@@ -877,9 +955,10 @@ ok('estiramiento: dura lo prometido, sobrevive al guardarse, suma su voto y llev
   for (const [f, max] of Object.entries(LEGACY)) assert.ok(hex(css(f)) <= max, `${f} subió de ${max} colores sueltos: usa tokens`)
   // Todo token usado existe: un var(--mal-escrito) en CSS falla en silencio.
   assert.equal(hex(css('v7.css')), 0)
-  const all = ['v7.css', 'tokens.css', 'v4.css', 'v5.css', 'v6.css', 'app.css', 'brote.css', 'features.css', 'index.css'].map(css).join('\n')
+  assert.equal(hex(css('v8.css')), 0)
+  const all = ['v8.css', 'v7.css', 'tokens.css', 'v4.css', 'v5.css', 'v6.css', 'app.css', 'brote.css', 'features.css', 'index.css'].map(css).join('\n')
   const defined = new Set([...all.matchAll(/(--[\w-]+)\s*:/g)].map(m => m[1]))
-  const used = [...css('v7.css').matchAll(/var\((--[\w-]+)/g), ...css('v4.css').matchAll(/var\((--[\w-]+)/g), ...css('v5.css').matchAll(/var\((--[\w-]+)/g), ...css('v6.css').matchAll(/var\((--[\w-]+)/g), ...css('tokens.css').matchAll(/var\((--[\w-]+)/g)].map(m => m[1])
+  const used = [...css('v8.css').matchAll(/var\((--[\w-]+)/g), ...css('v7.css').matchAll(/var\((--[\w-]+)/g), ...css('v4.css').matchAll(/var\((--[\w-]+)/g), ...css('v5.css').matchAll(/var\((--[\w-]+)/g), ...css('v6.css').matchAll(/var\((--[\w-]+)/g), ...css('tokens.css').matchAll(/var\((--[\w-]+)/g)].map(m => m[1])
   const missing = [...new Set(used.filter(t => !defined.has(t) && t !== '--p'))]
   assert.deepEqual(missing, [], 'tokens usados que no existen')
   // El nombre se escribe igual en todos lados: bambú, en minúscula y con acento.
@@ -1185,4 +1264,12 @@ async function audioChecks() {
   assert.deepEqual([0, 1, 2, 5, 9].map(P.breathSeconds), [5, 8, 11, 20, 20], 'la respiración crece y topa en 20 s')
   assert.match(P.passShortcutUrl(P.pauseApp('instagram'), 10), /^shortcuts:\/\/run-shortcut\?name=Bamb%C3%BA%20Pase&input=text&text=10%7Cinstagram%3A%2F%2F$/)
   ok('pausa antes de las apps: enlace, servidor, nube y fricción')
+}
+
+// Google directo: el rechazo del trigger de invitación se traduce, otros errores no.
+{
+  const O = moduleOf('oauth')
+  assert.equal(O.isInviteRejection('Database error saving new user'), true)
+  assert.equal(O.isInviteRejection('Invalid nonce'), false)
+  ok('google: rechazo por invitación reconocido')
 }

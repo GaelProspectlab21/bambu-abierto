@@ -1,3 +1,4 @@
+import { playSound } from './lib/sounds'
 import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { AuthScreen } from './AuthScreen'
@@ -20,7 +21,8 @@ import { nfcServerAction } from './lib/nfcActions'
 import { applyRecords, diffRecords, toRecords, type RecordRow } from './lib/records'
 import { pullSince, pushRows, SyncEngine, type SyncStatus } from './lib/sync'
 import { readCloudSnapshot } from './lib/cloudSync'
-import { authStorageKey, cloudAvailable, cloudConfigured, supabase } from './lib/supabase'
+import { authStorageKey, cloudAvailable, cloudConfigured, oauthReturnError, supabase } from './lib/supabase'
+import { GOOGLE_INVITE_MESSAGE } from './lib/oauth'
 import { flushAuthLog, logAuth, setAuthLogOwner } from './lib/authLog'
 import { clearAccountStorage, getLocalOwnerId, setStorageScope, loadAppData, parseBackup, requestPersistence, saveAppData, setLocalOwnerId, syncStore } from './lib/storage'
 import { clearOwnPhotos, setPhotoOwner } from './lib/photos'
@@ -158,6 +160,15 @@ export default function App() {
 
   const message = useCallback((text: string, undo?: () => void, options?: ToastOptions) => setToast({ text, undo, id: Date.now(), ...options }), [])
   const fail = useCallback((text: string, retry?: () => void) => message(text, retry, { tone: 'error', action: 'Reintentar' }), [message])
+  useEffect(() => { if (oauthReturnError) fail(GOOGLE_INVITE_MESSAGE) }, [fail])
+  useEffect(() => {
+    const tap = (event: MouseEvent) => {
+      if (event.isTrusted && event.target instanceof Element && event.target.closest('button:enabled')) playSound('tap')
+    }
+    document.addEventListener('click', tap)
+    return () => document.removeEventListener('click', tap)
+  }, [])
+  useEffect(() => { if (toast?.tone === 'error') playSound('error') }, [toast])
   const online = useOnline()
   const [update, setUpdate] = useState(false)
 

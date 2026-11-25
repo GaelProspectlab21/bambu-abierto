@@ -14,6 +14,7 @@ import { Card, Chips, Heading, Stepper, rewardSound, setSounds, soundsOn } from 
 import { setThemeChoice, themeChoice, type ThemeChoice } from './lib/theme'
 import { listPhotos } from './lib/photos'
 import { companionOn, setCompanionOn } from './Companion'
+import { GoogleAccount } from './GoogleAccount'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Props = {
@@ -82,7 +83,8 @@ export function SettingsPage({ data, commit, onMessage, status, cloud, onExport,
   }
   return <>
     <Heading eyebrow="AJUSTES" title="Tu espacio" text="Etiquetas, metas, hábitos y respaldo." />
-    <Card><h2>Apariencia</h2><p className="hint">Automático sigue el modo de tu teléfono.</p><Chips label="Mascota" value={mascot ? 'on' : 'off'} onChange={v => { setCompanionOn(v === 'on'); setMascot(v === 'on') }} options={[['on', 'Mascota visible'], ['off', 'Ocultar mascota']]} /><Chips label="Tema" value={theme} onChange={t => { setThemeChoice(t); setTheme(t) }} options={[['auto', 'Automático'], ['claro', 'Claro'], ['oscuro', 'Oscuro']]} /><Chips label="Sonidos" value={sound ? 'on' : 'off'} onChange={v => { setSounds(v === 'on'); setSound(v === 'on'); if (v === 'on') rewardSound() }} options={[['on', 'Sonido al ganar algo'], ['off', 'Sin sonidos']]} /></Card>
+    {cloud && <Card><h2>Tu cuenta</h2><GoogleAccount link onError={onMessage} /><button type="button" className="quiet-button" onClick={onSignOut}>Cerrar sesión</button></Card>}
+    <Card><h2>Apariencia</h2><p className="hint">Automático sigue el modo de tu teléfono.</p><Chips label="Mascota" value={mascot ? 'on' : 'off'} onChange={v => { setCompanionOn(v === 'on'); setMascot(v === 'on') }} options={[['on', 'Mascota visible'], ['off', 'Ocultar mascota']]} /><Chips label="Tema" value={theme} onChange={t => { setThemeChoice(t); setTheme(t) }} options={[['auto', 'Automático'], ['claro', 'Claro'], ['oscuro', 'Oscuro']]} /><Chips label="Sonidos" value={sound ? 'on' : 'off'} onChange={v => { setSounds(v === 'on'); setSound(v === 'on'); if (v === 'on') rewardSound() }} options={[['on', 'Sonidos suaves'], ['off', 'Sin sonidos']]} /></Card>
     <Card><h2>Tu norte</h2><p className="hint">En quién te quieres convertir. La reflexión de la noche te lo pregunta.</p>
       <input className="text-input" value={data.profile.north ?? ''} maxLength={140} placeholder="Con tus palabras" aria-label="Tu norte" onChange={e => commit(d => ({ ...d, profile: { ...d.profile, north: e.target.value || undefined } }))} /></Card>
     <Card><h2>Qué mides</h2><p className="hint">Lo que apagas no aparece ni cuenta en tus misiones. No borra nada de lo que ya registraste.</p>

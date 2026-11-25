@@ -1,5 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 import { loggingFetch } from './authLog'
+import { oauthErrorUrl } from './oauth'
+
+// Capture before the SDK consumes the callback URL. Never render provider error text.
+export const oauthReturnError = (() => {
+  const result = oauthErrorUrl(window.location.href)
+  if (result.error) window.history.replaceState(window.history.state, '', result.cleanHref)
+  return result.error
+})()
 
 const url = import.meta.env.VITE_SUPABASE_URL?.trim()
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim()

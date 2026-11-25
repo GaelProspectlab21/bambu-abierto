@@ -158,6 +158,6 @@ export function TravelCard() {
     <p className="hint">{done ? 'Funciona en modo avión. Ocupa unos 2 MB.' : 'Guarda los 73 libros (unos 2 MB, menos que una foto). Después se lee sin internet.'}</p>
     {busy && <div className="ob-progress" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={saved ?? 0} aria-label={`${saved ?? 0} de ${total} libros`}><span style={{ width: `${(saved ?? 0) / total * 100}%` }} /></div>}
     {done ? <button type="button" className="quiet-button" onClick={() => void remove()}>Quitar del teléfono</button>
-      : <button type="button" className="secondary-button" disabled={busy} onClick={() => void save()}>{busy ? `Guardando ${saved ?? 0} de ${total}` : saved ? `Terminar de guardar (${saved} de ${total})` : 'Guardar para el viaje'} <span>↓</span></button>}
+      : <button type="button" className="secondary-button" disabled={busy} aria-busy={busy} onClick={() => void save()}>{busy ? `Guardando ${saved ?? 0} de ${total}` : saved ? `Terminar de guardar (${saved} de ${total})` : 'Guardar para el viaje'} <span>↓</span></button>}
   </Card>
 }

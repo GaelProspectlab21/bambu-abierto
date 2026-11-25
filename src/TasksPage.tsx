@@ -56,8 +56,8 @@ export function TasksPage({ data, onChange, onPrepare, busy = false, jevAllowed 
       <span className="eyebrow">TU SIGUIENTE TAREA</span>
       <h2>{next.text}</h2>
       <p>{next.dueDate ? `${next.dueDate < today ? 'Venció' : 'Para'} ${fmtDay(next.dueDate)}` : 'Sin fecha'}{next.level ? ` · nivel ${next.level}` : ''} · {next.minutes} min</p>
-      <div className="row-actions"><button className="primary-button" disabled={busy} onClick={() => onPrepare(suggestPick(tasks, 3))}>{busy ? 'Preparando tu bloque' : jevAllowed ? 'Armar mi bloque con Jev' : 'Armar mi bloque'} <span>↗</span></button>
-        <button className="secondary-button" disabled={busy} onClick={() => onPrepare([next])}>Solo esta</button></div>
+      <div className="row-actions"><button className="primary-button" disabled={busy} aria-busy={busy} onClick={() => onPrepare(suggestPick(tasks, 3))}>{busy ? 'Preparando tu bloque' : jevAllowed ? 'Armar mi bloque con Jev' : 'Armar mi bloque'} <span>↗</span></button>
+        <button className="secondary-button" disabled={busy} aria-busy={busy} onClick={() => onPrepare([next])}>Solo esta</button></div>
       <p className="hint">{jevAllowed ? 'Elige varias con «Al bloque». Jev recibe el texto y las notas de las tareas elegidas. Tú revisas y empiezas.' : 'Elige varias con «Al bloque». Una regla de este teléfono propone nivel y minutos. Tú revisas y empiezas.'}</p>
     </Card>}
     <Card>
@@ -95,7 +95,7 @@ export function TasksPage({ data, onChange, onPrepare, busy = false, jevAllowed 
     {picked.length > 0 && <div className="pick-bar" role="region" aria-label="Bloque en preparación">
       <span>{picked.length} {picked.length === 1 ? 'tarea' : 'tareas'} en el bloque</span>
       <button className="quiet-button" onClick={() => setPicked([])}>Limpiar</button>
-      <button className="primary-button" disabled={busy} onClick={() => { onPrepare(tasks.filter(t => picked.includes(t.id))); setPicked([]) }}>{busy ? 'Preparando tu bloque' : jevAllowed ? 'Armar bloque con Jev' : 'Armar bloque'} <span>↗</span></button>
+      <button className="primary-button" disabled={busy} aria-busy={busy} onClick={() => { onPrepare(tasks.filter(t => picked.includes(t.id))); setPicked([]) }}>{busy ? 'Preparando tu bloque' : jevAllowed ? 'Armar bloque con Jev' : 'Armar bloque'} <span>↗</span></button>
     </div>}
   </>
 }

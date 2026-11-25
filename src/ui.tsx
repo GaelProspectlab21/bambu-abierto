@@ -1,4 +1,5 @@
 import { tabDestination } from './lib/navigation'
+import { playSound } from './lib/sounds'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { haptic } from './lib/haptic'
 import type { Light } from './lib/focusStats'
@@ -127,31 +128,8 @@ export function MoveImage({ start, end, alt, similar, size = 'big', drawn = fals
 }
 
 export type Celebration = { title: string; text?: string; kind?: 'level' | 'rank' | 'achievement' | 'day' | 'record' | 'streak'; image?: string; count?: number }
-const SOUND_KEY = 'bambu.sonidos'
-export function soundsOn(): boolean { try { return localStorage.getItem(SOUND_KEY) !== '0' } catch { return true } }
-export function setSounds(on: boolean) { try { localStorage.setItem(SOUND_KEY, on ? '1' : '0') } catch { /* preferencia de este teléfono */ } }
-/** Dos notas que suben: suena solo cuando ganaste algo. En iPhone es la única sensación física que da una web. */
-export function rewardSound(big = false) {
-  if (!soundsOn()) return
-  try {
-    const ctx = new AudioContext()
-    const gain = ctx.createGain()
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + (big ? 1.1 : 0.6))
-    ;(big ? [523, 659, 784] : [659, 880]).forEach((hz, i) => {
-      const osc = ctx.createOscillator()
-      osc.type = 'triangle'
-      osc.frequency.value = hz
-      osc.connect(gain)
-      osc.start(ctx.currentTime + i * 0.09)
-      osc.stop(ctx.currentTime + (big ? 1.1 : 0.6))
-    })
-    gain.connect(ctx.destination)
-    window.setTimeout(() => void ctx.close(), 1500)
-  } catch { /* sin sonido no se pierde nada */ }
-}
-/** Dispara una celebración desde cualquier pantalla. */
+export { soundsOn, setSounds } from './lib/sounds'
+export function rewardSound(big = false) { playSound(big ? 'level' : 'complete') }
 export function celebrate(detail: Celebration) {
   window.dispatchEvent(new CustomEvent<Celebration>('bambu:celebrate', { detail }))
 }
@@ -163,7 +141,7 @@ export function CelebrationLayer() {
     const on = (event: Event) => {
       const detail = (event as CustomEvent<Celebration>).detail
       haptic([30, 40, 60])
-      rewardSound(detail.kind === 'rank' || detail.kind === 'day' || detail.kind === 'streak')
+      playSound(detail.kind === 'streak' ? 'streak' : detail.kind === 'rank' || detail.kind === 'level' ? 'level' : 'complete')
       setQueue(q => [...q.slice(-2), { ...detail, id: Date.now() + Math.random() }])
     }
     window.addEventListener('bambu:celebrate', on)

@@ -26,12 +26,12 @@
   --success: #1d7a4a;
 
   /* Función: logro y promesa (Sol) */
-  --gold: var(--sol-700); --gold-wash: #fbf3dc;
+  --gold: #805b10; --gold-wash: #fbf3dc;
   --promise: var(--sol-400); --promise-edge: #d6a325; --promise-ink: #2b2208;
   --sun-wash: var(--sol-100); --sun-banner: #fff8e6; --sun-edge: #e8d6a6; --sun-ink: #4a3a0c; --sun-strong: #8a5a00;
 
   /* Función: compromiso, mantener presionado (Brasa) */
-  --commit: var(--brasa-600); --commit-deep: var(--brasa-800); --commit-soft: var(--brasa-200); --commit-soft-deep: #d39a78;
+  --commit: #a6420b; --on-commit: #fff; --commit-deep: var(--brasa-800); --commit-soft: var(--brasa-200); --commit-soft-deep: #d39a78;
 
   /* Función: alerta */
   --warn: var(--alerta-700); --warn-wash: var(--alerta-50);
@@ -42,7 +42,10 @@
   /* Forma y movimiento */
   --radius-s: 10px; --radius: 16px; --radius-l: 24px; --pill: 999px; --tap: 44px;
   --section-gap: 16px;
-  --ease: cubic-bezier(.2, 0, 0, 1); --ease-pop: cubic-bezier(.2, .8, .2, 1); --dur-fast: 120ms; --dur: 260ms;
+  --hero-control: #173f31; --on-hero: #fff;
+  --button-height: 48px; --button-radius: var(--radius-s); --button-weight: 650;
+  --button-press: .97; --button-disabled: .55; --button-lip: 3px;
+  --ease: cubic-bezier(.2, 0, 0, 1); --ease-pop: var(--ease); --dur-fast: 120ms; --dur: 260ms;
 
   /* Letra: Fraunces SOFT para títulos y números; sistema para el cuerpo */
   /* v5: áreas de tu día (tira medida), vidrio de la navegación y el disco del botón + */
@@ -64,7 +67,7 @@
   --gold: #e0b04a; --gold-wash: #2a2415;
   --promise: #e0b03a; --promise-edge: #b8901f; --promise-ink: #1d1604;
   --sun-wash: #2e2710; --sun-banner: #2e2710; --sun-edge: #5a4a1a; --sun-ink: #f3e2b0; --sun-strong: #f0c86a;
-  --commit: #d9661f; --commit-deep: #7a3108; --commit-soft: #5a3420; --commit-soft-deep: #44271a;
+  --commit: #d9661f; --on-commit: #0a1a12; --commit-deep: #7a3108; --commit-soft: #5a3420; --commit-soft-deep: #44271a;
   --warn: #f09a78; --warn-wash: #2c1b14;
   --lip-primary: #0a1a12; --lip-secondary: #26332c; --lip-sun: #7a5a0c;
   --area-read: #6fbf9a; --area-focus: #e0b04a; --area-move: #e07a3a; --area-rescue: #7fb3e6; --rescue-wash: #172533;
