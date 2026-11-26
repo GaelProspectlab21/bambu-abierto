@@ -95,7 +95,7 @@ export function PhotoLab({ data, commit, onMessage }: { data: AppData; commit: C
             <h3>Antes y después</h3>
             <label className="photo-from">Desde<select className="text-input" value={before.id} onChange={e => setFromId(e.target.value)}>{ofPose.slice(1).map(p => <option key={p.id} value={p.id}>{fmtDay(p.day)}</option>)}</select></label>
             <Reveal before={url(before)} after={url(after)} />
-            <div className="tallo-note"><img src="/img/tallo-guapo.png" alt="" width="56" height="56" loading="lazy" /><div>
+            <div className="tallo-note"><img src="img/tallo-guapo.png" alt="" width="56" height="56" loading="lazy" /><div>
               <strong>Lo que dicen tus datos</strong>
               {photoSummary(data, before.day, after.day).lines.map(l => <p key={l}>{l}</p>)}
             </div></div>

@@ -7,55 +7,22 @@
  * recoge las cartas nuevas desde la última vez que pasó (pull con cursor). Si una carta
  * que llega es más vieja que algo que tú tienes en la mochila, gana lo tuyo.
  */
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { recordKey, type Collection, type RecordRow } from './records'
+import { recordKey, type RecordRow } from './records'
 
 export type SyncState = { cursor: number; pending: Record<string, RecordRow>; bootstrapped: boolean; savedAt?: number }
 export type SyncStatus = { phase: 'loading' | 'syncing' | 'synced' | 'offline'; pending: number; lastSyncAt: number | null; error?: string }
 export type SyncStore = { load: () => Promise<SyncState | null>; save: (state: SyncState) => Promise<void> }
-
-const PUSH_BATCH = 400
-const PULL_PAGE = 1000
+export type Remote = { pull: (cursor: number) => Promise<{ rows: RecordRow[]; cursor: number }>; push: (rows: RecordRow[]) => Promise<void> }
 
 export class UpdateRequired extends Error {}
 
-/** De dos copias guardadas de la cola, la más reciente. Si IndexedDB falló y se usó el espejo, el espejo gana. */
 export function newerState(a: SyncState | null, b: SyncState | null): SyncState | null {
   if (!a || !b) return a ?? b
   return (b.savedAt ?? 0) > (a.savedAt ?? 0) ? b : a
 }
 
-export async function pullSince(client: SupabaseClient, userId: string, cursor: number): Promise<{ rows: RecordRow[]; cursor: number }> {
-  const rows: RecordRow[] = []
-  let current = cursor
-  for (;;) {
-    const { data, error } = await client.from('bambu_records')
-      .select('collection,id,payload,deleted,client_updated_at,seq')
-      .eq('user_id', userId).gt('seq', current).order('seq', { ascending: true }).limit(PULL_PAGE)
-      .abortSignal(AbortSignal.timeout(20000))
-    if (error) throw new Error(`pull: ${error.message}`)
-    const page = (data ?? []) as { collection: Collection; id: string; payload: Record<string, unknown>; deleted: boolean; client_updated_at: number; seq: number }[]
-    page.forEach(row => rows.push({ collection: row.collection, id: row.id, payload: row.payload ?? {}, deleted: row.deleted, clientUpdatedAt: Number(row.client_updated_at) }))
-    if (page.length) current = Number(page[page.length - 1].seq)
-    if (page.length < PULL_PAGE) break
-  }
-  return { rows, cursor: current }
-}
-
-export async function pushRows(client: SupabaseClient, rows: RecordRow[]): Promise<number> {
-  let latest = 0
-  for (let i = 0; i < rows.length; i += PUSH_BATCH) {
-    const batch = rows.slice(i, i + PUSH_BATCH)
-    const { data, error } = await client.rpc('bambu_push', { p_records: batch }).abortSignal(AbortSignal.timeout(25000))
-    if (error?.message.includes('BAMBU_UPDATE_REQUIRED')) throw new UpdateRequired('Hay una versión nueva de Bambú.')
-    if (error) throw new Error(`push: ${error.message}`)
-    latest = Math.max(latest, Number(data) || 0)
-  }
-  return latest
-}
-
 type Options = {
-  client: SupabaseClient; userId: string; store: SyncStore
+  client: Remote; userId: string; store: SyncStore
   /** Mete lo que llegó de la nube en los datos y lo GUARDA en el teléfono. El cursor avanza solo cuando esto termina. */
   onRemote: (rows: RecordRow[]) => void | Promise<void>
   onStatus: (status: SyncStatus) => void
@@ -161,7 +128,7 @@ export class SyncEngine {
     try {
       const sending = Object.values(this.state.pending)
       if (sending.length) {
-        await pushRows(this.opts.client, sending)
+        await this.opts.client.push(sending)
         const pending = { ...this.state.pending }
         sending.forEach(row => {
           const key = recordKey(row.collection, row.id)
@@ -169,7 +136,7 @@ export class SyncEngine {
         })
         this.state = { ...this.state, pending }
       }
-      const { rows, cursor } = await pullSince(this.opts.client, this.opts.userId, this.state.cursor)
+      const { rows, cursor } = await this.opts.client.pull(this.state.cursor)
       const fresh = this.keepNewer(rows)
       // Primero los datos al disco, después el cursor. Al revés, un cierre a la mitad dejaba
       // un cursor que ya no vuelve a pedir filas que nunca llegaron a guardarse.

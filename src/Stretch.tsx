@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { dateKey, type AppData } from './lib/model'
 import { ROUTINES, STRETCH_EVENT, openStretch, stepsOf, stretchRow, stretchSlot, stretchStreak, stretchedOn, totalSeconds, type StretchWhen } from './lib/stretch'
-import { Card } from './ui'
+import { Card, useWakeLock } from './ui'
 import { Icon } from './Icons'
 import { haptic } from './lib/haptic'
 import { reward } from './juice'
@@ -41,13 +41,7 @@ function StretchPlayer({ when, commit, onMessage, streak, onClose }: { when: Str
   const doneBtn = useRef<HTMLButtonElement>(null)
 
   // Pantalla encendida mientras estiras (si el teléfono lo permite).
-  useEffect(() => {
-    if (!started || done) return
-    let lock: { release: () => Promise<void> } | null = null
-    const nav = navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }
-    nav.wakeLock?.request('screen').then(l => { lock = l }).catch(() => { /* sin bloqueo, sigue igual */ })
-    return () => { void lock?.release().catch(() => undefined) }
-  }, [started, done])
+  useWakeLock(started && !done)
 
   // Reloj por marcas de tiempo: si el teléfono se duerme un momento, no se atrasa.
   useEffect(() => {

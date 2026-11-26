@@ -21,7 +21,7 @@ export function LoadingScreen({ text }: { text: string }) {
   useEffect(() => { const t = window.setInterval(() => setSeconds(s => s + 1), 1000); return () => window.clearInterval(t) }, [])
   const tip = WHILE_YOU_WAIT[Math.floor(seconds / 5) % WHILE_YOU_WAIT.length]
   return <main className="status-screen loading" aria-busy="true">
-    <div className="grow-mark" aria-hidden="true"><img src="/brote.svg" alt="" width="96" height="96" /></div>
+    <div className="grow-mark" aria-hidden="true"><img src="brote.svg" alt="" width="96" height="96" /></div>
     <p role="status">{text}</p>
     {seconds >= 6 && <>
       <p className="status-slow">Está tardando más de lo normal. Lo de este teléfono sigue a salvo.</p>
@@ -32,7 +32,7 @@ export function LoadingScreen({ text }: { text: string }) {
 }
 
 type Tone = 'error' | 'offline' | 'lost'
-const ART: Record<Tone, string> = { error: '/img/error.webp', offline: '/img/sin-senal.webp', lost: '/img/perdido.webp' }
+const ART: Record<Tone, string> = { error: 'img/error.webp', offline: 'img/sin-senal.webp', lost: 'img/perdido.webp' }
 
 /** Pantalla completa para cuando no se puede abrir la app. */
 export function ProblemScreen({ tone, title, text, children }: { tone: Tone; title: string; text: string; children?: ReactNode }) {

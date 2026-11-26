@@ -42,7 +42,7 @@ const LEVELS_PER_RANK = 3
 const RANK_FILES = ['semilla', 'brote', 'raices', 'tallo', 'cana', 'joven', 'firme', 'bosquecito', 'bosque', 'antiguo']
 export type RankInfo = { index: number; name: string; image: string; next: { name: string; image: string; level: number } | null }
 export function rankImage(index: number): string {
-  return `/img/rango-${String(index + 1).padStart(2, '0')}-${RANK_FILES[index]}.webp`
+  return `img/rango-${String(index + 1).padStart(2, '0')}-${RANK_FILES[index]}.webp`
 }
 export function rankOf(level: number): RankInfo {
   const index = Math.min(RANKS.length - 1, Math.floor((Math.max(1, level) - 1) / LEVELS_PER_RANK))

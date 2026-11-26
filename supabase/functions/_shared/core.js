@@ -382,13 +382,21 @@ function cleanActivityRow(value) {
 		"other"
 	].find((k) => k === value.kind);
 	if (!id || !kind || !isDay(value.day)) return null;
+	const sport = [
+		"caminar",
+		"correr",
+		"bici"
+	].find((k) => k === value.sport);
+	const km = num(value.km, 0, 500);
 	return compact({
 		id,
 		day: value.day,
 		kind,
 		minutes: int(value.minutes, 1, 1440),
 		intensity: int(value.intensity, 1, 3),
-		note: cleanText(value.note, 300) || void 0
+		note: cleanText(value.note, 300) || void 0,
+		sport,
+		km: km !== void 0 ? Math.round(km * 100) / 100 : void 0
 	});
 }
 function cleanCheckinRow(value) {
@@ -613,7 +621,8 @@ function cleanHabitDefs(value) {
 			label,
 			mark: cleanText(item.mark, 2) || label.charAt(0).toUpperCase(),
 			archived: item.archived === true ? true : void 0,
-			auto
+			auto,
+			when: item.when === "manana" ? "manana" : void 0
 		})];
 	});
 	return rows.length || value.length === 0 ? rows : DEFAULT_HABITS;
@@ -631,6 +640,68 @@ function cleanReminders(value) {
 		wake: clock(v.wake, d.wake) || d.wake,
 		photos: v.photos !== false
 	};
+}
+function cleanRoutineItem(value, i) {
+	if (!isRecord(value)) return null;
+	const name = cleanText(value.name, 80);
+	if (!name) return null;
+	const kind = [
+		"reps",
+		"seconds",
+		"free"
+	].find((k) => k === value.kind) ?? "reps";
+	const when = value.when === "before" || value.when === "after" ? value.when : void 0;
+	return compact({
+		id: cleanText(value.id, 40) || `i${i}`,
+		name,
+		kind,
+		target: int(value.target, 0, 3600) ?? 0,
+		rounds: int(value.rounds, 1, 10),
+		when,
+		quiet: isDay(value.quiet) ? value.quiet : void 0,
+		sides: value.sides === true ? true : void 0
+	});
+}
+function cleanRoutine(value) {
+	if (!isRecord(value) || !Array.isArray(value.items)) return null;
+	const items = value.items.slice(0, 40).flatMap((item, i) => {
+		const row = cleanRoutineItem(item, i);
+		return row ? [row] : [];
+	});
+	return {
+		title: cleanText(value.title, 80) || "Rutina",
+		rounds: int(value.rounds, 1, 10) ?? 3,
+		items
+	};
+}
+function cleanTrain(value) {
+	if (!isRecord(value) || !Array.isArray(value.week)) return void 0;
+	return {
+		week: Array.from({ length: 7 }, (_, i) => cleanRoutine(value.week[i])),
+		deadline: clock(value.deadline, "19:00") || "19:00",
+		lock: value.lock !== false,
+		restSeconds: int(value.restSeconds, 0, 600) ?? 60
+	};
+}
+function cleanAmigos(value) {
+	if (!Array.isArray(value)) return void 0;
+	const ids = [...new Set(value.filter((x) => typeof x === "string" && /^[A-Za-z0-9]{6,128}$/.test(x)))].slice(0, 200);
+	return ids.length ? ids : void 0;
+}
+function cleanCandado(value) {
+	return isRecord(value) && typeof value.llave === "string" && /^[A-Za-z0-9]{16,40}$/.test(value.llave) ? { llave: value.llave } : void 0;
+}
+function cleanAvisos(value) {
+	return isRecord(value) && typeof value.hora === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value.hora) ? { hora: value.hora } : void 0;
+}
+function cleanTablas(value) {
+	if (!isRecord(value)) return void 0;
+	const apodo = cleanText(value.apodo, 24);
+	return apodo ? {
+		apodo,
+		avatar: int(value.avatar, 0, 9) ?? 0,
+		...typeof value.privada === "boolean" ? { privada: value.privada } : {}
+	} : void 0;
 }
 function cleanSettings(value) {
 	const v = isRecord(value) ? value : {};
@@ -664,7 +735,19 @@ function cleanSettings(value) {
 		equipment: texts(v.equipment, 20, 20) ?? DEFAULT_SETTINGS.equipment,
 		reminders: cleanReminders(v.reminders),
 		nutrition: cleanNutrition(v.nutrition),
-		habitSuggest: cleanHabitSuggest(v.habitSuggest)
+		habitSuggest: cleanHabitSuggest(v.habitSuggest),
+		train: cleanTrain(v.train),
+		morningSetup: v.morningSetup === true ? true : void 0,
+		walkDaily: v.walkDaily === true ? true : void 0,
+		cardioSetup: v.cardioSetup === true ? true : void 0,
+		rutina2611: v.rutina2611 === true ? true : void 0,
+		rondas2611: v.rondas2611 === true ? true : void 0,
+		tablas: cleanTablas(v.tablas),
+		amigos: cleanAmigos(v.amigos),
+		aprobados: cleanAmigos(v.aprobados),
+		candado: cleanCandado(v.candado),
+		widget: cleanCandado(v.widget),
+		avisos: cleanAvisos(v.avisos)
 	});
 }
 function dateKey(date = /* @__PURE__ */ new Date()) {
@@ -951,101 +1034,8 @@ function proteinMealsOn(data, day) {
 }
 //#endregion
 //#region src/lib/exercises.ts
-var MUSCLES = [
-	{
-		id: "pecho",
-		label: "Pecho",
-		group: "torso",
-		recoveryHours: 48,
-		weekly: [4, 10]
-	},
-	{
-		id: "espalda",
-		label: "Espalda",
-		group: "torso",
-		recoveryHours: 48,
-		weekly: [6, 14]
-	},
-	{
-		id: "hombros",
-		label: "Hombros",
-		group: "torso",
-		recoveryHours: 48,
-		weekly: [4, 10]
-	},
-	{
-		id: "triceps",
-		label: "Tríceps",
-		group: "torso",
-		recoveryHours: 48,
-		weekly: [3, 8]
-	},
-	{
-		id: "biceps",
-		label: "Bíceps",
-		group: "torso",
-		recoveryHours: 48,
-		weekly: [3, 8]
-	},
-	{
-		id: "cuello",
-		label: "Cuello",
-		group: "extra",
-		recoveryHours: 48,
-		weekly: [4, 8]
-	},
-	{
-		id: "antebrazo",
-		label: "Antebrazo",
-		group: "extra",
-		recoveryHours: 36,
-		weekly: [4, 8]
-	},
-	{
-		id: "core",
-		label: "Abdomen y core",
-		group: "extra",
-		recoveryHours: 24,
-		weekly: [4, 10]
-	},
-	{
-		id: "cuadriceps",
-		label: "Cuádriceps",
-		group: "pierna",
-		recoveryHours: 48,
-		weekly: [4, 10]
-	},
-	{
-		id: "gluteos",
-		label: "Glúteos",
-		group: "pierna",
-		recoveryHours: 48,
-		weekly: [4, 10]
-	},
-	{
-		id: "isquios",
-		label: "Isquios",
-		group: "pierna",
-		recoveryHours: 48,
-		weekly: [3, 8]
-	},
-	{
-		id: "pantorrillas",
-		label: "Pantorrillas",
-		group: "pierna",
-		recoveryHours: 24,
-		weekly: [4, 10]
-	},
-	{
-		id: "aductores",
-		label: "Aductores (ingle)",
-		group: "extra",
-		recoveryHours: 48,
-		weekly: [1, 4]
-	}
-];
 var J004 = "J004";
-var EXERCISES = [
+new Map([
 	{
 		id: "pushup-wall",
 		name: "Lagartija en pared",
@@ -1834,389 +1824,11 @@ var EXERCISES = [
 		],
 		mistakes: []
 	}
-];
-/** Las dos sesiones del método de Juanma (torso y pierna), adaptadas a casa. */
-var TEMPLATES = [{
-	id: "torso",
-	name: "Torso",
-	slots: [
-		"empuje",
-		"jalon",
-		"hombro",
-		"jalon_ancho",
-		"biceps",
-		"aduccion",
-		"cuello_flex",
-		"cuello_ext"
-	]
-}, {
-	id: "pierna",
-	name: "Pierna y core",
-	slots: [
-		"pierna",
-		"bisagra",
-		"pantorrilla",
-		"core",
-		"antebrazo_flex",
-		"agarre"
-	]
-}];
-/** Blindaje de futbolista: dos ejercicios con ensayos que bajan lesiones de ingle e isquio. Va en días de fútbol. */
-var SHIELD_SLOTS = ["aductor", "nordico"];
-var BY_ID = new Map(EXERCISES.map((e) => [e.id, e]));
-function exercise(id) {
-	return BY_ID.get(id);
-}
-function ladder(slot) {
-	return EXERCISES.filter((e) => e.slot === slot).sort((a, b) => a.level - b.level);
-}
-function nextInLadder(id) {
-	const e = exercise(id);
-	if (!e) return void 0;
-	return ladder(e.slot).find((x) => x.level > e.level && x.mode === e.mode);
-}
-//#endregion
-//#region src/lib/coach.ts
-/**
-* El coach de entrenamiento. Funciones puras: reciben tus datos y la hora, devuelven qué
-* toca. Nada aquí adivina: cada recomendación sale de lo que registraste y de una regla
-* escrita (casi todas del método de Juanma, ver juanma.ts).
-*/
-var HOUR = 36e5;
-var DAY = 24 * HOUR;
+].map((e) => [e.id, e]));
 function shift(day, n) {
 	const d = /* @__PURE__ */ new Date(`${day}T12:00:00`);
 	d.setDate(d.getDate() + n);
 	return dateKey(d);
-}
-function weekday(day) {
-	return (/* @__PURE__ */ new Date(`${day}T12:00:00`)).getDay();
-}
-function mondayOf(day) {
-	return shift(day, -((weekday(day) + 6) % 7));
-}
-/** Una serie cuenta como dura si quedaron 3 o menos repeticiones en reserva (o no se anotó). */
-function isHard(set) {
-	return set.rir === void 0 || set.rir <= 3;
-}
-function setValue(set) {
-	return set.reps ?? set.seconds ?? 0;
-}
-function footballEnd(day) {
-	return (/* @__PURE__ */ new Date(`${day}T20:00:00`)).getTime();
-}
-function muscleStates(data, now = Date.now()) {
-	const today = dateKey(new Date(now));
-	const weekStart = shift(today, -6);
-	const since = shift(today, -10);
-	const recent = data.sets.filter((s) => s.day >= since && isHard(s));
-	const sore = new Set(data.checkins.find((c) => c.day === today)?.soreness ?? []);
-	const football = data.activities.filter((a) => a.kind === "football" && a.day >= shift(today, -3) && a.day <= today);
-	return MUSCLES.map((m) => {
-		let weekSets = 0;
-		let lastAt = null;
-		const perDay = /* @__PURE__ */ new Map();
-		for (const set of recent) {
-			const weight = exercise(set.exercise)?.muscles[m.id] ?? 0;
-			if (!weight) continue;
-			if (set.day >= weekStart) weekSets += weight;
-			if (weight === 1) {
-				const entry = perDay.get(set.day) ?? {
-					sets: 0,
-					failures: 0,
-					last: 0
-				};
-				entry.sets++;
-				if (set.rir === 0) entry.failures++;
-				entry.last = Math.max(entry.last, set.at);
-				perDay.set(set.day, entry);
-				lastAt = Math.max(lastAt ?? 0, set.at);
-			}
-		}
-		let readyAt = null;
-		let reason = "Sin entrenar en los últimos días.";
-		for (const [, entry] of perDay) {
-			if (entry.sets < 2) continue;
-			const extra = entry.sets >= 6 || entry.failures >= 3 ? 24 : 0;
-			const at = entry.last + (m.recoveryHours + extra) * HOUR;
-			if (!readyAt || at > readyAt) {
-				readyAt = at;
-				reason = extra ? "Sesión fuerte: necesita un día más." : "Entrenado hace poco.";
-			}
-		}
-		if (m.group === "pierna") for (const game of football) {
-			const at = footballEnd(game.day) + 36 * HOUR;
-			if (!readyAt || at > readyAt) {
-				readyAt = at;
-				reason = "El fútbol ya cargó tus piernas.";
-			}
-		}
-		if (sore.has(m.id)) {
-			const at = (/* @__PURE__ */ new Date(`${shift(today, 1)}T08:00:00`)).getTime();
-			if (!readyAt || at > readyAt) {
-				readyAt = at;
-				reason = "Reportaste agujetas hoy.";
-			}
-		}
-		const recovering = readyAt !== null && readyAt > now;
-		const idle = !recovering && (lastAt === null || now - lastAt > 5 * DAY);
-		return {
-			id: m.id,
-			label: m.label,
-			group: m.group,
-			target: m.weekly,
-			weekSets: Math.round(weekSets * 10) / 10,
-			lastAt,
-			readyAt: recovering ? readyAt : null,
-			status: recovering ? "recuperando" : idle ? "pendiente" : "listo",
-			reason: recovering ? reason : idle ? lastAt ? "Más de 5 días sin estímulo: es prioridad." : "Aún sin registros." : "Recuperado."
-		};
-	});
-}
-function readyLabel(at, now = Date.now()) {
-	const d = new Date(at);
-	const today = dateKey(new Date(now));
-	const day = dateKey(d);
-	const part = d.getHours() < 12 ? "en la mañana" : d.getHours() < 19 ? "en la tarde" : "en la noche";
-	if (day === today) return `hoy ${part}`;
-	if (day === shift(today, 1)) return `mañana ${part}`;
-	return `el ${new Intl.DateTimeFormat("es-MX", { weekday: "long" }).format(d)} ${part}`;
-}
-/** Las sesiones de un ejercicio, de la más nueva a la más vieja. */
-function sessionsOf(data, exerciseId) {
-	const byDay = /* @__PURE__ */ new Map();
-	data.sets.filter((s) => s.exercise === exerciseId).forEach((s) => byDay.set(s.day, [...byDay.get(s.day) ?? [], s]));
-	return [...byDay.entries()].map(([day, sets]) => ({
-		day,
-		sets: sets.sort((a, b) => a.at - b.at)
-	})).sort((a, b) => b.day.localeCompare(a.day));
-}
-var DEFAULT_START = {
-	empuje: "pushup",
-	hombro: "pike",
-	jalon: "row-backpack",
-	jalon_ancho: "row-backpack-1arm",
-	aduccion: "floor-towel-pull",
-	biceps: "curl-backpack",
-	cuello_flex: "neck-curl",
-	cuello_ext: "neck-extension",
-	pierna: "squat",
-	bisagra: "glute-bridge",
-	pantorrilla: "calf-raise",
-	core: "plank",
-	antebrazo_flex: "wrist-curl",
-	antebrazo_ext: "wrist-extension",
-	agarre: "backpack-hold",
-	aductor: "copenhagen",
-	nordico: "nordic"
-};
-function available(ex, equipment) {
-	return ex.equipment.every((e) => e === "nada" || equipment.includes(e));
-}
-/** El escalón en el que estás en un patrón: el último que registraste, o el de arranque. */
-function currentForSlot(data, slot) {
-	const options = ladder(slot);
-	const ids = new Set(options.map((e) => e.id));
-	const last = [...data.sets].filter((s) => ids.has(s.exercise)).sort((a, b) => b.at - a.at)[0];
-	if (last) return exercise(last.exercise) ?? options[0];
-	const level = data.settings.trainingLevel;
-	if (level && LEVELED.includes(slot)) {
-		const usable = options.filter((e) => available(e, data.settings.equipment));
-		if (usable.length) return usable[Math.round((level - 1) / 3 * (usable.length - 1))];
-	}
-	return exercise(DEFAULT_START[slot]) ?? options[0];
-}
-/** Patrones grandes donde el nivel de arranque cambia el ejercicio. Cuello, agarre y antebrazo arrancan siempre en lo más seguro. */
-var LEVELED = [
-	"empuje",
-	"hombro",
-	"pierna",
-	"bisagra",
-	"core",
-	"jalon"
-];
-/** Doble progresión: si todas tus series tocaron el tope del rango, sube; si no, una repetición más. */
-function progression(data, ex, plannedSets = 2, today = dateKey()) {
-	const sessions = sessionsOf(data, ex.id).filter((s) => s.day < today);
-	const [lo, hi] = ex.range;
-	const unit = ex.mode === "seconds" ? "s" : "";
-	if (!sessions.length) return {
-		verdict: "nuevo",
-		last: [],
-		target: Array(plannedSets).fill(lo),
-		message: `Primera vez: busca ${lo} a ${hi}${unit} con buena técnica y anota cuántas salieron.`
-	};
-	const last = sessions[0].sets.map(setValue);
-	const prevTotal = sessions[1]?.sets.map(setValue).reduce((a, b) => a + b, 0);
-	const lastTotal = last.reduce((a, b) => a + b, 0);
-	const working = last.slice(0, plannedSets);
-	const allTop = working.length >= Math.min(plannedSets, 2) && working.every((v) => v >= hi);
-	const loaded = sessions[0].sets.some((s) => (s.loadKg ?? 0) > 0);
-	if (allTop) {
-		const next = nextInLadder(ex.id);
-		return {
-			verdict: "subir",
-			last,
-			target: Array(plannedSets).fill(lo),
-			next,
-			message: next ? `Llegaste al tope (${hi}${unit}) en todas tus series. Sube a ${next.name} y vuelve a ${lo}.` : loaded ? `Tope alcanzado con peso. Súbele 1 o 2 kg a la mochila y vuelve a ${lo}.` : `Tope alcanzado. Métele peso con la mochila o libros y vuelve a ${lo}.`
-		};
-	}
-	if (prevTotal && lastTotal < prevTotal * .8) return {
-		verdict: "fatiga",
-		last,
-		target: last.slice(0, plannedSets),
-		message: "La última vez saliste 20% abajo de la anterior. Repite esa meta; revisa sueño y comida."
-	};
-	const target = Array.from({ length: plannedSets }, (_, i) => Math.min(hi, (working[i] ?? working[working.length - 1] ?? lo) + (ex.mode === "seconds" ? 5 : 1)));
-	return {
-		verdict: "progresando",
-		last,
-		target,
-		message: `Última vez ${last.join(" · ")}${unit}. Hoy busca ${target.join(" · ")}${unit}.`
-	};
-}
-function dayLoad(data, day) {
-	return data.sets.filter((s) => s.day === day && isHard(s)).length >= 4 || data.activities.some((a) => a.day === day && a.kind === "football");
-}
-function sessionKind(sets) {
-	const counts = {
-		torso: 0,
-		pierna: 0
-	};
-	sets.forEach((s) => {
-		const slot = exercise(s.exercise)?.slot;
-		if (!slot) return;
-		if (TEMPLATES[0].slots.includes(slot)) counts.torso++;
-		if (TEMPLATES[1].slots.includes(slot)) counts.pierna++;
-	});
-	if (!counts.torso && !counts.pierna) return null;
-	return counts.torso >= counts.pierna ? "torso" : "pierna";
-}
-function weekSessions(data, today = dateKey()) {
-	const start = mondayOf(today);
-	const days = Array.from({ length: 7 }, (_, i) => shift(start, i));
-	let torso = 0, pierna = 0;
-	days.forEach((day) => {
-		const kind = sessionKind(data.sets.filter((s) => s.day === day));
-		if (kind === "torso") torso++;
-		if (kind === "pierna") pierna++;
-	});
-	const football = new Set(data.activities.filter((a) => a.kind === "football" && days.includes(a.day)).map((a) => a.day)).size;
-	return {
-		torso,
-		pierna,
-		football,
-		days
-	};
-}
-function itemsFor(data, template, today) {
-	const slots = template === "blindaje" ? SHIELD_SLOTS : TEMPLATES.find((t) => t.id === template).slots;
-	const sets = template === "blindaje" ? 1 : 2;
-	return slots.map((slot) => {
-		let ex = currentForSlot(data, slot);
-		if (!available(ex, data.settings.equipment)) ex = ladder(slot).filter((e) => available(e, data.settings.equipment)).pop() ?? ex;
-		const n = template === "blindaje" ? sets : ex.sets ?? sets;
-		return {
-			slot,
-			exercise: ex,
-			sets: n,
-			progression: progression(data, ex, n),
-			doneToday: data.sets.filter((s) => s.day === today && s.exercise === ex.id).length
-		};
-	});
-}
-function todayPlan(data, now = Date.now()) {
-	const today = dateKey(new Date(now));
-	const checkin = data.checkins.find((c) => c.day === today) ?? (data.checkins.find((c) => c.day === shift(today, -1))?.pain === "pecho" ? data.checkins.find((c) => c.day === shift(today, -1)) : void 0);
-	if (checkin?.pain === "pecho") return {
-		kind: "dolor",
-		urgent: true,
-		title: "Hoy no entrenes.",
-		items: [],
-		summary: "Reportaste dolor en el pecho. Avísale hoy a tu mamá, papá o un adulto. Si te falta el aire, te mareas o el dolor es fuerte, es urgencia: pide ayuda ya.",
-		reasons: [{ text: "El dolor de pecho no es agujeta. Un adulto y un médico deciden cuándo vuelves." }]
-	};
-	const states = muscleStates(data, now);
-	const ready = (group) => states.filter((s) => s.group === group).every((s) => s.status !== "recuperando");
-	const week = weekSessions(data, today);
-	const footballToday = data.settings.footballDays.includes(weekday(today)) || data.activities.some((a) => a.day === today && a.kind === "football");
-	const legTarget = data.settings.footballDays.length >= 3 ? 1 : 2;
-	const reasons = [];
-	const trainedToday = sessionKind(data.sets.filter((s) => s.day === today));
-	if (checkin?.pain) reasons.push({ text: `Reportaste dolor en ${checkin.pain}: salta cualquier ejercicio que lo provoque.` });
-	if (trainedToday) return {
-		kind: trainedToday,
-		title: trainedToday === "torso" ? "Hoy ya entrenaste torso." : "Hoy ya entrenaste pierna.",
-		summary: "Termina tus series pendientes o descansa. La recuperación también construye.",
-		reasons,
-		items: itemsFor(data, trainedToday, today)
-	};
-	if (footballToday) return {
-		kind: "futbol",
-		title: "Hoy toca fútbol.",
-		items: itemsFor(data, "blindaje", today),
-		summary: "El partido es tu sesión de pierna. En tu calentamiento, 5 minutos de blindaje: una serie de Copenhagen por lado y una de nórdico.",
-		reasons: [
-			...reasons,
-			{ text: `Tus piernas ya trabajan en el fútbol. Tu plan incluye ${legTarget === 1 ? "una sesión" : "dos sesiones"} de pierna a la semana.` },
-			{
-				text: "El Copenhagen bajó 41% los problemas de ingle en futbolistas y el nórdico baja a la mitad las lesiones de isquio.",
-				source: "HAROY"
-			}
-		]
-	};
-	if ([
-		1,
-		2,
-		3,
-		4,
-		5
-	].every((n) => dayLoad(data, shift(today, -n)))) return {
-		kind: "descanso",
-		title: "Hoy descansa.",
-		items: [],
-		summary: `Llevas cinco días seguidos con carga. Camina, estírate y cuida tu meta de ${data.settings.sleepTarget} horas de sueño: el músculo crece cuando descansas.`,
-		reasons: [...reasons, {
-			text: "Juanma se recupera bien porque hace pocas series y duerme 9 horas.",
-			source: "J009"
-		}]
-	};
-	const torsoBehind = 3 - week.torso;
-	const legBehind = legTarget - week.pierna;
-	const nextFootball = [1, 2].some((n) => data.settings.footballDays.includes(weekday(shift(today, n))));
-	const canLegs = ready("pierna") && legBehind > 0 && !data.settings.footballDays.includes(weekday(shift(today, 1)));
-	const canTorso = ready("torso") && torsoBehind > 0;
-	let kind = null;
-	if (canLegs && (!canTorso || legBehind >= torsoBehind)) kind = "pierna";
-	else if (canTorso) kind = "torso";
-	else if (ready("torso") && torsoBehind <= 0 && legBehind <= 0) kind = null;
-	if (!kind) {
-		const pending = states.filter((s) => s.status === "recuperando");
-		return {
-			kind: "descanso",
-			title: "Hoy descanso activo.",
-			items: [],
-			summary: torsoBehind <= 0 && legBehind <= 0 ? "Ya cumpliste las sesiones de la semana. Camina y estírate." : `Tus músculos siguen recuperando${pending[0]?.readyAt ? `: ${pending[0].label.toLowerCase()} listo ${readyLabel(pending[0].readyAt, now)}` : ""}.`,
-			reasons: [...reasons, { text: "Entrenar un músculo que no se ha recuperado no lo hace crecer más rápido." }]
-		};
-	}
-	reasons.push({
-		text: kind === "torso" ? `Llevas ${week.torso} de 3 sesiones de torso esta semana.` : `Llevas ${week.pierna} de ${legTarget} de pierna esta semana.`,
-		source: "J009"
-	});
-	if (kind === "pierna" && nextFootball) reasons.push({ text: "Hay fútbol pronto: haz las series limpias, sin llegar al fallo en pierna." });
-	if (kind === "torso") reasons.push({
-		text: "El cuello va con torso: dos series de 10 a 20 en flexión y extensión.",
-		source: "J004"
-	});
-	return {
-		kind,
-		title: kind === "torso" ? "Hoy toca torso." : "Hoy toca pierna y core.",
-		items: itemsFor(data, kind, today),
-		reasons,
-		summary: "Dos series por ejercicio. La primera a 1 o 2 del fallo; la última hasta que la técnica se rompa."
-	};
 }
 function avg(values) {
 	return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
@@ -2268,12 +1880,203 @@ function massPlan(data, today = dateKey()) {
 	};
 }
 //#endregion
+//#region src/lib/rutina.ts
+var r = (n, t) => [
+	n,
+	"reps",
+	t
+];
+var s = (n, t) => [
+	n,
+	"seconds",
+	t
+];
+var pistol = [
+	"Pistol squat asistida",
+	"reps",
+	5,
+	{ sides: true }
+];
+var calfOne = [
+	"Elevaciones de talón a una pierna",
+	"reps",
+	15,
+	{ sides: true }
+];
+var bridgeOne = [
+	"Puente de glúteo a una pierna",
+	"reps",
+	12,
+	{ sides: true }
+];
+var sidePlank = [
+	"Plancha lateral",
+	"seconds",
+	30,
+	{ sides: true }
+];
+function routine(day, title, seeds) {
+	return {
+		title,
+		rounds: 3,
+		items: seeds.map(([name, kind, target, extra], i) => ({
+			id: `d${day}-${i}`,
+			name,
+			kind,
+			target,
+			...extra ?? {}
+		}))
+	};
+}
+var PUSH_A = [
+	s("Handstand contra pared", 30),
+	r("Handstand toque de hombros", 0),
+	s("Planche lean", 10),
+	r("Pike push ups", 5),
+	r("Fondos", 10),
+	r("Lagartijas", 15),
+	r("Lagartijas up", 15),
+	r("Lagartijas lentas", 10),
+	r("Lagartijas diamante", 10)
+];
+var LEGS_A = [
+	r("Sentadillas", 15),
+	r("Desplantes", 15),
+	pistol,
+	s("Wall sit", 60),
+	r("Subidas de talones en wall sit", 15),
+	r("Elevaciones de talones", 15),
+	calfOne,
+	bridgeOne,
+	s("Hollow hold", 45),
+	r("Abs con piernas arriba", 25),
+	r("Abs crackers", 15),
+	r("Russian twist", 55),
+	s("Plancha", 60),
+	s("Aguante isométrico de abs", 30)
+];
+var PULL = [
+	[
+		"Muscle up",
+		"reps",
+		2,
+		{ when: "before" }
+	],
+	[
+		"Dominadas",
+		"reps",
+		7,
+		{ rounds: 5 }
+	],
+	r("Curl de toalla superior", 15),
+	r("Curl de toalla inferior", 20),
+	r("Remo con toalla en barra", 10),
+	[
+		"Chin ups",
+		"reps",
+		7,
+		{ rounds: 5 }
+	],
+	s("Colgarse de la barra", 30)
+];
+var PUSH_B = [
+	s("Handstand contra pared", 30),
+	r("Handstand toque de hombros", 0),
+	r("Handstand push up con pared", 5),
+	s("Tuck planche", 15),
+	s("Planche lean", 10),
+	s("Parado de cabeza", 20),
+	r("Pike push ups", 5),
+	r("Fondos", 10),
+	r("Lagartijas down", 15),
+	r("Lagartijas con toque de hombro", 10),
+	r("Lagartijas lentas", 10),
+	r("Lagartijas diamante", 10)
+];
+var LEGS_B = [
+	r("Sentadillas", 15),
+	r("Desplantes", 15),
+	pistol,
+	s("Wall sit", 60),
+	r("Subidas de talones en wall sit", 15),
+	r("Elevaciones de talones", 15),
+	calfOne,
+	bridgeOne,
+	s("L sit", 10),
+	r("Crunches", 25),
+	sidePlank,
+	s("Hollow hold", 45),
+	r("Abs con piernas arriba", 25),
+	s("Aguante isométrico de abs", 30),
+	r("Salto de cuerda", 20)
+];
+var CORE = [
+	s("Hollow hold", 45),
+	r("Abs con piernas arriba", 25),
+	r("Abs crackers", 15),
+	r("Russian twist", 55),
+	r("Crunches", 25),
+	sidePlank,
+	s("Plancha", 60),
+	s("Aguante isométrico de abs", 30),
+	r("Burpees suaves sin lagartija", 20),
+	r("Salto de cuerda", 20),
+	[
+		"Correr 5 km o bici",
+		"free",
+		0,
+		{ when: "after" }
+	]
+];
+function seedWeek() {
+	return {
+		deadline: "19:00",
+		lock: true,
+		restSeconds: 60,
+		week: [
+			routine(0, "Hombros, pecho y tríceps", PUSH_A),
+			routine(1, "Piernas y abdomen", LEGS_A),
+			routine(2, "Espalda, bíceps y antebrazo", PULL),
+			routine(3, "Hombros, pecho y tríceps", PUSH_B),
+			routine(4, "Piernas y abdomen", LEGS_B),
+			routine(5, "Espalda, bíceps y antebrazo", PULL),
+			routine(6, "Abdomen y cardio", CORE)
+		]
+	};
+}
+function weekIndex(day) {
+	return ((/* @__PURE__ */ new Date(`${day}T12:00:00`)).getDay() + 6) % 7;
+}
+function planOf(data) {
+	return data.settings.train ?? seedWeek();
+}
+function routineFor(data, day) {
+	const rt = planOf(data).week[weekIndex(day)];
+	return rt && rt.items.length ? rt : null;
+}
+function trainedOn(data, day) {
+	return data.sets.some((x) => x.day === day);
+}
+function minutes(hhmm) {
+	const [h, m] = hhmm.split(":").map(Number);
+	return h * 60 + m;
+}
+function lockActive(data, day, clock) {
+	const plan = planOf(data);
+	if (!plan.lock || !routineFor(data, day) || trainedOn(data, day)) return false;
+	return minutes(clock) >= minutes(plan.deadline);
+}
+function clockOf(now) {
+	const d = new Date(now);
+	return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+//#endregion
 //#region src/lib/text.ts
 /** "1 serie", "2 series". Todo conteo visible pasa por aquí: un "1 hábitos" se nota y resta confianza. */
 function plural(n, one, many) {
 	return `${n} ${n === 1 ? one : many}`;
 }
-function minutesOf(hhmm) {
+function minutesOf$1(hhmm) {
 	const [h, m] = hhmm.split(":").map(Number);
 	return h * 60 + m;
 }
@@ -2283,30 +2086,30 @@ function hhmm(minutes) {
 }
 /** Hora de acostarse: las horas de sueño meta antes de levantarse (regla de Juanma: 9 h). */
 function bedtime(r, sleepTarget) {
-	return hhmm(minutesOf(r.wake) - sleepTarget * 60);
+	return hhmm(minutesOf$1(r.wake) - sleepTarget * 60);
 }
 /** El horario del día: a qué minuto suena cada aviso. Los vacíos están apagados. */
 function schedule(r, sleepTarget) {
 	const out = [];
 	if (r.checkin) out.push({
 		kind: "checkin",
-		at: minutesOf(r.checkin)
+		at: minutesOf$1(r.checkin)
 	});
 	if (r.photos) out.push({
 		kind: "photos",
-		at: minutesOf(r.wake)
+		at: minutesOf$1(r.wake)
 	});
 	if (r.train) out.push({
 		kind: "train",
-		at: minutesOf(r.train)
+		at: minutesOf$1(r.train)
 	});
 	if (r.read) out.push({
 		kind: "read",
-		at: minutesOf(r.read)
+		at: minutesOf$1(r.read)
 	});
 	out.push({
 		kind: "sleep",
-		at: minutesOf(bedtime(r, sleepTarget)) - 30
+		at: minutesOf$1(bedtime(r, sleepTarget)) - 30
 	});
 	return out.map((x) => ({
 		...x,
@@ -2354,16 +2157,23 @@ function reminderNote(kind, data, now) {
 			body: s.current ? "Cinco minutos cuentan. Sigue a tu ritmo." : "Cinco minutos y arrancas racha nueva."
 		};
 	}
-	if (kind === "train") {
-		if (data.sets.some((x) => x.day === today)) return null;
-		const plan = todayPlan(data, now);
-		if (plan.kind !== "torso" && plan.kind !== "pierna") return null;
+	if (kind === "train" || kind === "trainLate") {
+		const rt = routineFor(data, today);
+		if (!rt || trainedOn(data, today)) return null;
+		const plan = planOf(data);
+		if (kind === "trainLate") return plan.lock ? {
+			kind,
+			key,
+			url: "/?ir=entrenar",
+			title: "Tus redes ya están bloqueadas",
+			body: "Pasó tu hora límite. Toca el piso y haz tu rutina para liberarlas."
+		} : null;
 		return {
 			kind,
 			key,
 			url: "/?ir=entrenar",
-			title: plan.title,
-			body: "Dos series por ejercicio. Al terminar, proteína y a dormir tus horas."
+			title: `Hoy toca ${rt.title}`,
+			body: plan.lock ? `Toca el piso antes de las ${plan.deadline} o tus redes se bloquean.` : "Toca la etiqueta del piso y arranca."
 		};
 	}
 	if (kind === "sleep") return {
@@ -2384,7 +2194,13 @@ function reminderNote(kind, data, now) {
 }
 /** Todo lo que toca mandar ahora, ya filtrado por lo que hiciste. */
 function dueNotes(data, now) {
-	return dueKinds(cleanReminders(data.settings.reminders), data.settings.sleepTarget, now).flatMap((kind) => {
+	const r = cleanReminders(data.settings.reminders);
+	const kinds = dueKinds(r, data.settings.sleepTarget, now);
+	if (r.on) {
+		const d = new Date(now), minute = d.getHours() * 60 + d.getMinutes(), at = minutesOf$1(planOf(data).deadline);
+		if (minute >= at && minute < at + 90) kinds.push("trainLate");
+	}
+	return kinds.flatMap((kind) => {
 		const note = reminderNote(kind, data, now);
 		return note ? [note] : [];
 	});
@@ -2524,7 +2340,8 @@ function parseNfc(search) {
 		"focus",
 		"checkin",
 		"weigh",
-		"night"
+		"night",
+		"cama"
 	].includes(tag) ? { tag } : null;
 }
 function gave(capacity, given) {
@@ -2545,6 +2362,9 @@ function verdict(capacity, given) {
 	};
 }
 //#endregion
+//#region src/lib/jardin.ts
+var WAKE_PREFIX = "Despertar:";
+//#endregion
 //#region src/lib/nfcActions.ts
 /**
 * Lo que hace una etiqueta NFC cuando NO hay sesión en el navegador.
@@ -2559,9 +2379,96 @@ function verdict(capacity, given) {
 * Función pura: recibe tus datos y devuelve los datos nuevos y el mensaje. La usa la función
 * bambu-nfc (empaquetada en core.js) y las pruebas.
 */
+var BED_HABIT = {
+	id: "cama",
+	label: "Tender la cama",
+	mark: "T"
+};
+function minutesOf(hhmm) {
+	const [h, m] = hhmm.split(":").map(Number);
+	return h * 60 + m;
+}
+function bedAction(data, day, clock) {
+	const habits = data.settings.habits;
+	const existing = habits.find((h) => !h.archived && (h.id === BED_HABIT.id || /cama/i.test(h.label)));
+	const habit = existing ?? BED_HABIT;
+	const settings = existing ? data.settings : {
+		...data.settings,
+		habits: [BED_HABIT, ...habits.filter((h) => h.id !== BED_HABIT.id)]
+	};
+	const marked = (data.habits[day] ?? []).includes(habit.id);
+	const woke = data.activities.some((a) => a.day === day && a.kind === "other" && a.note?.startsWith("Despertar:"));
+	if (marked && woke) return {
+		next: data,
+		title: "Tu cama ya estaba",
+		text: "Ya la habías tachado hoy."
+	};
+	const next = {
+		...data,
+		settings,
+		habits: marked ? data.habits : {
+			...data.habits,
+			[day]: [...data.habits[day] ?? [], habit.id]
+		},
+		activities: woke ? data.activities : [...data.activities, {
+			id: `wake:${day}`,
+			day,
+			kind: "other",
+			note: `${WAKE_PREFIX} ${clock}`
+		}]
+	};
+	const goal = data.settings.reminders.wake;
+	const diff = minutesOf(clock) - minutesOf(goal);
+	const late = diff >= 60 ? `${Math.floor(diff / 60)} h${diff % 60 ? ` ${diff % 60} min` : ""}` : `${diff} min`;
+	const text = diff <= 0 ? `A tiempo. Tu meta era ${goal}.` : `${late} después de tu meta de ${goal}.`;
+	return {
+		next,
+		title: `Cama tendida a las ${clock}`,
+		text
+	};
+}
+function trainingAction(data, now, day) {
+	const w = data.activeWorkout && !data.activeWorkout.endedAt ? data.activeWorkout : null;
+	if (w && now - w.startedAt < SAME_TOUCH) return {
+		next: data,
+		title: "Tu rutina ya empezó",
+		text: "Vuelve a tocar el piso al terminar."
+	};
+	if (w) {
+		const sets = data.sets.filter((s) => s.day === day).length;
+		const min = Math.round((now - w.startedAt) / 6e4);
+		if (!sets) return {
+			next: {
+				...data,
+				activeWorkout: null
+			},
+			title: "Cerrada sin series",
+			text: "No registraste ninguna serie, así que hoy no cuenta como entreno."
+		};
+		return {
+			next: {
+				...data,
+				activeWorkout: null
+			},
+			title: `Rutina cerrada: ${sets} ${sets === 1 ? "serie" : "series"}`,
+			text: `${min} min. Buen trabajo.`
+		};
+	}
+	const rt = routineFor(data, day);
+	return {
+		next: {
+			...data,
+			activeWorkout: { startedAt: now }
+		},
+		open: true,
+		title: rt ? `Hoy: ${rt.title}` : "Rutina iniciada",
+		text: "Abre Bambú desde el ícono y registra cada serie."
+	};
+}
 /** iPhone a veces lee la etiqueta dos veces seguidas: lo de menos de 8 s se toma como el mismo toque. */
 var SAME_TOUCH = 8e3;
-function nfcServerAction(data, action, now, day) {
+function nfcServerAction(data, action, now, day, clock = clockOf(now)) {
+	if (action.tag === "cama") return bedAction(data, day, clock);
 	if (action.tag === "reading") {
 		const s = data.activeReading;
 		if (s && s.endedAt) return {
@@ -2613,34 +2520,7 @@ function nfcServerAction(data, action, now, day) {
 			text: "El cronómetro ya corre. Toca otra vez la etiqueta al terminar."
 		};
 	}
-	if (action.tag === "training") {
-		const w = data.activeWorkout && !data.activeWorkout.endedAt ? data.activeWorkout : null;
-		if (w && now - w.startedAt < SAME_TOUCH) return {
-			next: data,
-			title: "Tu sesión ya empezó",
-			text: "Registra cada serie en Bambú. Toca otra vez la etiqueta al terminar."
-		};
-		if (w) {
-			const sets = data.sets.filter((s) => s.day === day).length;
-			return {
-				next: {
-					...data,
-					activeWorkout: null
-				},
-				title: `Sesión cerrada: ${sets} ${sets === 1 ? "serie" : "series"}`,
-				text: `${Math.round((now - w.startedAt) / 6e4)} min. Come proteína y duerme tus horas.`
-			};
-		}
-		return {
-			next: {
-				...data,
-				activeWorkout: { startedAt: now }
-			},
-			open: true,
-			title: "Sesión iniciada",
-			text: "Abre Bambú desde el ícono para ver el plan y registrar tus series."
-		};
-	}
+	if (action.tag === "training") return trainingAction(data, now, day);
 	if (action.tag === "night") {
 		const n = action.night;
 		if (!n) return {
@@ -2676,7 +2556,14 @@ function nfcServerAction(data, action, now, day) {
 		if (!outcome) return {
 			next: data,
 			title: "Pausa",
-			text: `Antes de ${app.name}, respira.`
+			text: `Antes de ${app.name}, respira.`,
+			locked: lockActive(data, day, clock)
+		};
+		if (outcome.kind === "pase" && lockActive(data, day, clock)) return {
+			next: data,
+			locked: true,
+			title: "Primero entrena",
+			text: `Ya pasó tu hora límite y no has tocado el piso. Haz tu rutina y ${app.name} se abre solo.`
 		};
 		const next = {
 			...data,

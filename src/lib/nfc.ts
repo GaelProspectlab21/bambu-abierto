@@ -6,13 +6,14 @@
  */
 import { parseOutcome, type PauseOutcome } from './pause'
 
-export type NfcTag = 'reading' | 'training' | 'focus' | 'habit' | 'checkin' | 'weigh' | 'night' | 'pause'
+export type NfcTag = 'reading' | 'training' | 'focus' | 'habit' | 'checkin' | 'weigh' | 'night' | 'pause' | 'cama'
 /** `night` solo viaja en la petición al servidor (nunca en el enlace): lo que marcaste en la pantalla rápida de la noche. */
 export type NfcAction = { tag: NfcTag; habit?: string; night?: { capacity: number; given: number; reflection?: string }; app?: string; outcome?: PauseOutcome }
 
 export const NFC_TAGS: { tag: Exclude<NfcTag, 'habit' | 'pause'>; title: string; where: string; does: string }[] = [
+  { tag: 'cama', title: 'Cama', where: 'Pegada en la cabecera de tu cama.', does: 'Al tenderla, un toque tacha Tender la cama y guarda a qué hora despertaste.' },
+  { tag: 'training', title: 'Piso de entreno', where: 'En el piso donde entrenas.', does: 'Primer toque abre tu rutina de hoy. Segundo toque la cierra. Solo cuenta si registraste series. Si no lo tocas antes de tu hora límite, tus redes se bloquean.' },
   { tag: 'reading', title: 'Lectura', where: 'Pegada en tu Biblia o en el buró donde lees.', does: 'Primer toque empieza el cronómetro. Segundo toque lo para y abre tu reflexión y los capítulos.' },
-  { tag: 'training', title: 'Entrenamiento', where: 'En la pared o el piso donde haces lagartijas, junto a las mini paralelas.', does: 'Primer toque abre la sesión de hoy con el plan del coach. Segundo toque la cierra con tu resumen.' },
   { tag: 'focus', title: 'Bloque de enfoque', where: 'En tu escritorio.', does: 'Sin bloque abierto: abre Tareas con tu siguiente tarea lista. Con bloque abierto: lo cierra.' },
   { tag: 'night', title: 'Noche', where: 'En tu buró, junto a la cama.', does: 'Abre tu reflexión de la noche. Sin sesión (Safari), la registras ahí mismo: con cuánto amaneciste, cuánto diste y una línea.' },
   { tag: 'checkin', title: 'Buenos días', where: 'En tu buró o junto a la cama.', does: 'Abre el registro de la mañana: horas de sueño, energía y agujetas.' },
@@ -33,7 +34,7 @@ export function parseNfc(search: string): NfcAction | null {
     const habit = (params.get('h') ?? '').slice(0, 40)
     return habit ? { tag: 'habit', habit } : null
   }
-  return tag && ['reading', 'training', 'focus', 'checkin', 'weigh', 'night'].includes(tag) ? { tag: tag as NfcTag } : null
+  return tag && ['reading', 'training', 'focus', 'checkin', 'weigh', 'night', 'cama'].includes(tag) ? { tag: tag as NfcTag } : null
 }
 
 /** El enlace que se graba en la etiqueta. Con `key`, funciona aunque Safari no tenga sesión. */
