@@ -1,6 +1,6 @@
 # Bambú
 
-> **Versión de Kiki** (rama `kiki`): en vivo en https://tuagentedeia.com/bambu/ con cámara que cuenta repeticiones, minutos de redes, duelos, Cindy, widget y avisos. Documentación en [docs/kiki/](docs/kiki/). La versión original de Gael está en la rama `main`.
+> **Versión de Kiki** (rama `kiki`): en vivo en https://tuagentedeia.com/bambu/ con cámara que cuenta repeticiones, minutos de redes, duelos, Cindy, widget y avisos. Todos los cambios desde esta versión original y cómo se hicieron: [docs/kiki/de-gael-a-kiki.md](docs/kiki/de-gael-a-kiki.md). Documentación en [docs/kiki/](docs/kiki/). La versión original de Gael está en la rama `main`.
 
 Aplicación personal para lectura, hábitos, fuerza en casa y bloques de enfoque. La interfaz guarda una copia local y, cuando se configura una cuenta privada, sincroniza datos con Supabase mediante HTTPS.
 

@@ -4,6 +4,7 @@ Bambú adaptado por Kiki a partir de la app de Gael. En vivo en **https://tuagen
 
 | Documento | Para qué |
 |---|---|
+| **[De la versión de Gael a la de Kiki](de-gael-a-kiki.md)** | Todos los cambios, cómo se hicieron y lo aprendido. |
 | [Funciones](funciones.md) | Todo lo que hace esta versión, pantalla por pantalla. |
 | [Arquitectura](arquitectura.md) | Qué archivo hace qué y cómo viajan los datos. |
 | [Nube](nube-y-reglas.md) | Colecciones de Firestore y quién lee o escribe. |
