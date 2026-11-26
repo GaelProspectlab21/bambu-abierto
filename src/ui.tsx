@@ -76,16 +76,58 @@ export function chime() {
 }
 
 /** Mantiene la pantalla encendida mientras haya una sesión abierta. */
+let awakeVideo: HTMLVideoElement | null = null
+let awakeUsers = 0
+function awakeVideoOn() {
+  if (typeof document === 'undefined') return
+  if (!awakeVideo) {
+    const v = document.createElement('video')
+    v.src = 'despierto.mp4'
+    v.muted = true
+    v.loop = true
+    v.playsInline = true
+    v.setAttribute('playsinline', '')
+    v.setAttribute('muted', '')
+    v.setAttribute('aria-hidden', 'true')
+    v.style.cssText = 'position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1'
+    document.body.appendChild(v)
+    awakeVideo = v
+  }
+  const v = awakeVideo
+  const play = () => v.play().catch(() => {
+    const retry = () => { void v.play().catch(() => undefined); window.removeEventListener('touchend', retry); window.removeEventListener('click', retry) }
+    window.addEventListener('touchend', retry, { once: true })
+    window.addEventListener('click', retry, { once: true })
+  })
+  void play()
+}
+function awakeVideoOff() {
+  if (awakeUsers > 0 || !awakeVideo) return
+  awakeVideo.pause()
+}
+
 export function useWakeLock(active: boolean) {
   const lock = useRef<WakeLockSentinel | null>(null)
   useEffect(() => {
-    if (!active || !('wakeLock' in navigator)) return
+    if (!active) return
     let cancelled = false
-    const acquire = () => navigator.wakeLock.request('screen').then(l => { if (cancelled) void l.release(); else lock.current = l }).catch(() => undefined)
-    void acquire()
-    const again = () => { if (!document.hidden) void acquire() }
+    awakeUsers++
+    const native = 'wakeLock' in navigator && window.isSecureContext
+    const acquire = () => {
+      awakeVideoOn()
+      if (native) void navigator.wakeLock.request('screen').then(l => { if (cancelled) void l.release(); else lock.current = l }).catch(() => undefined)
+    }
+    acquire()
+    const again = () => { if (!document.hidden) acquire() }
     document.addEventListener('visibilitychange', again)
-    return () => { cancelled = true; document.removeEventListener('visibilitychange', again); void lock.current?.release().catch(() => undefined); lock.current = null }
+    return () => {
+      cancelled = true
+      awakeUsers = Math.max(0, awakeUsers - 1)
+      document.removeEventListener('visibilitychange', again)
+      void lock.current?.release().catch(() => undefined)
+      lock.current = null
+      awakeVideoOff()
+    }
   }, [active])
 }
 
@@ -180,7 +222,7 @@ export function CelebrationLayer() {
   if (current.kind === 'streak') return <StreakMoment c={current} onDone={() => setQueue(q => q.slice(1))} />
   return <div className={`celebration cel-${current.kind ?? 'achievement'}`} role="status" onClick={() => setQueue(q => q.slice(1))}>
     <div className="confetti" aria-hidden="true">{Array.from({ length: 28 }, (_, i) => <i key={`${current.id}-${i}`} style={{ ['--x' as string]: `${(i * 37) % 100}%`, ['--d' as string]: `${(i % 7) * 70}ms`, ['--r' as string]: `${(i * 53) % 360}deg`, background: CONFETTI[i % CONFETTI.length] }} />)}</div>
-    <div className="cel-card">{current.image ? <img className="cel-art" src={current.image} alt="" width="168" height="168" /> : <img src="/brote.svg" alt="" width="64" height="76" />}<strong>{current.title}</strong>{current.text && <span>{current.text}</span>}</div>
+    <div className="cel-card">{current.image ? <img className="cel-art" src={current.image} alt="" width="168" height="168" /> : <img src="brote.svg" alt="" width="64" height="76" />}<strong>{current.title}</strong>{current.text && <span>{current.text}</span>}</div>
   </div>
 }
 

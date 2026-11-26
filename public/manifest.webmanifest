@@ -1,14 +1,14 @@
 {
-  "id": "/",
-  "name": "bambú · Mide cuánto das",
+  "id": "./",
+  "name": "bambú",
   "short_name": "bambú",
   "description": "Mide cuánto das, no cuánto produces. Lectura, entreno, enfoque y hábitos.",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f5f7f5",
-  "theme_color": "#255b48",
+  "background_color": "#0d1013",
+  "theme_color": "#0d1013",
   "lang": "es-MX",
   "categories": [
     "productivity",
@@ -17,19 +17,19 @@
   ],
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -37,34 +37,23 @@
   ],
   "shortcuts": [
     {
-      "name": "Registrar en un toque",
-      "short_name": "Registrar",
-      "url": "/?registrar=1",
+      "name": "Entrenar",
+      "short_name": "Entrenar",
+      "url": "./?ir=entrenar",
       "icons": [
         {
-          "src": "/icon-192.png",
+          "src": "icon-192.png",
           "sizes": "192x192"
         }
       ]
     },
     {
-      "name": "Empezar a leer",
-      "short_name": "Leer",
-      "url": "/?ir=lectura",
+      "name": "Tareas",
+      "short_name": "Tareas",
+      "url": "./?ir=tareas",
       "icons": [
         {
-          "src": "/icon-192.png",
-          "sizes": "192x192"
-        }
-      ]
-    },
-    {
-      "name": "Reflexión de la noche",
-      "short_name": "Noche",
-      "url": "/?ir=noche",
-      "icons": [
-        {
-          "src": "/icon-192.png",
+          "src": "icon-192.png",
           "sizes": "192x192"
         }
       ]

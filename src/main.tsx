@@ -13,16 +13,13 @@ import './v6.css'
 import './v7.css'
 // Último: los tokens de marca le ganan a cualquier definición vieja.
 import './tokens.css'
+import '@fontsource-variable/nunito/index.css'
+import './duo.css'
 import { applyTheme, watchSystemTheme } from './lib/theme'
 
 applyTheme()
 watchSystemTheme()
 
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch((error: unknown) => {
-    console.error('No se pudo activar el modo sin conexión.', error)
-  })
-}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

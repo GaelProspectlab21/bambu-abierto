@@ -11,6 +11,12 @@ importers:
       '@fontsource-variable/fraunces':
         specifier: 5.2.8
         version: 5.2.8
+      '@fontsource-variable/nunito':
+        specifier: 5.2.7
+        version: 5.2.7
+      '@mediapipe/tasks-vision':
+        specifier: 1.2.3
+        version: 1.2.3
       '@supabase/supabase-js':
         specifier: 2.112.3
         version: 2.112.3
@@ -41,6 +47,12 @@ packages:
 
   '@fontsource-variable/fraunces@5.2.8':
     resolution: {integrity: sha512-dQYLYcmyrTqIjN+f5XM6hLUkIvj7OTuGfKET+2uyJ2fIe7LFmdbyDprymjAVvrDhOwc9lzibJbqaFdKk96S3oA==}
+
+  '@fontsource-variable/nunito@5.2.7':
+    resolution: {integrity: sha512-2N8QhatkyKgSUbAGZO2FYLioxA32+RyI1EplVLawbpkGjUeui9Qg9VMrpkCaik1ydjFjfLV+kzQ0cGEsMrMenQ==}
+
+  '@mediapipe/tasks-vision@1.2.3':
+    resolution: {integrity: sha512-sxJyfhbN+EamexhaaCmUlw7v8vWWMum7VDsORe6d4c8Dk/xlI4qiIgoSw9cE9hpvYhVRRVLIA8y605FbqWkNeQ==}
 
   '@oxc-project/types@0.146.0':
     resolution: {integrity: sha512-XC0QsnnhVe7sLIWmYmdPw7x5P0h4W8vUU3Nv1ySgWXtvCz8NizoAEpGXA0sOYoJQV2Rl13LgURAHQ5cI5ILCSA==}
@@ -381,6 +393,10 @@ packages:
 snapshots:
 
   '@fontsource-variable/fraunces@5.2.8': {}
+
+  '@fontsource-variable/nunito@5.2.7': {}
+
+  '@mediapipe/tasks-vision@1.2.3': {}
 
   '@oxc-project/types@0.146.0': {}
 

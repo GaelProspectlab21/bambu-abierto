@@ -94,7 +94,7 @@ export function Companion({ data, section, go, commit, now, cloud, inline = fals
       <button className="quiet-button hide-btn" onClick={() => { setCompanionOn(false); setOpen(false) }}>Ocultar mascota</button>
     </div>}
     <button ref={trigger} aria-controls={open ? panelId : undefined} className={`companion-fab look-${look} ${cheer ? 'cheer' : ''}`} aria-expanded={open} aria-label={open ? 'Cerrar sugerencias' : training ? 'Abrir sugerencias de Tallo' : `Abrir sugerencias de Brote (${items.length})`} onClick={toggle}>
-      <>{training ? <img src="/img/tallo-guapo.png" width="66" height="72" alt="Tallo presumido" /> : <BroteArt mood={mood} look={look} size={58} />}</>
+      <>{training ? <img src="img/tallo-guapo.png" width="66" height="72" alt="Tallo presumido" /> : <BroteArt mood={mood} look={look} size={58} />}</>
       {!seen && <i className="companion-dot" aria-hidden="true" />}
     </button>
   </aside>

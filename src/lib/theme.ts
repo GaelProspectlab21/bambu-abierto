@@ -3,7 +3,7 @@ export type ThemeChoice = 'auto' | 'claro' | 'oscuro'
 const KEY = 'bambu.theme'
 
 export function themeChoice(): ThemeChoice {
-  try { const v = localStorage.getItem(KEY); return v === 'claro' || v === 'oscuro' ? v : 'auto' } catch { return 'auto' }
+  return 'oscuro'
 }
 export function resolveTheme(choice: ThemeChoice, systemDark: boolean): 'light' | 'dark' {
   return choice === 'oscuro' ? 'dark' : choice === 'claro' ? 'light' : systemDark ? 'dark' : 'light'
@@ -12,7 +12,7 @@ export function applyTheme(choice: ThemeChoice = themeChoice()): void {
   const dark = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches
   const theme = resolveTheme(choice, dark)
   document.documentElement.dataset.theme = theme
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', theme === 'dark' ? '#0e1511' : '#f4f6f4')
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', theme === 'dark' ? '#0d1013' : '#0d1013')
 }
 export function setThemeChoice(choice: ThemeChoice): void {
   try { localStorage.setItem(KEY, choice) } catch { /* se aplica igual en esta sesión */ }

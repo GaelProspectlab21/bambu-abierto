@@ -100,7 +100,7 @@ export function SettingsPage({ data, commit, onMessage, status, cloud, onExport,
       {cloud && !key && <p className="caution">Cargando tu llave de etiquetas. Sin ella, los enlaces piden iniciar sesión en Safari.</p>}
       {!secure && <p className="caution">Los enlaces funcionan desde la app publicada en HTTPS. Aquí puedes verlos, pero grábalos desde el teléfono.</p>}
       <div className="nfc-list">{NFC_TAGS.map(t => <article key={t.tag}><div><strong>{t.title}</strong><p>{t.does}</p><small>Dónde: {t.where}</small><code>{nfcUrl(window.location.origin, { tag: t.tag }, key)}</code></div>
-        <div className="row-actions"><button className="secondary-button" onClick={() => copy({ tag: t.tag })}>Copiar enlace</button><a className="quiet-button" href={`/?nfc=${t.tag}`}>Probar</a></div></article>)}
+        <div className="row-actions"><button className="secondary-button" onClick={() => copy({ tag: t.tag })}>Copiar enlace</button><a className="quiet-button" href={`?nfc=${t.tag}`}>Probar</a></div></article>)}
         <article><div><strong>Hábito con etiqueta</strong><p>Marca un hábito de hoy con un toque. Ej. una en la cama para "tender la cama" o en el tapete de estiramiento.</p>
           <select className="text-input" value={habitTag} onChange={e => setHabitTag(e.target.value)} aria-label="Hábito de la etiqueta">{activeHabits(s).map(h => <option key={h.id} value={h.id}>{h.label}</option>)}</select>
           {habitTag && <code>{nfcUrl(window.location.origin, { tag: 'habit', habit: habitTag }, key)}</code>}</div>

@@ -38,7 +38,7 @@ function StreakStalk({ data, current, best }: { data: AppData; current: number; 
     <p className="stalk-text"><strong>{current} {current === 1 ? 'día' : 'días'}</strong> seguidos{record ? ' · tu récord' : ` · récord ${best}`}{!todayDone && current > 0 ? '. Hoy suma uno más.' : ''}</p>
   </div>
 }
-export type Section = 'Hoy' | 'Noche' | 'Lectura' | 'Entrenar' | 'Comida' | 'Enfoque' | 'Tareas' | 'Hábitos' | 'Historial' | 'Ajustes'
+export type Section = 'Hoy' | 'Noche' | 'Lectura' | 'Entrenar' | 'Comida' | 'Enfoque' | 'Tareas' | 'Hábitos' | 'Historial' | 'Amigos' | 'Ajustes'
 
 /** Comida en Hoy: el número que importa según tu modo y el botón para registrar ya. */
 function FoodCard({ data, go }: { data: AppData; go: (s: Section) => void }) {

@@ -13,10 +13,11 @@
 import { cleanReminders, dateKey, modulesOf, type AppData, type Reminders } from './model'
 export { cleanReminders, DEFAULT_REMINDERS, type Reminders } from './model'
 import { realReading, streak } from './progress'
-import { massPlan, todayPlan } from './coach'
+import { massPlan } from './coach'
+import { planOf, routineFor, trainedOn } from './rutina'
 import { plural } from './text'
 
-export type ReminderKind = 'checkin' | 'read' | 'train' | 'sleep' | 'photos'
+export type ReminderKind = 'checkin' | 'read' | 'train' | 'trainLate' | 'sleep' | 'photos'
 export type Note = { kind: ReminderKind; key: string; title: string; body: string; url: string }
 
 /** Minutos de gracia: si el servidor se atrasa, el aviso todavía sale; después de esto ya no. */
@@ -78,11 +79,12 @@ export function reminderNote(kind: ReminderKind, data: AppData, now: number): No
     return { kind, key, url: '/?ir=lectura', title: s.current ? `Llevas ${plural(s.current, 'día', 'días')} leyendo` : 'Hoy toca leer',
       body: s.current ? 'Cinco minutos cuentan. Sigue a tu ritmo.' : 'Cinco minutos y arrancas racha nueva.' }
   }
-  if (kind === 'train') {
-    if (data.sets.some(x => x.day === today)) return null
-    const plan = todayPlan(data, now)
-    if (plan.kind !== 'torso' && plan.kind !== 'pierna') return null
-    return { kind, key, url: '/?ir=entrenar', title: plan.title, body: 'Dos series por ejercicio. Al terminar, proteína y a dormir tus horas.' }
+  if (kind === 'train' || kind === 'trainLate') {
+    const rt = routineFor(data, today)
+    if (!rt || trainedOn(data, today)) return null
+    const plan = planOf(data)
+    if (kind === 'trainLate') return plan.lock ? { kind, key, url: '/?ir=entrenar', title: 'Tus redes ya están bloqueadas', body: 'Pasó tu hora límite. Toca el piso y haz tu rutina para liberarlas.' } : null
+    return { kind, key, url: '/?ir=entrenar', title: `Hoy toca ${rt.title}`, body: plan.lock ? `Toca el piso antes de las ${plan.deadline} o tus redes se bloquean.` : 'Toca la etiqueta del piso y arranca.' }
   }
   if (kind === 'sleep') {
     return { kind, key, url: '/?ir=hoy', title: 'En 30 minutos, a la cama',
@@ -96,7 +98,12 @@ export function reminderNote(kind: ReminderKind, data: AppData, now: number): No
 /** Todo lo que toca mandar ahora, ya filtrado por lo que hiciste. */
 export function dueNotes(data: AppData, now: number): Note[] {
   const r = cleanReminders(data.settings.reminders)
-  return dueKinds(r, data.settings.sleepTarget, now).flatMap(kind => {
+  const kinds = dueKinds(r, data.settings.sleepTarget, now)
+  if (r.on) {
+    const d = new Date(now), minute = d.getHours() * 60 + d.getMinutes(), at = minutesOf(planOf(data).deadline)
+    if (minute >= at && minute < at + LATE_LIMIT) kinds.push('trainLate')
+  }
+  return kinds.flatMap(kind => {
     const note = reminderNote(kind, data, now)
     return note ? [note] : []
   })

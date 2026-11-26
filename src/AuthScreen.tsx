@@ -1,99 +1,89 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
-import { setLocalOnly, supabase } from './lib/supabase'
+import { useEffect, useState, type FormEvent } from 'react'
+import { cuenta, errorDeCuenta, google, setLocalOnly } from './lib/firebase'
+import { DuoIcon } from './DuoIcons'
 
-type Props = { recovery: boolean; onRecoveryComplete: () => void }
-type View = 'sign-in' | 'sign-up' | 'reset'
+type View = 'entrar' | 'crear' | 'recuperar'
 
-function authClient() {
-  if (!supabase) throw new Error('La conexión de cuenta no está configurada.')
-  return supabase
-}
-
-/** iPhone abriendo Bambú en Safari y no como app instalada: ahí la sesión puede no guardarse. */
 function iosInBrowser(): boolean {
   const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   const standalone = window.matchMedia?.('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
   return ios && !standalone
 }
 
-function friendlyError(message: string): string {
-  if (message.includes('Invalid login credentials')) return 'El correo o la contraseña no son correctos.'
-  if (message.includes('Email not confirmed')) return 'Confirma tu correo desde el mensaje que te enviamos.'
-  if (message.includes('rate limit')) return 'Hubo varios intentos seguidos. Espera un momento y vuelve a probar.'
-  return 'No pudimos completar la solicitud. Revisa tus datos y vuelve a intentar.'
-}
-
-export function AuthScreen({ recovery, onRecoveryComplete }: Props) {
-  const [view, setView] = useState<View>('sign-in')
+export function AuthScreen() {
+  const [view, setView] = useState<View>('entrar')
   const [name, setName] = useState('')
-  const [invitation, setInvitation] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmation, setConfirmation] = useState('')
+  const [show, setShow] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  function go(next: View) { setView(next); setNotice(''); setError('') }
+
+  useEffect(() => {
+    if (!google.pendiente()) return
     setBusy(true)
-    setNotice('')
-    setError('')
+    google.volver().catch(reason => setError(errorDeCuenta(reason))).finally(() => setBusy(false))
+  }, [])
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (busy) return
+    const mail = email.trim().toLowerCase()
+    setBusy(true); setNotice(''); setError('')
     try {
-      if (recovery) {
-        if (password.length < 12) throw new Error('Usa una contraseña de al menos 12 caracteres.')
-        if (password !== confirmation) throw new Error('Las contraseñas no coinciden.')
-        const { error: updateError } = await authClient().auth.updateUser({ password })
-        if (updateError) throw updateError
-        setPassword('')
-        setConfirmation('')
-        onRecoveryComplete()
-        setNotice('Contraseña actualizada. Tu cuenta quedó protegida con la nueva clave.')
-      } else if (view === 'sign-up') {
-        if (password.length < 12) throw new Error('Usa una contraseña de al menos 12 caracteres.')
-        const { data, error: signupError } = await authClient().auth.signUp({ email: email.trim().toLowerCase(), password, options: { data: { display_name: name.trim(), invitation_code: invitation.trim() } } })
-        if (signupError) { setError('No pudimos crear tu cuenta. Revisa el código de invitación, el correo y la contraseña.'); return }
-        if (!data.session) setNotice('Revisa tu correo para terminar el registro.')
-      } else if (view === 'reset') {
-        const { error: resetError } = await authClient().auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: window.location.origin })
-        if (resetError) throw resetError
-        setNotice('Si ese correo tiene una cuenta, recibirá un enlace para cambiar la contraseña.')
+      if (view === 'crear') {
+        if (password.length < 8) throw new Error('La contraseña necesita al menos 8 caracteres.')
+        await cuenta.crear(mail, password, name)
+      } else if (view === 'recuperar') {
+        await cuenta.recuperar(mail)
+        setNotice('Listo. Si ese correo tiene cuenta, te llega un enlace para cambiar la contraseña. Revisa también spam.')
       } else {
-        const { error: signInError } = await authClient().auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
-        if (signInError) throw signInError
+        await cuenta.entrar(mail, password)
       }
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : ''
-      setError(message.startsWith('Usa una contraseña') || message.startsWith('Las contraseñas') ? message : friendlyError(message))
-    } finally {
-      setBusy(false)
-    }
+      setError(errorDeCuenta(reason))
+    } finally { setBusy(false) }
   }
 
-  const heading = recovery ? 'Crea una contraseña nueva.' : view === 'reset' ? 'Recupera tu acceso.' : view === 'sign-up' ? 'Crea tu espacio.' : 'Entra a tu espacio.'
-  return <main className="welcome-screen auth-screen"><section className="welcome-card auth-card">
-    <div className="welcome-brand"><img src="/icon.svg" width="32" height="32" alt="" /> bambú</div>
-    <div className="eyebrow">CUENTA PERSONAL</div>
-    <h1>{heading}</h1>
-    <p className="welcome-copy">Entra con tu cuenta o crea una con tu código de invitación. También puedes usar bambú sin cuenta, solo en este teléfono.</p>
-    {!recovery && iosInBrowser() && <div className="ios-install" role="note">
-      <strong>Estás en Safari, no en la app.</strong>
-      <p>Si Safari está en modo privado, cada vez que abres te pide entrar. Para que Bambú recuerde tu sesión:</p>
-      <ol><li>Sal del modo privado en Safari.</li><li>Abre esta página y toca Compartir.</li><li>Añadir a pantalla de inicio, con <b>Abrir como app web</b> activado.</li><li>Borra el ícono viejo y abre siempre desde el nuevo.</li></ol>
-    </div>}
-    <form onSubmit={handleSubmit}>
-      {!recovery && view === 'sign-up' && <><label className="field-label">Nombre o apodo<input className="text-input" autoComplete="nickname" required maxLength={60} value={name} onChange={e => setName(e.target.value)} /></label><label className="field-label">Código de invitación<input className="text-input" autoComplete="off" required maxLength={100} value={invitation} onChange={e => setInvitation(e.target.value)} /></label></>}
-      {!recovery && <label className="field-label">Correo electrónico<input className="text-input" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="tu correo" /></label>}
-      {view !== 'reset' || recovery ? <label className="field-label">{recovery ? 'Nueva contraseña' : 'Contraseña'}<input className="text-input" type="password" autoComplete={recovery || view === 'sign-up' ? 'new-password' : 'current-password'} required minLength={recovery || view === 'sign-up' ? 12 : 1} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)} /></label> : null}
-      {recovery && <label className="field-label">Repite la contraseña<input className="text-input" type="password" autoComplete="new-password" required minLength={12} maxLength={128} value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>}
-      {error && <p className="auth-message error" role="alert">{error}</p>}
-      {notice && <p className="auth-message success" role="status">{notice}</p>}
-      <button className="primary-button auth-submit" type="submit" disabled={busy}>{busy ? 'Un momento' : recovery ? 'Actualizar contraseña' : view === 'reset' ? 'Enviar enlace' : view === 'sign-up' ? 'Crear mi cuenta' : 'Iniciar sesión'}<span>↗</span></button>
-    </form>
-    {!recovery && <button className="auth-switch" onClick={() => { setView(view === 'sign-up' ? 'sign-in' : 'sign-up'); setNotice(''); setError('') }}>{view === 'sign-up' ? 'Ya tengo cuenta' : 'Tengo una invitación'}</button>}
-    {!recovery && <button className="auth-switch" onClick={() => { setView(view === 'reset' ? 'sign-in' : 'reset'); setNotice(''); setError('') }}>{view === 'reset' ? 'Volver a iniciar sesión' : 'Olvidé mi contraseña'}</button>}
-    {!recovery && <button className="secondary-button local-mode-button" onClick={() => { setLocalOnly(true); window.location.reload() }}>Usar sin cuenta, solo en este dispositivo</button>}
-    <div className="privacy-note"><span className="local-dot" />Cada cuenta tiene su propio espacio privado.</div>
-  </section><p className="welcome-foot">bambú · tus datos siguen siendo tuyos</p></main>
+  const title = view === 'crear' ? 'Crea tu cuenta' : view === 'recuperar' ? 'Recupera tu acceso' : 'Entra a tu cuenta'
+  return <main className="d-auth">
+    <section className="d-auth-card">
+      <div className="d-auth-brand"><img src="icon.svg" width="44" height="44" alt="" /><b>bambú</b></div>
+      <h1>{title}</h1>
+      <p className="d-auth-copy">{view === 'crear' ? 'Tu progreso se guarda en tu cuenta y puedes competir en las tablas. Si ya usabas Bambú en este teléfono, se sube todo lo que tienes.' : view === 'recuperar' ? 'Escribe tu correo y te mandamos un enlace para poner una contraseña nueva.' : 'Con Google o con tu correo.'}</p>
+      {view !== 'recuperar' && <>
+        <button type="button" className="d-google" disabled={busy} onClick={() => { setBusy(true); google.ir() }}>
+          <svg viewBox="0 0 48 48" width="24" height="24" aria-hidden="true"><path className="g-r" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.2C12.4 13.6 17.7 9.5 24 9.5Z" /><path className="g-b" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.8c4.3-4 6.9-9.9 6.9-17.1Z" /><path className="g-y" d="M10.5 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.2C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.8l7.9-6.2Z" /><path className="g-g" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.8c-2.1 1.4-4.8 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.2C6.6 42.6 14.6 48 24 48Z" /></svg>
+          Continuar con Google
+        </button>
+        <div className="d-auth-or"><span>o con tu correo</span></div>
+      </>}
+      {view !== 'recuperar' && <div className="d-mode two" role="tablist">
+        <button type="button" role="tab" aria-selected={view === 'entrar'} className={view === 'entrar' ? 'on' : ''} onClick={() => go('entrar')}>Entrar</button>
+        <button type="button" role="tab" aria-selected={view === 'crear'} className={view === 'crear' ? 'on' : ''} onClick={() => go('crear')}>Crear cuenta</button>
+      </div>}
+      <form className="d-auth-form" onSubmit={submit}>
+        {view === 'crear' && <label className="d-field">Tu nombre<input className="d-input" autoComplete="nickname" required maxLength={40} value={name} onChange={e => setName(e.target.value)} placeholder="Cómo te llamas" /></label>}
+        <label className="d-field">Correo<input className="d-input" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" required maxLength={254} value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@correo.com" /></label>
+        {view !== 'recuperar' && <label className="d-field">Contraseña
+          <span className="d-pass">
+            <input className="d-input" type={show ? 'text' : 'password'} autoComplete={view === 'crear' ? 'new-password' : 'current-password'} required minLength={view === 'crear' ? 8 : 1} maxLength={128} value={password} onChange={e => setPassword(e.target.value)} placeholder={view === 'crear' ? 'Mínimo 8 caracteres' : 'Tu contraseña'} />
+            <button type="button" className="d-pass-eye" onClick={() => setShow(!show)} aria-label={show ? 'Ocultar contraseña' : 'Ver contraseña'}>{show ? 'Ocultar' : 'Ver'}</button>
+          </span>
+        </label>}
+        {error && <p className="d-auth-msg error" role="alert">{error}</p>}
+        {notice && <p className="d-auth-msg ok" role="status">{notice}</p>}
+        <button className="d-btn green wide" type="submit" disabled={busy}>{busy ? 'Un momento' : view === 'crear' ? 'Crear mi cuenta' : view === 'recuperar' ? 'Mandar enlace' : 'Entrar'}</button>
+      </form>
+      {view === 'recuperar'
+        ? <button type="button" className="d-auth-link" onClick={() => go('entrar')}>Volver a entrar</button>
+        : view === 'entrar' && <button type="button" className="d-auth-link" onClick={() => go('recuperar')}>Olvidé mi contraseña</button>}
+      {iosInBrowser() && <p className="d-auth-ios"><DuoIcon name="estrella" size={20} />Para que no te pida entrar a cada rato, abre Bambú desde el ícono de tu pantalla de inicio.</p>}
+      <button type="button" className="d-btn white wide" onClick={() => { setLocalOnly(true); window.location.reload() }}>Seguir sin cuenta</button>
+      <p className="d-auth-foot">Sin cuenta todo se queda solo en este teléfono y no sales en las tablas.</p>
+    </section>
+  </main>
 }

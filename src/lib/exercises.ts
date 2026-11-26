@@ -226,8 +226,8 @@ export const IMAGES: Record<string, { similar?: string; photo?: string }> = {
 export const DRAWN = ['pike', 'pike-elevated', 'pike-parallettes', 'curl-towel', 'hollow', 'tuck-lsit', 'copenhagen', 'nordic', 'floor-towel-pull']
 export type ExerciseImage = { start: string; end: string; similar?: string; drawn?: boolean }
 export function imageOf(id: string): ExerciseImage | null {
-  if (DRAWN.includes(id)) return { start: `/ejercicios/${id}-0.svg`, end: `/ejercicios/${id}-1.svg`, drawn: true }
+  if (DRAWN.includes(id)) return { start: `ejercicios/${id}-0.svg`, end: `ejercicios/${id}-1.svg`, drawn: true }
   const meta = IMAGES[id]
   const file = meta?.photo ?? id
-  return meta ? { start: `/ejercicios/${file}-0.jpg`, end: `/ejercicios/${file}-1.jpg`, similar: meta.similar } : null
+  return meta ? { start: `ejercicios/${file}-0.jpg`, end: `ejercicios/${file}-1.jpg`, similar: meta.similar } : null
 }

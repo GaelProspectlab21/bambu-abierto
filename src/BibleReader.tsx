@@ -18,7 +18,7 @@ type BookText = { id: number; capitulos: Verse[][] }
  * (sin el prefijo bambu-, así una versión nueva de la app no la borra) y se lee en modo avión.
  */
 export const BIBLE_CACHE = 'biblia-bll-v1'
-const url = (id: number) => `/biblia/bll/${id}.json`
+const url = (id: number) => `biblia/bll/${id}.json`
 const POS_KEY = 'bambu.biblia.pos'
 const SIZE_KEY = 'bambu.biblia.letra'
 const memo = new Map<number, BookText>()

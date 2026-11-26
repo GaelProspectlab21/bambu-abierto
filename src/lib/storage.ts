@@ -78,6 +78,17 @@ export async function loadAppData(): Promise<{ data: AppData; mode: StorageMode 
     return { data: readLocal(), mode: 'local' }
   }
 }
+export async function readScope(scope: string): Promise<AppData | null> {
+  let database: AppData | null = null
+  let mirror: AppData | null = null
+  try {
+    const db = await openDatabase()
+    try { const v = await requestValue(db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(`current:${scope}`)); if (v) database = normalizeData(v) } finally { db.close() }
+  } catch { database = null }
+  try { const raw = localStorage.getItem(`bambu.app.v3.${scope}`); if (raw) mirror = normalizeData(JSON.parse(raw)) } catch { mirror = null }
+  if (!database || !mirror) return database ?? mirror
+  return (mirror.savedAt ?? 0) > (database.savedAt ?? 0) ? mirror : database
+}
 export async function saveAppData(data: AppData): Promise<StorageMode> {
   const mirrorKey = currentKey()
   try { await writeDatabase(data) } catch (error) {
@@ -205,4 +216,16 @@ export async function clearAccountStorage(userId: string): Promise<void> {
     if (owner === userId) localStorage.removeItem(OWNER_LOCAL_KEY)
     localStorage.removeItem(`bambu-auth-log:${userId}`)
   } finally { db.close() }
+}
+
+export async function wipeDevice(): Promise<void> {
+  await new Promise<void>(resolve => {
+    try {
+      const req = indexedDB.deleteDatabase(DB_NAME)
+      req.onsuccess = () => resolve(); req.onerror = () => resolve(); req.onblocked = () => resolve()
+    } catch { resolve() }
+  })
+  try {
+    Object.keys(localStorage).filter(k => k.startsWith('bambu') || k.startsWith('ritmo')).forEach(k => localStorage.removeItem(k))
+  } catch { return }
 }

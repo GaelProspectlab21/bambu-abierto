@@ -38,7 +38,8 @@ export type TrainingSet = {
   id: string; day: string; at: number; exercise: string
   reps?: number; seconds?: number; loadKg?: number; rir?: number; note?: string
 }
-export type Activity = { id: string; day: string; kind: 'football' | 'rest' | 'walk' | 'other'; minutes?: number; intensity?: number; note?: string }
+export type Sport = 'caminar' | 'correr' | 'bici'
+export type Activity = { id: string; day: string; kind: 'football' | 'rest' | 'walk' | 'other'; minutes?: number; intensity?: number; note?: string; sport?: Sport; km?: number }
 export type Checkin = {
   id: string; day: string; sleepHours?: number; energy?: number; steps?: number
   soreness?: string[]; pain?: string; painNote?: string; proteinMeals?: number; realFood?: boolean
@@ -65,8 +66,12 @@ export type NutritionProfile = { sex?: 'h' | 'm'; goal?: NutritionGoal; training
 
 // ── Hábitos y ajustes ────────────────────────────────────────────────────
 export type HabitAuto = 'bible' | 'reading' | 'training' | 'focus'
-export type HabitDef = { id: string; label: string; mark: string; archived?: boolean; auto?: HabitAuto }
+export type HabitDef = { id: string; label: string; mark: string; archived?: boolean; auto?: HabitAuto; when?: 'manana' }
 export type ChecklistItem = { id: string; label: string; enabled: boolean }
+export type RoutineKind = 'reps' | 'seconds' | 'free'
+export type RoutineItem = { id: string; name: string; kind: RoutineKind; target: number; rounds?: number; when?: 'before' | 'after'; quiet?: string; sides?: boolean }
+export type Routine = { title: string; rounds: number; items: RoutineItem[] }
+export type TrainPlan = { week: (Routine | null)[]; deadline: string; lock: boolean; restSeconds: number }
 /** Horas de los recordatorios (HH:MM, vacío = apagado). La lógica de cuándo suenan vive en reminders.ts. */
 export type Reminders = { on: boolean; checkin: string; read: string; train: string; wake: string; photos: boolean }
 /** Qué partes de Bambú usa cada persona. Lo que no usa no aparece ni cuenta en misiones. */
@@ -84,6 +89,18 @@ export type Settings = {
   nutrition?: NutritionProfile
   /** Brote sugiere un hábito nuevo cada tanto (habitCoach.ts): cuándo fue la última y cuáles dijiste que no. */
   habitSuggest?: { lastDay?: string; skipped?: string[] }
+  train?: TrainPlan
+  morningSetup?: boolean
+  tablas?: { apodo: string; avatar: number; privada?: boolean }
+  amigos?: string[]
+  aprobados?: string[]
+  candado?: { llave: string }
+  widget?: { llave: string }
+  avisos?: { hora: string }
+  walkDaily?: boolean
+  cardioSetup?: boolean
+  rutina2611?: boolean
+  rondas2611?: boolean
 }
 /** `north` es en quién te quieres convertir, con tus palabras. La reflexión de la noche te lo pregunta. */
 export type Profile = { name: string; onboardingComplete: boolean; north?: string }
@@ -260,7 +277,9 @@ export function cleanActivityRow(value: Rec): Activity | null {
   const id = idOf(value)
   const kind = (['football', 'rest', 'walk', 'other'] as const).find(k => k === value.kind)
   if (!id || !kind || !isDay(value.day)) return null
-  return compact({ id, day: value.day, kind, minutes: int(value.minutes, 1, 1440), intensity: int(value.intensity, 1, 3), note: cleanText(value.note, 300) || undefined })
+  const sport = (['caminar', 'correr', 'bici'] as const).find(k => k === value.sport)
+  const km = num(value.km, 0, 500)
+  return compact({ id, day: value.day, kind, minutes: int(value.minutes, 1, 1440), intensity: int(value.intensity, 1, 3), note: cleanText(value.note, 300) || undefined, sport, km: km !== undefined ? Math.round(km * 100) / 100 : undefined })
 }
 export function cleanCheckinRow(value: Rec): Checkin | null {
   if (!isDay(value.day)) return null
@@ -371,7 +390,7 @@ function cleanHabitDefs(value: unknown): HabitDef[] {
     if (!id || !label || seen.has(id)) return []
     seen.add(id)
     const auto = (['bible', 'reading', 'training', 'focus'] as const).find(a => a === item.auto)
-    return [compact({ id, label, mark: cleanText(item.mark, 2) || label.charAt(0).toUpperCase(), archived: item.archived === true ? true : undefined, auto })]
+    return [compact({ id, label, mark: cleanText(item.mark, 2) || label.charAt(0).toUpperCase(), archived: item.archived === true ? true : undefined, auto, when: item.when === 'manana' ? 'manana' as const : undefined })]
   })
   // Una lista vacía es válida (quien no quiere hábitos); solo se repone si había datos y ninguno servía.
   return rows.length || value.length === 0 ? rows : DEFAULT_HABITS
@@ -385,6 +404,40 @@ export function cleanReminders(value: unknown): Reminders {
     on: v.on === true, checkin: clock(v.checkin, d.checkin), read: clock(v.read, d.read), train: clock(v.train, d.train),
     wake: clock(v.wake, d.wake) || d.wake, photos: v.photos !== false,
   }
+}
+function cleanRoutineItem(value: unknown, i: number): RoutineItem | null {
+  if (!isRecord(value)) return null
+  const name = cleanText(value.name, 80)
+  if (!name) return null
+  const kind = (['reps', 'seconds', 'free'] as const).find(k => k === value.kind) ?? 'reps'
+  const when = value.when === 'before' || value.when === 'after' ? value.when : undefined
+  return compact({ id: cleanText(value.id, 40) || `i${i}`, name, kind, target: int(value.target, 0, 3600) ?? 0, rounds: int(value.rounds, 1, 10), when, quiet: isDay(value.quiet) ? value.quiet : undefined, sides: value.sides === true ? true : undefined }) as RoutineItem
+}
+function cleanRoutine(value: unknown): Routine | null {
+  if (!isRecord(value) || !Array.isArray(value.items)) return null
+  const items = value.items.slice(0, 40).flatMap((item, i) => { const row = cleanRoutineItem(item, i); return row ? [row] : [] })
+  return { title: cleanText(value.title, 80) || 'Rutina', rounds: int(value.rounds, 1, 10) ?? 3, items }
+}
+export function cleanTrain(value: unknown): TrainPlan | undefined {
+  if (!isRecord(value) || !Array.isArray(value.week)) return undefined
+  const week = Array.from({ length: 7 }, (_, i) => cleanRoutine((value.week as unknown[])[i]))
+  return { week, deadline: clock(value.deadline, '19:00') || '19:00', lock: value.lock !== false, restSeconds: int(value.restSeconds, 0, 600) ?? 60 }
+}
+function cleanAmigos(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const ids = [...new Set(value.filter((x): x is string => typeof x === 'string' && /^[A-Za-z0-9]{6,128}$/.test(x)))].slice(0, 200)
+  return ids.length ? ids : undefined
+}
+function cleanCandado(value: unknown): Settings['candado'] {
+  return isRecord(value) && typeof value.llave === 'string' && /^[A-Za-z0-9]{16,40}$/.test(value.llave) ? { llave: value.llave } : undefined
+}
+function cleanAvisos(value: unknown): Settings['avisos'] {
+  return isRecord(value) && typeof value.hora === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value.hora) ? { hora: value.hora } : undefined
+}
+function cleanTablas(value: unknown): Settings['tablas'] {
+  if (!isRecord(value)) return undefined
+  const apodo = cleanText(value.apodo, 24)
+  return apodo ? { apodo, avatar: int(value.avatar, 0, 9) ?? 0, ...(typeof value.privada === 'boolean' ? { privada: value.privada } : {}) } : undefined
 }
 export function cleanSettings(value: unknown): Settings {
   const v = isRecord(value) ? value : {}
@@ -408,6 +461,18 @@ export function cleanSettings(value: unknown): Settings {
     reminders: cleanReminders(v.reminders),
     nutrition: cleanNutrition(v.nutrition),
     habitSuggest: cleanHabitSuggest(v.habitSuggest),
+    train: cleanTrain(v.train),
+    morningSetup: v.morningSetup === true ? true : undefined,
+    walkDaily: v.walkDaily === true ? true : undefined,
+    cardioSetup: v.cardioSetup === true ? true : undefined,
+    rutina2611: v.rutina2611 === true ? true : undefined,
+    rondas2611: v.rondas2611 === true ? true : undefined,
+    tablas: cleanTablas(v.tablas),
+    amigos: cleanAmigos(v.amigos),
+    aprobados: cleanAmigos(v.aprobados),
+    candado: cleanCandado(v.candado),
+    widget: cleanCandado(v.widget),
+    avisos: cleanAvisos(v.avisos),
   }) as Settings
 }
 export function cleanHabitDays(value: unknown): Record<string, string[]> {

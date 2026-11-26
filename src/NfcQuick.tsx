@@ -36,7 +36,7 @@ function NfcQuickAction({ search, onSignIn }: { search: string; onSignIn: () => 
 
   return <main className="nfc-quick">
     <section className={`nfc-quick-card ${result ? (result.ok ? 'ok' : 'bad') : ''}`} role="status" aria-live="polite">
-      <img src="/icon.svg" width="44" height="44" alt="" />
+      <img src="icon.svg" width="44" height="44" alt="" />
       {!result ? <><h1>Registrando</h1><p>Un segundo.</p></> : <>
         <div className="nfc-quick-mark" aria-hidden="true">{result.ok ? '✓' : '!'}</div>
         <h1>{result.title}</h1>
@@ -87,7 +87,7 @@ function NightQuick({ search, onSignIn }: { search: string; onSignIn: () => void
   }
   return <main className="nfc-quick">
     <section className={`nfc-quick-card night-quick ${phase === 'done' ? 'ok' : ''}`} aria-live="polite">
-      <img src="/icon.svg" width="44" height="44" alt="" />
+      <img src="icon.svg" width="44" height="44" alt="" />
       {phase === 'loading' && <><h1>Tu noche</h1><p>Un segundo.</p></>}
       {phase === 'error' && result && <><h1>{result.title}</h1><p>{result.text}</p></>}
       {phase === 'done' && result && <><div className="nfc-quick-mark" aria-hidden="true">{'✓'}</div><h1>{result.title}</h1><p>{result.text}</p><p className="hint">Ya puedes cerrar esta pestaña. Tu app instalada lo tiene al abrirla.</p></>}
