@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
-import { correoVerificado, cuenta, errorDeCuenta, mandarVerificacion, revisarVerificacion, setLocalOnly } from './lib/nube'
+import { correoVerificado, cuenta, errorDeCuenta, mandarVerificacion, revisarVerificacion, setLocalOnly, socialListo } from './lib/nube'
 import { readScope } from './lib/storage'
 import { faltantes, fusionar, resumenLocal } from './lib/fusion'
 import { activeHabits, modulesOf, type AppData, type Modules } from './lib/model'
@@ -161,8 +161,9 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     </div>
 
     {mods.training && <CandadoSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
-    <AvisosSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />
-    <WidgetSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />
+    {/* Avisos y widget de Kiki esperan su servidor en Supabase. Además su avisos-sw.js reemplazaría a sw.js (modo sin señal y avisos de bambu-remind). */}
+    {socialListo && <AvisosSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
+    {socialListo && <WidgetSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
     {server && <PauseSetup keyValue={key} onCopy={url => { navigator.clipboard?.writeText(url).then(() => onMessage('Enlace copiado.')).catch(() => onMessage(url)) }} />}
     {server && <RemindersCard data={data} commit={commit} onMessage={onMessage} />}
 

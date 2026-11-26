@@ -14,7 +14,7 @@ import { StatsBar } from './DuoTop'
 import { DuoIcon, type DuoIconName } from './DuoIcons'
 import { activeHabits, dateKey, EMPTY_DATA, modulesOf, type AppData } from './lib/model'
 import { bedAction, nfcServerAction, trainingAction } from './lib/nfcActions'
-import { ajustarRutina2611, clockOf, deshacerRondas2611, seedWeek } from './lib/rutina'
+import { ajustarRutina2611, clockOf, deshacerRondas2611 } from './lib/rutina'
 import { applyRecords, diffRecords, toRecords, type RecordRow } from './lib/records'
 import { SyncEngine, type SyncStatus } from './lib/sync'
 import { supabase } from './lib/supabase'
@@ -532,7 +532,7 @@ export default function App() {
   if (cloudConfigured && !cloudReady && cloudError) return <ProblemScreen tone="offline" title="No llegamos a la nube." text="Revisa tu señal. Lo de este teléfono sigue intacto y se sube solo cuando vuelva la conexión."><button className="primary-button" onClick={() => setAttempt(a => a + 1)}>Reintentar</button><button className="quiet-button" onClick={signOut}>Cerrar sesión</button></ProblemScreen>
   if (cloudConfigured && !cloudReady) return <LoadingScreen text="Sincronizando tu espacio privado." />
   if (!data.profile.onboardingComplete) return <Onboarding initialName={data.profile.name} onComplete={r => commit(d => ({ ...d, profile: { name: r.name || 'Tú', onboardingComplete: true },
-    settings: { ...d.settings, age: r.age, modules: r.modules, habits: r.habits, train: d.settings.train ?? seedWeek(), walkDaily: true, cardioSetup: true },
+    settings: { ...d.settings, age: r.age, modules: r.modules, habits: r.habits, walkDaily: true, cardioSetup: true },
     habits: r.firstVotes.length ? { ...d.habits, [dateKey()]: [...new Set([...(d.habits[dateKey()] ?? []), ...r.firstVotes])] } : d.habits }))} />
   if (candado) return <CandadoPage data={data} commit={commit} app={candado} onSalir={to => { try { sessionStorage.removeItem(CANDADO_KEY) } catch { void 0 } setCandado(null); if (to) go(to) }} />
 

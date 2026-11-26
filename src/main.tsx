@@ -22,6 +22,13 @@ applyTheme()
 watchSystemTheme()
 
 
+// Modo sin señal, Biblia guardada y avisos de bambu-remind. Va relativo para servir también en una subcarpeta.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register(new URL('sw.js', document.baseURI).href).catch((error: unknown) => {
+    console.error('No se pudo activar el modo sin conexión.', error)
+  })
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

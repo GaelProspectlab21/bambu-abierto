@@ -1297,7 +1297,7 @@ ok('comida: totales, nube, modo crecimiento sin calorías, fase por cintura, gas
 {
   const J = moduleOf('jardin'), Li = moduleOf('libre'), X = moduleOf('xp')
   const off = { reading: false, bible: false, training: false, focus: true, food: false }
-  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, modules: off, habits: [{ id: 'agua', label: 'Tomar agua', mark: 'A' }] } })
+  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, modules: off, habits: [{ id: 'agua', label: 'Tomar agua', mark: 'A' }], train: moduleOf('rutina').kikiWeek() } })
   const withDays = days => ({ ...base, habits: Object.fromEntries(days.map(d => [d, ['agua']])) })
   const one = withDays(['2026-11-02', '2026-11-04'])
   const s1 = J.gardenStats(one, '2026-11-05')
@@ -1954,6 +1954,26 @@ ok('anillos: Cuerpo, Mente y Alma promedian solo lo que aplica hoy; descansar ci
   assert.ok(!plan.week.flatMap(rt => rt ? rt.items : []).some(i => /Muscle up|Dominadas$|Planche|Handstand/.test(i.name)), 'nada avanzado de inicio')
   assert.equal(R.kikiWeek().week.filter(Boolean).length, 7)
 }
+{
+  const R = moduleOf('rutina'); const C = moduleOf('coach')
+  const now = new Date('2026-11-25T10:00:00').getTime(), today = '2026-11-25'
+  const d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, age: 13, footballDays: [] } })
+  assert.equal(R.usesCoach(d), true, 'sin rutina propia manda el coach')
+  const plan = C.todayPlan(d, now)
+  const rt = R.coachRoutine(d, today, now)
+  if (plan.kind === 'torso' || plan.kind === 'pierna') {
+    assert.equal(rt.title, plan.kind === 'torso' ? 'Torso' : 'Pierna')
+    assert.deepEqual(rt.items.map(i => i.name), plan.items.map(i => i.exercise.id), 'los items llevan el id con el que el coach guarda las series')
+    const first = plan.items[0]
+    const conSeries = { ...d, sets: Array.from({ length: first.sets }, (_, k) => ({ id: `s${k}`, day: today, at: now + k, exercise: first.exercise.id, reps: 8 })) }
+    assert.equal(R.routineProgress(conSeries, today, R.coachRoutine(conSeries, today, now)).done, first.sets, 'las series del coach cuentan en el avance de Hoy')
+  } else assert.equal(rt, null)
+  assert.equal(R.coachRoutine(d, '2026-11-24', now), null, 'un día pasado sin series no inventa rutina')
+  const kiki = { ...d, settings: { ...d.settings, train: R.kikiWeek() } }
+  assert.equal(R.usesCoach(kiki), false)
+  assert.equal(R.routineFor(kiki, today).title, R.kikiWeek().week[2].title, 'con rutina propia manda la rutina')
+}
+ok('coach original: sin rutina propia, Hoy y los anillos siguen al coach (torso y pierna) y sus series cuentan; con rutina propia manda la rutina')
 ok('rutina de inicio: 3 días, 2 rondas, sin candado, todo del catálogo; la de Kiki queda como plantilla')
 {
   const vite = fs.readFileSync(path.join(__dirname, '../vite.config.ts'), 'utf8')

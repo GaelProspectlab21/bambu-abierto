@@ -1224,3 +1224,4 @@ button.d-card { box-shadow: 0 4px 0 var(--d-line); }
 .d-unit2.today .d-unit2-head { flex-wrap: wrap; }
 .d-anillos-ley span { opacity: 1; }
 .d-unit2-head > .d-anillos-ley { display: flex; }
+.d-coach-switch { display: block; margin: 18px auto 8px; }

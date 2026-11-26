@@ -3,7 +3,7 @@ import { Sheet } from './Sheet'
 import { activeHabits, dateKey, makeId, modulesOf, type AppData } from './lib/model'
 import type { PersonalTask } from './lib/personal'
 import { firstDay, habitOn, shiftDay, tasksFor } from './lib/jardin'
-import { clockOf, lockActive, routineFor, routineProgress } from './lib/rutina'
+import { clockOf, COACH_FUTURE, lockActive, routineFor, routineProgress } from './lib/rutina'
 import { readOn } from './lib/lectura'
 import { broteLine, xpOn, XP } from './lib/xp'
 import { haptic } from './lib/haptic'
@@ -73,7 +73,7 @@ function dayNodes(data: AppData, day: string, today: string): PathNode[] {
     const p = routineProgress(data, day, rt)
     const done = p.total > 0 && p.done >= p.total
     const locked = day === today && lockActive(data, today, clockOf(Date.now()))
-    out.push({ kind: 'train', label: rt.title, sub: future ? `${rt.items.length} ejercicios` : done ? 'Completa' : `${p.done} de ${p.total} series${locked ? ' · redes bloqueadas' : ''}`, icon: locked && !done ? 'candado' : 'pesa', state: future ? 'locked' : done ? 'done' : day < today ? 'missed' : 'todo', partial: p.total ? p.done / p.total : 0, xp: XP.routine })
+    out.push({ kind: 'train', label: rt.title, sub: future ? (rt.items[0]?.name === COACH_FUTURE ? 'Lo decide tu coach' : `${rt.items.length} ejercicios`) : done ? 'Completa' : `${p.done} de ${p.total} series${locked ? ' · redes bloqueadas' : ''}`, icon: locked && !done ? 'candado' : 'pesa', state: future ? 'locked' : done ? 'done' : day < today ? 'missed' : 'todo', partial: p.total ? p.done / p.total : 0, xp: XP.routine })
   }
   if (data.settings.walkDaily) {
     const done = walkDone(data, day), got = walkLabel(data, day)
