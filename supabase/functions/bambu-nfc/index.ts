@@ -41,7 +41,7 @@ Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: h })
   const fail = (status: number, title: string, text: string) => new Response(JSON.stringify({ ok: false, title, text }), { status, headers: h })
   try {
-    const body = await req.json().catch(() => ({})) as { k?: unknown; search?: unknown; peek?: unknown; night?: unknown; stretch?: unknown }
+    const body = await req.json().catch(() => ({})) as { k?: unknown; search?: unknown; peek?: unknown; night?: unknown; stretch?: unknown; wake?: unknown }
     const k = typeof body.k === 'string' ? body.k : ''
     const parsed = typeof body.search === 'string' ? parseNfc(body.search) : null
     const n = body.night as { capacity?: unknown; given?: unknown; reflection?: unknown } | undefined
@@ -50,7 +50,9 @@ Deno.serve(async req => {
     const st = body.stretch as { when?: unknown; seconds?: unknown } | undefined
     const stretch = parsed?.tag === 'estirar' && st && (st.when === 'manana' || st.when === 'noche') && Number.isFinite(Number(st.seconds))
       ? { when: st.when as 'manana' | 'noche', seconds: Math.max(0, Math.min(1800, Number(st.seconds))) } : undefined
-    const action = parsed ? { ...parsed, ...(night ? { night } : {}), ...(stretch ? { stretch } : {}) } : null
+    const wk = body.wake as { reps?: unknown } | undefined
+    const wake = parsed?.tag === 'despertar' && wk && Number.isFinite(Number(wk.reps)) ? { reps: Math.max(0, Math.min(300, Math.round(Number(wk.reps)))) } : undefined
+    const action = parsed ? { ...parsed, ...(night ? { night } : {}), ...(stretch ? { stretch } : {}), ...(wake ? { wake } : {}) } : null
     if (k.length < 32 || k.length > 64) return fail(401, 'Etiqueta sin llave válida', 'Grábala de nuevo con el enlace de Ajustes.')
     if (!action) return fail(400, 'Etiqueta desconocida', 'Grábala de nuevo con el enlace de Ajustes.')
     const { data: owner } = await db.from('bambu_nfc_keys').select('user_id, uses').eq('key', k).maybeSingle()
@@ -65,6 +67,10 @@ Deno.serve(async req => {
     if (body.peek === true && action.tag === 'night') {
       const row = (data.checkins as { day: string; capacity?: number; given?: number; reflection?: string }[]).find(c => c.day === day)
       return new Response(JSON.stringify({ ok: true, peek: { capacity: row?.capacity ?? null, given: row?.given ?? null, reflection: row?.reflection ?? '' } }), { headers: h })
+    }
+    if (body.peek === true && action.tag === 'despertar') {
+      const dd = (data.settings as { despertador?: { reps?: number } }).despertador
+      return new Response(JSON.stringify({ ok: true, reps: [5, 10, 15, 20].includes(Number(dd?.reps)) ? Number(dd?.reps) : 10 }), { headers: h })
     }
     const result = nfcServerAction(data, action, now, day, localClock(tz, now))
     const rows = diffRecords(data, result.next, now)

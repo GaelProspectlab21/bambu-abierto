@@ -16,8 +16,9 @@ import { realReading, streak } from './progress'
 import { massPlan } from './coach'
 import { planOf, routineFor, trainedOn } from './rutina'
 import { plural } from './text'
+import { despertadorDe, ranuraInsistir } from './despertador'
 
-export type ReminderKind = 'checkin' | 'read' | 'train' | 'trainLate' | 'sleep' | 'photos'
+export type ReminderKind = 'checkin' | 'read' | 'train' | 'trainLate' | 'sleep' | 'photos' | 'alarm'
 export type Note = { kind: ReminderKind; key: string; title: string; body: string; url: string }
 
 /** Minutos de gracia: si el servidor se atrasa, el aviso todavía sale; después de esto ya no. */
@@ -103,10 +104,18 @@ export function dueNotes(data: AppData, now: number): Note[] {
     const d = new Date(now), minute = d.getHours() * 60 + d.getMinutes(), at = minutesOf(planOf(data).deadline)
     if (minute >= at && minute < at + LATE_LIMIT) kinds.push('trainLate')
   }
-  return kinds.flatMap(kind => {
+  const notes = kinds.flatMap(kind => {
     const note = reminderNote(kind, data, now)
     return note ? [note] : []
   })
+  // Despertador: insiste cada 5 min durante una hora hasta que hagas tus lagartijas (cada ranura es su llave).
+  const d = new Date(now), clock = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const today = dateKey(d), slot = ranuraInsistir(data, today, clock)
+  if (slot !== null) {
+    const reps = despertadorDe(data).reps
+    notes.unshift({ kind: 'alarm', key: `alarm:${today}:${slot}`, url: '/?nfc=despertar', title: slot === 0 ? '¡Arriba! Tus lagartijas te esperan' : `Sigues sin tus ${reps} lagartijas`, body: slot === 0 ? `Haz ${reps} frente a la cámara y se apaga.` : `Te vuelvo a avisar en 5 minutos. ${reps} lagartijas y se acaba.` })
+  }
+  return notes
 }
 
 export function testNote(): Note {

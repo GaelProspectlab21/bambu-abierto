@@ -1,36 +1,39 @@
-import { Component, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Component, Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AuthScreen } from './AuthScreen'
 import { AudioMiniPlayer } from './BinauralAudio'
 import { Onboarding } from './Onboarding'
 import type { Section } from './TodayPage'
-import { ReadingPage, freshReading } from './ReadingPage'
-import { FoodPage } from './FoodPage'
+import { freshReading } from './lib/sesionLectura'
 import { HoyLista } from './HoyLista'
-import { MiRutina } from './MiRutina'
-import { TareasSimple } from './TareasSimple'
 import { type Preset } from './FocusPage'
 import { FocusBlock } from './FocusSimple'
 import { NfcQuick } from './NfcQuick'
+import { DespertadorPantalla } from './Despertador'
+import { despertadorDe, logDespertar } from './lib/despertador'
 import { PageVerse } from './PageExtras'
-import { JardinPage } from './Jardin'
-import { AjustesSimple } from './AjustesSimple'
 import { StatsBar } from './DuoTop'
 import { DuoIcon, type DuoIconName } from './DuoIcons'
 import { activeHabits, dateKey, EMPTY_DATA, modulesOf, type AppData } from './lib/model'
 import { bedAction, nfcServerAction, trainingAction } from './lib/nfcActions'
-import { ajustarRutina2611, clockOf, deshacerRondas2611 } from './lib/rutina'
-import { applyRecords, diffRecords, toRecords, type RecordRow } from './lib/records'
-import { SyncEngine, type SyncStatus } from './lib/sync'
 import { supabase } from './lib/supabase'
-import { amigosListo, cuenta, cuentaActiva as cloudConfigured, remoto, type Sesion } from './lib/nube'
+import { amigosListo, cuenta, cuentaActiva as cloudConfigured, remoto, reportarFallo, type Sesion } from './lib/nube'
 import { AmigosSimple } from './AmigosSimple'
 import { publicarMiSemana } from './lib/amigosNube'
 import { miSemana } from './lib/tablaSemana'
 import { NightPage } from './Night'
+import { devolver2611 } from './lib/minutos'
+import { PaseAbierto } from './PaseAbierto'
+import { ajustarRutina2611, clockOf, deshacerRondas2611, toquesA7, hspuA3, quitar2611 } from './lib/rutina'
+import { semanaVacia } from './lib/armar'
+import { applyRecords, diffRecords, toRecords, type RecordRow } from './lib/records'
+import { SyncEngine, type SyncStatus } from './lib/sync'
 import { logAuth, setAuthLogOwner } from './lib/authLog'
 import { usePublicarPerfil } from './Tablas'
 import { usePublicarEstado } from './Widget'
-import { AMIGO_KEY, useAmigosNuevos } from './Amigos'
+import { useFelicitar } from './Felicitar'
+import { OCULTAS_EN_COMPETIR, esCompetir, inicioDe } from './lib/modo'
+import { Consentimiento, aceptar, legalAceptado, mostrarLegal } from './Legal'
+import { AMIGO_KEY, useAmigosNuevos } from './amigosNuevos'
 import { clearAccountStorage, getLocalOwnerId, setStorageScope, loadAppData, parseBackup, readScope, requestPersistence, saveAppData, setLocalOwnerId, syncStore, wipeDevice } from './lib/storage'
 import { clearOwnPhotos, setPhotoOwner } from './lib/photos'
 import { clearNfcFromUrl, isRepeatScan, parseNfc, type NfcAction } from './lib/nfc'
@@ -39,16 +42,26 @@ import { game, rankOf } from './lib/gamification'
 import { keptToday } from './lib/vara'
 import { CelebrationLayer, celebrate, rewardSound, useWakeLock } from './ui'
 import { XP } from './lib/xp'
-import { LoadingScreen, NotFound, ProblemScreen, Recovering, ScreenCrash } from './StatusScreens'
+import { LoadingScreen, NotFound, ProblemScreen, Recovering, ScreenCrash, type Envio } from './StatusScreens'
 import { OfflineBanner, useOnline } from './Offline'
 import { StretchHost } from './Stretch'
-import { CandadoPage } from './Candado'
 import { openStretch, stretchSlot, type StretchWhen } from './lib/stretch'
 import { realReading, streak } from './lib/progress'
+import { faltaArchivo, recargarPorVersion, siFaltaArchivo } from './lib/version'
+
+const ReadingPage = lazy(() => import('./ReadingPage').then(m => ({ default: m.ReadingPage })).catch(e => siFaltaArchivo(e)))
+const FoodPage = lazy(() => import('./FoodPage').then(m => ({ default: m.FoodPage })).catch(e => siFaltaArchivo(e)))
+const MiRutina = lazy(() => import('./MiRutina').then(m => ({ default: m.MiRutina })).catch(e => siFaltaArchivo(e)))
+const TareasSimple = lazy(() => import('./TareasSimple').then(m => ({ default: m.TareasSimple })).catch(e => siFaltaArchivo(e)))
+const JardinPage = lazy(() => import('./Jardin').then(m => ({ default: m.JardinPage })).catch(e => siFaltaArchivo(e)))
+const AjustesSimple = lazy(() => import('./AjustesSimple').then(m => ({ default: m.AjustesSimple })).catch(e => siFaltaArchivo(e)))
+const CandadoPage = lazy(() => import('./Candado').then(m => ({ default: m.CandadoPage })).catch(e => siFaltaArchivo(e)))
+const Cargando = () => <p className="d-hint">Cargando</p>
+const VERSION = (() => { try { return new URL(import.meta.url).pathname.split('/').pop() ?? '' } catch { return '' } })()
 import { votesOn } from './lib/identity'
 
 const NAV: { id: Section; icon: DuoIconName; label: string }[] = [
-  { id: 'Hoy', icon: 'casa', label: 'Hoy' }, { id: 'Entrenar', icon: 'pesa', label: 'Entrenar' }, { id: 'Tareas', icon: 'lista', label: 'Tareas' },
+  { id: 'Hoy', icon: 'casa', label: 'Hoy' }, { id: 'Entrenar', icon: 'pesa', label: 'Entrenar' }, { id: 'Tareas', icon: 'lista', label: 'Tareas' }, { id: 'Lectura', icon: 'libro', label: 'Lectura' },
   { id: 'Comida', icon: 'plato', label: 'Comida' },
   { id: 'Historial', icon: 'planta', label: 'Jardín' }, { id: 'Amigos', icon: 'amigos', label: 'Amigos' }, { id: 'Ajustes', icon: 'engrane', label: 'Ajustes' },
 ]
@@ -59,6 +72,18 @@ const BOOT_STRETCH: StretchWhen | null = (() => {
   const url = new URL(window.location.href); url.searchParams.delete('estirar'); window.history.replaceState({}, '', url.pathname + url.search + url.hash)
   return v === 'noche' || v === 'manana' ? v : stretchSlot() ?? 'noche'
 })()
+/** Huella (SHA-256) de la cuenta de Kiki: sus ajustes personales de rutina solo se aplican a él. */
+const CUENTA_KIKI = 'c0170f1e0c878c53021befe41219e0910656e5e0b8807e90f0eb951edec2060b'
+function useEsCuenta(uid: string | undefined, huella: string): boolean {
+  const [es, setEs] = useState(false)
+  useEffect(() => {
+    if (!uid || !crypto?.subtle) { setEs(false); return }
+    let vivo = true
+    crypto.subtle.digest('SHA-256', new TextEncoder().encode(uid)).then(b => { if (vivo) setEs([...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('') === huella) }).catch(() => undefined)
+    return () => { vivo = false }
+  }, [uid, huella])
+  return es
+}
 const CANDADO_KEY = 'bambu.candado'
 const BOOT_CANDADO: string | null = (() => {
   const url = new URL(window.location.href)
@@ -70,14 +95,14 @@ const BOOT_CANDADO: string | null = (() => {
   return app
 })()
 /** ?ir=lectura abre esa sección (lo usan los avisos push). */
-const IR: Record<string, Section> = { comida: 'Comida', noche: 'Noche', hoy: 'Hoy', lectura: 'Lectura', entrenar: 'Entrenar', enfoque: 'Enfoque', tareas: 'Tareas', ajustes: 'Ajustes', jardin: 'Historial', amigos: 'Amigos', duelos: 'Entrenar', redes: 'Entrenar' }
+const IR: Record<string, Section> = { comida: 'Comida', noche: 'Noche', hoy: 'Hoy', lectura: 'Lectura', entrenar: 'Entrenar', enfoque: 'Enfoque', tareas: 'Tareas', ajustes: 'Ajustes', jardin: 'Historial', amigos: 'Amigos', duelos: 'Entrenar', retos: 'Entrenar', redes: 'Entrenar' }
 let bootFocus = false
 function sectionFromUrl(): Section {
   const url = new URL(window.location.href)
   const pedida = url.searchParams.get('ir') ?? ''
   const target = Object.prototype.hasOwnProperty.call(IR, pedida) ? IR[pedida] : undefined
   if (url.searchParams.has('ir')) { url.searchParams.delete('ir'); window.history.replaceState({}, '', url.pathname + url.search + url.hash) }
-  if (target && (pedida === 'duelos' || pedida === 'redes')) { try { localStorage.setItem('bambu.entreno.modo', pedida) } catch { return target } }
+  if (target && (pedida === 'duelos' || pedida === 'retos' || pedida === 'redes')) { try { localStorage.setItem('bambu.entreno.modo', pedida === 'retos' ? 'duelos' : pedida) } catch { return target } }
   if (target === 'Enfoque') { bootFocus = true; return 'Tareas' }
   if (target) return target
   const amigo = url.searchParams.get('amigo')
@@ -118,7 +143,7 @@ function CrashProbe() {
  * Si una pantalla truena, el primer intento se repara solo en un segundo (muchos fallos son de
  * un instante, como datos a medio llegar). Si vuelve a tronar, enseña la tarjeta completa.
  */
-class Guard extends Component<{ children: ReactNode; onExport: () => void; onHome: () => void; where: string }, { error: Error | null; retried: boolean }> {
+class Guard extends Component<{ children: ReactNode; onReport: (error: Error, where: string) => Promise<Envio>; where: string }, { error: Error | null; retried: boolean }> {
   state = { error: null as Error | null, retried: false }
   timer: number | null = null
   static getDerivedStateFromError(error: Error) { return { error } }
@@ -135,7 +160,8 @@ class Guard extends Component<{ children: ReactNode; onExport: () => void; onHom
   render() {
     if (!this.state.error) return this.props.children
     if (!this.state.retried) return <Recovering />
-    return <ScreenCrash error={this.state.error} where={this.props.where} onRetry={() => this.setState({ error: null })} onExport={this.props.onExport} onHome={this.props.onHome} />
+    const error = this.state.error
+    return <ScreenCrash where={this.props.where} onRetry={() => { if (!faltaArchivo(error) || !recargarPorVersion(Date.now(), true)) this.setState({ error: null }) }} onReport={() => this.props.onReport(error, this.props.where)} />
   }
 }
 
@@ -162,6 +188,7 @@ export default function App() {
   // La pausa de Atajos no es una etiqueta de la app: siempre la atiende PauseQuick con la llave.
   const [nfc, setNfc] = useState<NfcAction | null>(() => { const a = parseNfc(window.location.search); return a?.tag === 'pause' ? null : a })
   // Etiqueta con llave abierta en Safari sin sesión: la acción la hace el servidor (NfcQuick).
+  const [despierta, setDespierta] = useState(false)
   const [quick, setQuick] = useState(() => parseNfc(window.location.search) ? window.location.search : '')
   const [trainingKey, setTrainingKey] = useState(0)
 
@@ -282,12 +309,18 @@ export default function App() {
   }, [replace])
 
   const userId = session?.uid
+  const esKiki = useEsCuenta(userId, CUENTA_KIKI)
   usePublicarPerfil(data, cloudConfigured && cloudReady ? userId : undefined)
   usePublicarEstado(data, cloudConfigured && cloudReady ? userId : undefined)
+  useFelicitar(cloudConfigured && cloudReady && data.settings.tablas ? userId : undefined)
   useEffect(() => {
     if (ready && cloudReady && data.profile.onboardingComplete && !data.settings.rutina2611) commit(d => d.settings.rutina2611 ? d : ajustarRutina2611(d))
     if (ready && cloudReady && data.settings.rondas2611) commit(d => d.settings.rondas2611 ? deshacerRondas2611(d) : d)
-  }, [ready, cloudReady, data.profile.onboardingComplete, data.settings.rutina2611, data.settings.rondas2611]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (ready && cloudReady && esKiki && data.profile.onboardingComplete && !data.settings.toques2611) commit(d => d.settings.toques2611 ? d : toquesA7(d))
+    if (ready && cloudReady && esKiki && data.profile.onboardingComplete && !data.settings.hspu2611) commit(d => d.settings.hspu2611 ? d : hspuA3(d))
+    if (ready && cloudReady && esKiki && data.profile.onboardingComplete && !data.settings.quitar2611) commit(d => d.settings.quitar2611 ? d : quitar2611(d))
+    if (ready && cloudReady && esKiki && data.profile.onboardingComplete && !data.settings.devolver2611) commit(d => d.settings.devolver2611 ? d : devolver2611(d))
+  }, [ready, cloudReady, esKiki, data.profile.onboardingComplete, data.settings.rutina2611, data.settings.rondas2611, data.settings.toques2611, data.settings.hspu2611, data.settings.quitar2611, data.settings.devolver2611]) // eslint-disable-line react-hooks/exhaustive-deps
   const nuevosAmigos = useAmigosNuevos(data, cloudConfigured && cloudReady ? userId : undefined, section)
   // Tus puntos de la semana llegan solos a la tabla de tus amigos (solo si ya creaste tu código).
   const puntosSemana = miSemana(data).puntos
@@ -411,6 +444,12 @@ export default function App() {
   const [focusKey, setFocusKey] = useState(0)
   const go = useCallback((target: Section) => { const next: Section = target === 'Enfoque' ? 'Tareas' : target; setFocusOpen(target === 'Enfoque'); setSection(next); setLost(false); window.scrollTo({ top: 0 }) }, [])
   const goHome = useCallback(() => { window.history.replaceState({}, '', window.location.pathname); go('Hoy') }, [go])
+  const reportar = useCallback(async (error: Error, donde: string): Promise<Envio> => {
+    try {
+      await reportarFallo({ donde, error: `${error.name}: ${error.message}`, pila: (error.stack ?? '').split('\n').slice(0, 6).join('\n'), version: VERSION, navegador: navigator.userAgent })
+      return 'enviado'
+    } catch { return 'error' }
+  }, [])
 
   useEffect(() => {
     if (!ready) return
@@ -476,6 +515,8 @@ export default function App() {
       go('Hoy')
     } else if (action.tag === 'focus') {
       go('Enfoque')
+    } else if (action.tag === 'despertar') {
+      setDespierta(true)
     } else if (action.tag === 'estirar') {
       openStretch(stretchSlot() ?? (new Date().getHours() < 16 ? 'manana' : 'noche'))
     } else if (action.tag === 'habit') {
@@ -554,10 +595,17 @@ export default function App() {
   if (cloudConfigured && !session) return <AuthScreen />
   if (cloudConfigured && !cloudReady && cloudError) return <ProblemScreen tone="offline" title="No llegamos a la nube." text="Revisa tu señal. Lo de este teléfono sigue intacto y se sube solo cuando vuelva la conexión."><button className="primary-button" onClick={() => setAttempt(a => a + 1)}>Reintentar</button><button className="quiet-button" onClick={signOut}>Cerrar sesión</button></ProblemScreen>
   if (cloudConfigured && !cloudReady) return <LoadingScreen text="Sincronizando tu espacio privado." />
+  if (mostrarLegal && cloudConfigured && userId && !legalAceptado(data.settings)) return <Consentimiento onAceptar={salud => aceptar(commit, salud)} onSalir={() => void signOut()} />
   if (!data.profile.onboardingComplete) return <Onboarding initialName={data.profile.name} onComplete={r => commit(d => ({ ...d, profile: { name: r.name || 'Tú', onboardingComplete: true },
-    settings: { ...d.settings, age: r.age, modules: r.modules, habits: r.habits, walkDaily: true, cardioSetup: true },
+    settings: { ...d.settings, modules: r.modules, habits: r.habits, ...(r.age ? { age: r.age } : {}), sinEdad: r.sinEdad, ...(r.competir ? { train: { ...(d.settings.train ?? semanaVacia()), lock: false } } : {}), walkDaily: true, cardioSetup: true, modo: r.competir ? 'competir' : undefined,
+      ...(r.wake ? { reminders: { ...d.settings.reminders, wake: r.wake } } : {}), ...(r.despertador ? { despertador: { on: true, reps: 10 } } : {}), ...(r.deporteDias?.length ? { footballDays: r.deporteDias } : {}) },
     habits: r.firstVotes.length ? { ...d.habits, [dateKey()]: [...new Set([...(d.habits[dateKey()] ?? []), ...r.firstVotes])] } : d.habits }))} />
-  if (candado) return <CandadoPage data={data} commit={commit} app={candado} onSalir={to => { try { sessionStorage.removeItem(CANDADO_KEY) } catch { void 0 } setCandado(null); if (to) go(to) }} />
+  if (despierta) return <DespertadorPantalla reps={despertadorDe(data).reps} nombre={data.profile.name} onSalir={() => { setDespierta(false); go('Hoy') }} onListo={hechas => {
+    const clock = clockOf(Date.now())
+    commit(x => logDespertar(x, dateKey(), hechas, clock))
+    return { ok: true, title: `¡Arriba! ${hechas} lagartijas`, text: `A las ${clock}. Ya ganaste tu primer round del día.` }
+  }} />
+  if (candado) return <Suspense fallback={<Cargando />}><CandadoPage data={data} commit={commit} app={candado} onSalir={to => { try { sessionStorage.removeItem(CANDADO_KEY) } catch { void 0 } setCandado(null); if (to) go(to) }} /></Suspense>
 
   const syncText = !cloudConfigured ? 'Guardado en este dispositivo' : !status ? 'Conectando' : status.phase === 'synced' ? 'Nube al día' : status.phase === 'offline' ? `Sin conexión · ${status.pending} por subir` : `Subiendo ${status.pending || ''}`.trim()
   // Sin conexión con cambios pendientes: la píldora se vuelve botón para reintentar a mano.
@@ -567,10 +615,11 @@ export default function App() {
     : <div className={`sync-pill sync-${status?.phase ?? 'local'} ${extra}`} role="status">{syncText}</div>
   const mods = modulesOf(data.settings)
   // v9: Noche vuelve (la vara de Gael), Lectura abre también con solo Biblia, Amigos espera a que lo social esté en Supabase.
-  const allowed = (id: Section) => id === 'Lectura' ? mods.reading || mods.bible : id === 'Entrenar' ? mods.training : id === 'Tareas' ? mods.focus : id === 'Comida' ? mods.food : id === 'Amigos' ? amigosListo : id !== 'Hábitos' && id !== 'Enfoque'
+  const competir = esCompetir(data.settings)
+  const allowed = (id: Section) => competir && (OCULTAS_EN_COMPETIR as readonly string[]).includes(id) ? false : id === 'Lectura' ? mods.reading || mods.bible : id === 'Entrenar' ? mods.training : id === 'Tareas' ? mods.focus : id === 'Comida' ? mods.food : id === 'Amigos' ? amigosListo : id !== 'Hábitos' && id !== 'Enfoque'
   const nav = NAV.filter(n => allowed(n.id))
   const tabs = nav.filter(n => n.id !== 'Ajustes')
-  const page: Section = allowed(section) ? section : 'Hoy'
+  const page: Section = allowed(section) ? section : inicioDe(data.settings, tabs.map(t => t.id))
   const labelOf = (id: Section) => NAV.find(n => n.id === id)?.label ?? id
   const live = { Tareas: !!data.activeFocus, Lectura: !!data.activeReading, Entrenar: !!(data.activeWorkout && !data.activeWorkout.endedAt), Amigos: nuevosAmigos > 0 } as Partial<Record<Section, boolean>>
   return <div className="shell d-shell">
@@ -583,9 +632,11 @@ export default function App() {
       <header className="top" aria-label={lost ? 'No encontrada' : labelOf(page)}><StatsBar data={data} go={go} /><button type="button" className={`top-gear ${page === 'Ajustes' ? 'on' : ''}`} aria-label="Ajustes" onClick={() => go('Ajustes')}><DuoIcon name="engrane" size={30} /></button></header>
       <div className="page">
         {!online && <OfflineBanner pending={status?.pending ?? 0} cloud={cloudConfigured} />}
+        <PaseAbierto data={data} commit={commit} onMessage={t => message(t)} />
         {update && <button type="button" className="update-banner" onClick={() => window.location.reload()}><span><strong>Versión nueva lista.</strong> Toca para estrenarla.</span><i aria-hidden="true">↻</i></button>}
-        {lost ? <NotFound onHome={goHome} onGo={s => go(s)} /> : <Guard onExport={exportBackup} onHome={goHome} where={page} key={page}><div className="section-in">
+        {lost ? <NotFound onHome={goHome} onGo={s => go(s)} /> : <Guard onReport={reportar} where={page} key={page}><div className="section-in">
           <CrashProbe />
+          <Suspense fallback={<Cargando />}>
           {page === 'Hoy' && <HoyLista data={data} commit={commit} go={go} onMessage={message} />}
           {page === 'Noche' && <NightPage data={data} commit={commit} onMessage={message} go={go} />}
           {page === 'Lectura' && <ReadingPage data={data} commit={commit} onMessage={message} />}
@@ -601,6 +652,7 @@ export default function App() {
           {page === 'Amigos' && <AmigosSimple data={data} onMessage={message} />}
           {page === 'Ajustes' && <AjustesSimple data={data} commit={commit} onMessage={message} cloud={cloudConfigured} onExport={exportBackup} onImport={f => void importBackup(f)} onSignOut={() => void signOut()} onDelete={deleteEverything} />}
           {!lost && <PageVerse page={page} data={data} />}
+          </Suspense>
         </div></Guard>}
         <footer className="foot">Lo que repites echa raíces.</footer>
       </div>

@@ -41,6 +41,12 @@ export function removeTask(commit: Commit, id: string) {
 
 export { Sheet }
 
+/** Saludo con tu nombre según la hora: la app te habla a ti, no a un usuario. */
+function saludo(nombre: string): string {
+  const h = new Date().getHours(), primero = (nombre || '').trim().split(/\s+/)[0]
+  const base = h < 5 ? 'Ya es tarde' : h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'
+  return primero && primero !== 'Tú' ? `${base}, ${primero}` : base
+}
 type Kind = 'manana' | 'train' | 'walk' | 'list' | 'read' | 'bible' | 'night'
 type State = 'done' | 'now' | 'todo' | 'locked' | 'missed'
 type PathNode = { kind: Kind; label: string; sub?: string; icon: DuoIconName; state: State; partial?: number; xp: number; live?: boolean }
@@ -110,7 +116,7 @@ function dayNodes(data: AppData, day: string, today: string): PathNode[] {
 
 function Node({ n, x, onTap, mascot }: { n: PathNode; x: number; onTap: (el: HTMLElement) => void; mascot?: ReactNode }) {
   return <div className={`d-step2 ${n.state}`} style={{ '--x': `${x * 62}px` } as CSSProperties}>
-    {n.state === 'now' && <span className="d-start">{n.kind === 'train' ? '¡A ENTRENAR!' : n.kind === 'read' ? '¡A LEER!' : n.kind === 'manana' ? '¡BUENOS DÍAS!' : n.kind === 'walk' ? '¡A CAMINAR!' : n.kind === 'night' ? '¡A CERRAR!' : 'EMPEZAR'}</span>}
+    {n.state === 'now' && <span className="d-start">{n.kind === 'train' ? '¡A ENTRENAR!' : n.kind === 'read' || n.kind === 'bible' ? '¡A LEER!' : n.kind === 'manana' ? '¡BUENOS DÍAS!' : n.kind === 'walk' ? '¡A CAMINAR!' : n.kind === 'night' ? '¡A CERRAR!' : 'EMPEZAR'}</span>}
     <button type="button" className={`d-node2 ${n.state} ${n.live ? 'live' : ''}`} onClick={e => onTap(e.currentTarget)} aria-label={`${n.label}${n.sub ? `, ${n.sub}` : ''}`}>
       {n.partial !== undefined && n.partial > 0 && n.state !== 'done' && n.state !== 'locked' && <svg className="d-node-ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - n.partial * 100} /></svg>}
       <DuoIcon name={n.state === 'done' ? 'check' : n.state === 'locked' ? 'candado' : n.icon} size={44} />
@@ -122,9 +128,8 @@ function Node({ n, x, onTap, mascot }: { n: PathNode; x: number; onTap: (el: HTM
 
 export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commit: Commit; go: (s: Section) => void; onMessage: (t: string) => void }) {
   const today = dateKey()
-  const [sheet, setSheet] = useState<'list' | 'read' | 'manana' | 'walk' | null>(null)
+  const [sheet, setSheet] = useState<'list' | 'read' | 'bible' | 'manana' | 'walk' | null>(null)
   const [oro, setOro] = useState<Ring | null>(null)
-  const [bible, setBible] = useState(false)
   const [text, setText] = useState('')
   const [daily, setDaily] = useState(false)
   const [edit, setEdit] = useState(false)
@@ -169,7 +174,7 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     if (n.state === 'locked') { onMessage(`Se abre el ${dayTitle(day).toLowerCase()}.`); return }
     if (day !== today) { onMessage(n.state === 'done' ? 'Ese día lo cumpliste.' : 'Ese día ya pasó. Hoy cuenta más.'); return }
     if (n.kind === 'train') go('Entrenar')
-    else if (n.kind === 'bible') { setBible(true); setSheet('read') }
+    else if (n.kind === 'bible') setSheet('bible')
     else if (n.kind === 'night') go('Noche')
     else setSheet(n.kind)
   }
@@ -205,15 +210,15 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     const rt = routineFor(data, day)
     return <section className={`d-unit2 ${kind}`} key={day}>
       <header className="d-unit2-head">
-        <div><b>{kind === 'today' ? 'Hoy' : kind === 'future' && day === shiftDay(today, 1) ? 'Mañana' : dayTitle(day)}</b>
-          <span>{kind === 'today' ? `${dayTitle(day)} · ${cerrados(anillos)} de ${[anillos.cuerpo, anillos.mente, anillos.alma].filter(v => v !== null).length} anillos` : kind === 'future' ? (rt ? rt.title : 'Día de descanso') : `${done} de ${nodes.length} hechos`}</span></div>
+        <div><b>{kind === 'today' ? saludo(data.profile.name) : kind === 'future' && day === shiftDay(today, 1) ? 'Mañana' : dayTitle(day)}</b>
+          <span>{kind === 'today' ? <>{dayTitle(day)}<br />{cerrados(anillos)} de {[anillos.cuerpo, anillos.mente, anillos.alma].filter(v => v !== null).length} anillos</> : kind === 'future' ? (rt ? rt.title : 'Día de descanso') : `${done} de ${nodes.length} hechos`}</span></div>
         {kind === 'today' ? <AnillosDia a={anillos} oro={oroDe(data, today, anillos)} />
           : <DuoIcon name={kind === 'future' ? 'candado' : kind === 'past' && done === nodes.length && nodes.length ? 'check' : 'casa'} size={36} />}
         {kind === 'today' && <AnillosLeyenda a={anillos} oro={oroDe(data, today, anillos)} />}
       </header>
       {kind === 'today' && ofrecerOro(data, today, anillos) && <OroInvite ring={ofrecerOro(data, today, anillos)!} onOpen={() => setOro(ofrecerOro(data, today, anillos))} />}
       {nodes.map((n, i) => <Node key={n.kind} n={n} x={WAVE[(offset + i) % WAVE.length]} onTap={() => tap(n, day)}
-        mascot={kind === 'today' && n.state === 'now' ? <div className={`d-mascot ${WAVE[(offset + i) % WAVE.length] > 0 ? 'left' : 'right'}`}><div className="d-mascot-say">{line.text}</div><BroteArt mood={line.mood} size={70} /></div> : undefined} />)}
+        mascot={kind === 'today' && n.state === 'now' ? <div className={`d-mascot ${WAVE[(offset + i) % WAVE.length] > 0 ? 'left' : 'right'}`}><div className="d-mascot-say">{line.text}</div><BroteArt mood={line.mood} size={96} /></div> : undefined} />)}
       {kind === 'today' && <div className="d-step2 chest">
         <button type="button" className={`d-chest ${allDone ? 'open' : ''}`} onClick={() => allDone ? celebrate({ kind: 'day', title: '¡Día completo!', text: `Ganaste ${xpToday} XP hoy. Tu bambú está en flor.` }) : onMessage(`Vas en ${Math.round(score.pct * 100)}%. Al 80% se abre el cofre.`)} aria-label="Cofre del día">
           <DuoIcon name="cofre" size={64} off={!allDone} />
@@ -265,7 +270,7 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     </Sheet>}
     {sheet === 'walk' && <CardioSheet data={data} commit={commit} onClose={() => setSheet(null)} onMessage={onMessage} />}
     {sheet === 'manana' && <MorningSheet data={data} commit={commit} onClose={() => setSheet(null)} />}
+    {(sheet === 'read' || sheet === 'bible') && <ReadSheet data={data} commit={commit} biblia={sheet === 'bible'} onClose={() => setSheet(null)} onMessage={onMessage} />}
     {oro && <OroSheet ring={oro} day={today} commit={commit} onClose={() => setOro(null)} />}
-    {sheet === 'read' && <ReadSheet data={data} commit={commit} onClose={() => { setSheet(null); setBible(false) }} onMessage={onMessage} startBible={bible} />}
   </section>
 }

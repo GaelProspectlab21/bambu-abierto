@@ -6,6 +6,7 @@ import { GivenBar } from './GivenBar'
 import { verdict } from './lib/measure'
 import { StretchPlayer } from './Stretch'
 import { stretchSlot, type StretchWhen } from './lib/stretch'
+import { DespertadorPantalla } from './Despertador'
 
 type Result = { ok: boolean; title: string; text: string; open?: boolean }
 
@@ -143,7 +144,33 @@ function StretchQuick({ search, onSignIn }: { search: string; onSignIn: () => vo
   </main>
 }
 
+/** Despertador sin sesión (el Atajo abre Safari): la pantalla corre aquí y el servidor guarda con tu llave. */
+function DespertadorQuick({ search, onSignIn }: { search: string; onSignIn: () => void }) {
+  const k = useRef(new URLSearchParams(search).get('k') ?? '')
+  const [reps, setReps] = useState<number | null>(null)
+  const [fuera, setFuera] = useState(false)
+  useEffect(() => { clearNfcFromUrl() }, [])
+  useEffect(() => {
+    // Pregunta tu meta sin escribir nada (peek). Sin señal, 10.
+    if (!supabase || !k.current) { setReps(10); return }
+    supabase.functions.invoke('bambu-nfc', { body: { k: k.current, search: '?nfc=despertar', peek: true } })
+      .then(({ data }) => setReps(Number((data as { reps?: number } | null)?.reps) || 10)).catch(() => setReps(10))
+  }, [])
+  async function listo(hechas: number): Promise<Result> {
+    if (!supabase || !k.current) return { ok: false, title: 'Lo hiciste, pero no se guardó', text: 'Este Atajo no trae tu llave. Cópialo otra vez desde Ajustes.' }
+    const { data, error } = await supabase.functions.invoke('bambu-nfc', { body: { k: k.current, search: '?nfc=despertar', wake: { reps: hechas } } })
+    const b = data as Result | null
+    if (b?.title) return b
+    const ctx = (error as { context?: Response } | null)?.context
+    if (ctx?.json) return await ctx.json() as Result
+    return { ok: false, title: 'Lo hiciste, pero no se guardó', text: 'Revisa tu señal.' }
+  }
+  if (reps === null) return <main className="nfc-quick"><section className="nfc-quick-card"><h1>Despertando a Brote</h1></section></main>
+  if (fuera) return <main className="nfc-quick"><section className="nfc-quick-card ok"><h1>Buen día</h1><p>Ya puedes cerrar Safari.</p></section><button className="auth-switch" onClick={onSignIn}>Entrar a Bambú aquí en Safari</button></main>
+  return <DespertadorPantalla reps={reps} onListo={listo} onSalir={() => setFuera(true)} />
+}
+
 export function NfcQuick(props: { search: string; onSignIn: () => void }) {
   const tag = parseNfc(props.search)?.tag
-  return tag === 'night' ? <NightQuick {...props} /> : tag === 'estirar' ? <StretchQuick {...props} /> : <NfcQuickAction {...props} />
+  return tag === 'night' ? <NightQuick {...props} /> : tag === 'despertar' ? <DespertadorQuick {...props} /> : tag === 'estirar' ? <StretchQuick {...props} /> : <NfcQuickAction {...props} />
 }

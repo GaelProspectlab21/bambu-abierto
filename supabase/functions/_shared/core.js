@@ -1,4 +1,4 @@
-//#region src/lib/readingSession.ts
+// src/lib/readingSession.ts
 var text = (v, max) => typeof v === "string" ? v.trim().slice(0, max) : "";
 function readingDetail(v) {
 	return {
@@ -39,8 +39,7 @@ function finishReading(session, now = Date.now()) {
 		endedAt: session.pausedAt ?? now
 	};
 }
-//#endregion
-//#region src/lib/personal.ts
+// src/lib/personal.ts
 function provenance(value) {
 	const source = typeof value.source === "string" && [
 		"bambu",
@@ -93,8 +92,7 @@ function normalizeTasks(value) {
 		}];
 	});
 }
-//#endregion
-//#region src/lib/model.ts
+// src/lib/model.ts
 var ALL_MODULES = {
 	reading: true,
 	bible: true,
@@ -396,7 +394,9 @@ function cleanActivityRow(value) {
 		intensity: int(value.intensity, 1, 3),
 		note: cleanText(value.note, 300) || void 0,
 		sport,
-		km: km !== void 0 ? Math.round(km * 100) / 100 : void 0
+		km: km !== void 0 ? Math.round(km * 100) / 100 : void 0,
+		deporte: typeof value.deporte === "string" && /^[a-z]{2,20}$/.test(value.deporte) ? value.deporte : void 0,
+		sinAjuste: value.sinAjuste === true ? true : void 0
 	});
 }
 function cleanCheckinRow(value) {
@@ -689,7 +689,16 @@ function cleanAmigos(value) {
 	return ids.length ? ids : void 0;
 }
 function cleanCandado(value) {
-	return isRecord(value) && typeof value.llave === "string" && /^[A-Za-z0-9]{16,40}$/.test(value.llave) ? { llave: value.llave } : void 0;
+	if (!isRecord(value) || typeof value.llave !== "string" || !/^[A-Za-z0-9]{16,40}$/.test(value.llave)) return void 0;
+	const ms = (v) => typeof v === "number" && Number.isFinite(v) && v > 0 && v < 864e13 ? Math.round(v) : void 0;
+	const desde = ms(value.desde), hasta = ms(value.hasta);
+	const pase = typeof value.pase === "string" && /^(pase|emergencia):[A-Za-z0-9-]{1,60}$/.test(value.pase) ? value.pase : void 0;
+	return {
+		llave: value.llave,
+		...desde ? { desde } : {},
+		...hasta ? { hasta } : {},
+		...pase ? { pase } : {}
+	};
 }
 function cleanAvisos(value) {
 	return isRecord(value) && typeof value.hora === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value.hora) ? { hora: value.hora } : void 0;
@@ -742,12 +751,33 @@ function cleanSettings(value) {
 		cardioSetup: v.cardioSetup === true ? true : void 0,
 		rutina2611: v.rutina2611 === true ? true : void 0,
 		rondas2611: v.rondas2611 === true ? true : void 0,
+		toques2611: v.toques2611 === true ? true : void 0,
+		hspu2611: v.hspu2611 === true ? true : void 0,
+		quitar2611: v.quitar2611 === true ? true : void 0,
+		devolver2611: v.devolver2611 === true ? true : void 0,
 		tablas: cleanTablas(v.tablas),
 		amigos: cleanAmigos(v.amigos),
 		aprobados: cleanAmigos(v.aprobados),
 		candado: cleanCandado(v.candado),
 		widget: cleanCandado(v.widget),
-		avisos: cleanAvisos(v.avisos)
+		avisos: cleanAvisos(v.avisos),
+		despertador: isRecord(v.despertador) ? {
+			on: v.despertador.on === true,
+			reps: [
+				5,
+				10,
+				15,
+				20
+			].includes(Number(v.despertador.reps)) ? Number(v.despertador.reps) : 10
+		} : void 0,
+		modo: v.modo === "competir" ? "competir" : void 0,
+		sinEdad: v.sinEdad === true ? true : void 0,
+		minLibres: int(v.minLibres, 0, 240),
+		legal: isRecord(v.legal) && typeof v.legal.version === "string" && /^\d{4}-\d\d-\d\d$/.test(v.legal.version) && typeof v.legal.fecha === "string" && v.legal.fecha.length <= 40 ? {
+			version: v.legal.version,
+			fecha: v.legal.fecha,
+			salud: v.legal.salud === true
+		} : void 0
 	});
 }
 function dateKey(date = /* @__PURE__ */ new Date()) {
@@ -759,8 +789,7 @@ function makeId() {
 function activeHabits(settings) {
 	return settings.habits.filter((h) => !h.archived);
 }
-//#endregion
-//#region src/lib/records.ts
+// src/lib/records.ts
 /**
 * El espacio de Bambú como registros sueltos.
 *
@@ -962,8 +991,7 @@ function applyRecords(data, rows) {
 	}
 	return next;
 }
-//#endregion
-//#region src/lib/progress.ts
+// src/lib/progress.ts
 function shiftDay(day, count) {
 	const value = /* @__PURE__ */ new Date(`${day}T12:00:00`);
 	value.setDate(value.getDate() + count);
@@ -1032,8 +1060,7 @@ function proteinMealsOn(data, day) {
 	if (data.meals.some((m) => m.day === day)) return dayTotals(data, day).proteinMeals;
 	return data.checkins.find((c) => c.day === day)?.proteinMeals;
 }
-//#endregion
-//#region src/lib/exercises.ts
+// src/lib/exercises.ts
 var MUSCLES = [
 	{
 		id: "pecho",
@@ -1958,8 +1985,7 @@ function nextInLadder(id) {
 	if (!e) return void 0;
 	return ladder(e.slot).find((x) => x.level > e.level && x.mode === e.mode);
 }
-//#endregion
-//#region src/lib/coach.ts
+// src/lib/coach.ts
 /**
 * El coach de entrenamiento. Funciones puras: reciben tus datos y la hora, devuelven qué
 * toca. Nada aquí adivina: cada recomendación sale de lo que registraste y de una regla
@@ -2426,8 +2452,279 @@ function weekPlan(data, now = Date.now()) {
 		};
 	});
 }
-//#endregion
-//#region src/lib/rutina.ts
+// src/lib/musculoNombre.ts
+var GUESS = [
+	[/handstand|pike|hombro|parado de cabeza|planche/, "Hombros"],
+	[/lagartij|push|fondo|pecho/, "Pecho"],
+	[/domin|chin|pull|remo|australian|lever|muscle up|espalda|toalla/, "Espalda"],
+	[/sentadill|squat|desplante|zancada|talon|gluteo|wall sit|puente|pierna|nordic/, "Piernas"],
+	[/abs|abdom|plancha|hollow|russian|crunch|l sit|dragon|v-up|toes/, "Abdomen"],
+	[/bicep|tricep|curl|brazo|antebrazo|colgar/, "Brazos"]
+];
+var sinAcentos = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function musculoDeNombre(name) {
+	const n = sinAcentos(name);
+	return GUESS.find(([re]) => re.test(n))?.[1] ?? null;
+}
+// src/lib/deportes.ts
+var TODO = [
+	"Pecho",
+	"Espalda",
+	"Hombros",
+	"Brazos",
+	"Abdomen",
+	"Piernas"
+];
+var DEPORTES = [
+	{
+		id: "futbol",
+		name: "Fútbol",
+		musculos: ["Piernas"]
+	},
+	{
+		id: "basquet",
+		name: "Básquet",
+		musculos: ["Piernas", "Hombros"]
+	},
+	{
+		id: "voleibol",
+		name: "Vóleibol",
+		musculos: ["Piernas", "Hombros"]
+	},
+	{
+		id: "americano",
+		name: "Fútbol americano",
+		musculos: [
+			"Piernas",
+			"Pecho",
+			"Hombros"
+		]
+	},
+	{
+		id: "beisbol",
+		name: "Béisbol",
+		musculos: ["Hombros", "Brazos"]
+	},
+	{
+		id: "rugby",
+		name: "Rugby",
+		musculos: [
+			"Piernas",
+			"Pecho",
+			"Hombros"
+		]
+	},
+	{
+		id: "hockey",
+		name: "Hockey",
+		musculos: ["Piernas"]
+	},
+	{
+		id: "handball",
+		name: "Handball",
+		musculos: ["Piernas", "Hombros"]
+	},
+	{
+		id: "escalar",
+		name: "Escalar",
+		musculos: [
+			"Espalda",
+			"Brazos",
+			"Abdomen"
+		]
+	},
+	{
+		id: "nadar",
+		name: "Nadar",
+		musculos: [
+			"Espalda",
+			"Hombros",
+			"Pecho"
+		]
+	},
+	{
+		id: "box",
+		name: "Box",
+		musculos: [
+			"Hombros",
+			"Brazos",
+			"Abdomen"
+		]
+	},
+	{
+		id: "artes",
+		name: "Artes marciales",
+		musculos: [
+			"Piernas",
+			"Abdomen",
+			"Hombros"
+		]
+	},
+	{
+		id: "lucha",
+		name: "Lucha o jiu-jitsu",
+		musculos: [
+			"Espalda",
+			"Brazos",
+			"Abdomen"
+		]
+	},
+	{
+		id: "correr",
+		name: "Correr",
+		musculos: ["Piernas"]
+	},
+	{
+		id: "bici",
+		name: "Bici",
+		musculos: ["Piernas"]
+	},
+	{
+		id: "caminar",
+		name: "Caminar",
+		musculos: ["Piernas"]
+	},
+	{
+		id: "senderismo",
+		name: "Senderismo",
+		musculos: ["Piernas"]
+	},
+	{
+		id: "tenis",
+		name: "Tenis",
+		musculos: [
+			"Hombros",
+			"Brazos",
+			"Piernas"
+		]
+	},
+	{
+		id: "padel",
+		name: "Pádel",
+		musculos: [
+			"Hombros",
+			"Brazos",
+			"Piernas"
+		]
+	},
+	{
+		id: "frontenis",
+		name: "Frontenis",
+		musculos: [
+			"Hombros",
+			"Brazos",
+			"Piernas"
+		]
+	},
+	{
+		id: "pingpong",
+		name: "Ping pong",
+		musculos: ["Brazos"]
+	},
+	{
+		id: "badminton",
+		name: "Bádminton",
+		musculos: ["Hombros", "Piernas"]
+	},
+	{
+		id: "remo",
+		name: "Remo",
+		musculos: [
+			"Espalda",
+			"Brazos",
+			"Piernas"
+		]
+	},
+	{
+		id: "surf",
+		name: "Surf",
+		musculos: ["Espalda", "Hombros"]
+	},
+	{
+		id: "patinar",
+		name: "Patinar o skate",
+		musculos: ["Piernas"]
+	},
+	{
+		id: "baile",
+		name: "Baile",
+		musculos: ["Piernas"]
+	},
+	{
+		id: "yoga",
+		name: "Yoga",
+		musculos: []
+	},
+	{
+		id: "pilates",
+		name: "Pilates",
+		musculos: ["Abdomen"]
+	},
+	{
+		id: "crossfit",
+		name: "CrossFit",
+		musculos: TODO
+	},
+	{
+		id: "pesas",
+		name: "Gimnasio con pesas",
+		musculos: TODO
+	},
+	{
+		id: "golf",
+		name: "Golf",
+		musculos: []
+	}
+];
+function deportePorId(id) {
+	return DEPORTES.find((d) => d.id === id) ?? null;
+}
+function carga(minutos, intensidad) {
+	return minutos * (intensidad >= 3 ? 2 : intensidad === 2 ? 1.5 : 1);
+}
+function nivelDe(c) {
+	return c >= 120 ? "descanso" : c >= 45 ? "rebaja" : "nada";
+}
+function nombreDeporte(a) {
+	return deportePorId(a.deporte)?.name ?? ((a.note ?? "").replace("Deporte:", "").trim() || "Otro deporte");
+}
+function deportesOn(data, day) {
+	return data.activities.filter((a) => a.day === day && !!a.deporte);
+}
+function resumen(list) {
+	if (!list.length) return null;
+	const minutos = list.reduce((m, a) => m + (a.minutes ?? 0), 0);
+	const c = list.reduce((m, a) => m + carga(a.minutes ?? 0, a.intensity ?? 2), 0);
+	const musculos = [...new Set(list.flatMap((a) => deportePorId(a.deporte)?.musculos ?? []))];
+	return {
+		nivel: nivelDe(c),
+		musculos,
+		nombres: list.map(nombreDeporte),
+		minutos
+	};
+}
+function ajusteDe(data, day) {
+	return resumen(deportesOn(data, day).filter((a) => !a.sinAjuste));
+}
+function ajustar(rt, aj) {
+	if (!aj || aj.nivel === "nada") return rt;
+	if (aj.nivel === "descanso") return null;
+	const usado = (name) => {
+		const m = musculoDeNombre(name);
+		return !!m && aj.musculos.includes(m);
+	};
+	const items = rt.items.filter((i) => i.when || !usado(i.name)).map((i) => !i.when && i.rounds ? {
+		...i,
+		rounds: Math.min(i.rounds, 2)
+	} : i);
+	if (!items.some((i) => !i.when)) return null;
+	return {
+		...rt,
+		rounds: Math.min(rt.rounds, 2),
+		items
+	};
+}
+// src/lib/rutina.ts
 var r = (n, t) => [
 	n,
 	"reps",
@@ -2496,7 +2793,7 @@ function planOf(data) {
 function routineFor(data, day) {
 	if (usesCoach(data)) return coachRoutine(data, day);
 	const rt = planOf(data).week[weekIndex(day)];
-	return rt && rt.items.length ? rt : null;
+	return rt && rt.items.length ? ajustar(rt, ajusteDe(data, day)) : null;
 }
 /**
 * Sin rutina propia, el día lo decide el coach original (torso y pierna según tus días de fútbol,
@@ -2561,11 +2858,71 @@ function clockOf(now) {
 	const d = new Date(now);
 	return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
-//#endregion
-//#region src/lib/text.ts
+// src/lib/text.ts
 /** "1 serie", "2 series". Todo conteo visible pasa por aquí: un "1 hábitos" se nota y resta confianza. */
 function plural(n, one, many) {
 	return `${n} ${n === 1 ? one : many}`;
+}
+// src/lib/jardin.ts
+var WAKE_PREFIX = "Despertar:";
+// src/lib/despertador.ts
+var DESP_PREFIX = "Despertador:";
+var DESP_REPS = [
+	5,
+	10,
+	15,
+	20
+];
+var DESP_DEFAULT = {
+	on: false,
+	reps: 10
+};
+function despertadorDe(data) {
+	const d = data.settings.despertador;
+	const reps = DESP_REPS.find((r) => r === d?.reps) ?? DESP_DEFAULT.reps;
+	return {
+		on: d?.on === true,
+		reps
+	};
+}
+var despertoHoy = (data, day) => data.activities.some((a) => a.day === day && a.kind === "other" && !!a.note?.startsWith("Despertador:"));
+/** Guarda que te levantaste con tus lagartijas. También deja tu hora de despertar si no había. */
+function logDespertar(data, day, reps, clock) {
+	if (despertoHoy(data, day) || !(reps > 0)) return data;
+	const n = Math.min(Math.round(reps), 300);
+	const woke = data.activities.some((a) => a.day === day && a.kind === "other" && a.note?.startsWith("Despertar:"));
+	return {
+		...data,
+		activities: [
+			...data.activities,
+			{
+				id: `despertador:${day}`,
+				day,
+				kind: "other",
+				note: `${DESP_PREFIX} ${n} lagartijas a las ${clock}`
+			},
+			...woke ? [] : [{
+				id: `wake:${day}`,
+				day,
+				kind: "other",
+				note: `${WAKE_PREFIX} ${clock}`
+			}]
+		]
+	};
+}
+var mins = (hhmm) => {
+	const [h, m] = hhmm.split(":").map(Number);
+	return h * 60 + m;
+};
+/**
+* ¿Toca insistir ahora? Devuelve la ranura de 5 min (para que cada aviso tenga su llave) o null.
+* Solo dentro de la hora siguiente a tu hora de despertar y si aún no las hiciste.
+*/
+function ranuraInsistir(data, day, clock) {
+	if (!despertadorDe(data).on || despertoHoy(data, day)) return null;
+	const desde = mins(clock) - mins(data.settings.reminders.wake);
+	if (desde < 0 || desde >= 60) return null;
+	return Math.floor(desde / 5);
 }
 function minutesOf$1(hhmm) {
 	const [h, m] = hhmm.split(":").map(Number);
@@ -2691,10 +3048,23 @@ function dueNotes(data, now) {
 		const d = new Date(now), minute = d.getHours() * 60 + d.getMinutes(), at = minutesOf$1(planOf(data).deadline);
 		if (minute >= at && minute < at + 90) kinds.push("trainLate");
 	}
-	return kinds.flatMap((kind) => {
+	const notes = kinds.flatMap((kind) => {
 		const note = reminderNote(kind, data, now);
 		return note ? [note] : [];
 	});
+	const d = new Date(now), clock = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+	const today = dateKey(d), slot = ranuraInsistir(data, today, clock);
+	if (slot !== null) {
+		const reps = despertadorDe(data).reps;
+		notes.unshift({
+			kind: "alarm",
+			key: `alarm:${today}:${slot}`,
+			url: "/?nfc=despertar",
+			title: slot === 0 ? "¡Arriba! Tus lagartijas te esperan" : `Sigues sin tus ${reps} lagartijas`,
+			body: slot === 0 ? `Haz ${reps} frente a la cámara y se apaga.` : `Te vuelvo a avisar en 5 minutos. ${reps} lagartijas y se acaba.`
+		});
+	}
+	return notes;
 }
 function testNote() {
 	return {
@@ -2705,8 +3075,7 @@ function testNote() {
 		body: "Así se ven tus recordatorios. Puedes cambiar las horas en Ajustes."
 	};
 }
-//#endregion
-//#region src/lib/pause.ts
+// src/lib/pause.ts
 /**
 * Pausa antes de las apps (estilo Opal, sin app nativa).
 *
@@ -2797,8 +3166,7 @@ function pauseStats(data, day) {
 		resisted: rows.filter((a) => a.note?.endsWith("resistida")).length
 	};
 }
-//#endregion
-//#region src/lib/nfc.ts
+// src/lib/nfc.ts
 /**
 * Etiquetas NFC. Cada etiqueta guarda solo un enlace (sin cuenta ni contraseña). Al
 * acercar el teléfono, el sistema abre el enlace y Bambú decide qué hacer según tu estado:
@@ -2833,7 +3201,8 @@ function parseNfc(search) {
 		"weigh",
 		"night",
 		"cama",
-		"estirar"
+		"estirar",
+		"despertar"
 	].includes(tag) ? { tag } : null;
 }
 function gave(capacity, given) {
@@ -2853,11 +3222,7 @@ function verdict(capacity, given) {
 		text: `Diste ${given}% de los ${capacity}% que traías. Sin culpa: mañana se mide con la medida de mañana.`
 	};
 }
-//#endregion
-//#region src/lib/jardin.ts
-var WAKE_PREFIX = "Despertar:";
-//#endregion
-//#region src/lib/stretch.ts
+// src/lib/stretch.ts
 /**
 * Estiramiento diario: al despertar (movilidad suave, unos 5 min) y antes de dormir (posturas
 * sostenidas). Dosis conservadora adaptada de ACSM: 20 s, dos vueltas, sin dolor.
@@ -2893,8 +3258,7 @@ function logStretch(data, when, seconds, day = dateKey(), row = stretchRow(when,
 		} : data.habits
 	};
 }
-//#endregion
-//#region src/lib/nfcActions.ts
+// src/lib/nfcActions.ts
 /**
 * Lo que hace una etiqueta NFC cuando NO hay sesión en el navegador.
 *
@@ -2998,6 +3362,24 @@ function trainingAction(data, now, day) {
 var SAME_TOUCH = 8e3;
 function nfcServerAction(data, action, now, day, clock = clockOf(now)) {
 	if (action.tag === "cama") return bedAction(data, day, clock);
+	if (action.tag === "despertar") {
+		if (despertoHoy(data, day)) return {
+			next: data,
+			title: "Ya te levantaste",
+			text: "Tus lagartijas de hoy ya estaban."
+		};
+		const meta = despertadorDe(data).reps, hechas = Math.round(action.wake?.reps ?? 0);
+		if (hechas < meta) return {
+			next: data,
+			title: "Todavía no",
+			text: `Te faltan ${meta - Math.max(0, hechas)} lagartijas para apagarla.`
+		};
+		return {
+			next: logDespertar(data, day, hechas, clock),
+			title: `¡Arriba! ${hechas} lagartijas`,
+			text: `A las ${clock}. Ya ganaste tu primer round del día.`
+		};
+	}
 	if (action.tag === "estirar") {
 		const s = action.stretch;
 		if (!s || !(s.seconds >= 60)) return {
@@ -3155,5 +3537,4 @@ function nfcServerAction(data, action, now, day, clock = clockOf(now)) {
 		text: `Para ${action.tag === "focus" ? "preparar tu bloque" : action.tag === "checkin" ? "tu check-in de la mañana" : "registrar tu peso"} necesitas la app.`
 	};
 }
-//#endregion
 export { EMPTY_DATA, applyRecords, cleanSettings, diffRecords, dueKinds, dueNotes, nfcServerAction, parseNfc, testNote };

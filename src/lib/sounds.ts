@@ -6,6 +6,7 @@
  * marcas sube nota por nota sin desafinar.
  */
 export type SoundKind = 'complete' | 'undo' | 'achieve' | 'record' | 'streak' | 'level' | 'day' | 'gold' | 'focusStart' | 'focusEnd'
+  | 'miss' | 'tick' | 'go' | 'bible' | 'night' | 'meal' | 'awake'
 export const SOUND_KEY = 'bambu.sonidos'
 
 /** Re pentatónica, de Re4 a Re6. */
@@ -24,9 +25,17 @@ export const SCORES: Record<Exclude<SoundKind, 'complete'>, readonly Note[]> = {
   gold: [['bell', 7, 0, .35], ['bell', 8, .05, .35], ['bell', 9, .1, .35], ['bell', 10, .15, .45], ['wood', 10, .15, .5]],
   focusStart: [['bowl', 0, 0, .8]],
   focusEnd: [['bowl', 3, 0, 1], ['bell', 5, .9, 1], ['bell', 8, 1.8, 1]],
+  // v11: la cámara, la Biblia, la noche, la comida y el despertador tienen su propia voz.
+  miss: [['wood', 0, 0, .35]],
+  tick: [['wood', 5, 0, .45]],
+  go: [['wood', 8, 0, .8], ['bell', 10, .03, .5]],
+  bible: [['bowl', 0, 0, .55], ['bell', 7, .35, .3]],
+  night: [['bowl', 0, 0, .6], ['bell', 4, .5, .3], ['bell', 2, 1.1, .25]],
+  meal: [['wood', 4, 0, .55], ['wood', 6, .09, .5]],
+  awake: [['wood', 3, 0], ['wood', 5, .08], ['wood', 7, .16], ['wood', 8, .24], ['bell', 10, .34, .7], ['bell', 8, .34, .45], ['bowl', 3, .34, .6]],
 }
 /** Más alto gana: una celebración nunca la tapa el clic que la provocó. */
-const PRIORITY: Record<SoundKind, number> = { undo: 0, complete: 1, achieve: 2, record: 2, focusStart: 2, gold: 3, streak: 3, level: 4, day: 4, focusEnd: 4 }
+const PRIORITY: Record<SoundKind, number> = { undo: 0, miss: 0, tick: 1, complete: 1, meal: 1, achieve: 2, record: 2, focusStart: 2, go: 2, bible: 2, gold: 3, streak: 3, night: 3, level: 4, day: 4, focusEnd: 4, awake: 4 }
 
 /** Encendido salvo que lo apagues. El iPhone respeta el modo silencio porque Web Audio es ambiente. */
 export function soundAllowed(preference: string | null, hidden: boolean, interrupted: boolean, mediaPlaying: boolean): boolean {
@@ -151,3 +160,38 @@ export function playSound(kind: SoundKind, force = false) {
     else emit()
   } catch (error) { console.warn("Bambú no pudo sonar:", error) } // registrar funciona igual sin audio
 }
+
+/** Cada repetición de la cámara: madera que sube un grado por rep y una campanita cada 5. */
+export function repScore(n: number): readonly Note[] {
+  const degree = 2 + ((Math.max(1, n) - 1) % 8)
+  return n % 5 === 0 ? [['wood', degree, 0, .8], ['bell', Math.min(degree + 2, SCALE.length - 1), .03, .4]] : [['wood', degree, 0, .7]]
+}
+export function playRep(n: number) {
+  try {
+    if (!soundsOn() || document.hidden) return
+    context ??= new AudioContext()
+    const ctx = context
+    const go = () => { const t0 = ctx.currentTime + .005; repScore(n).forEach(note => voice(ctx, note, t0)) }
+    if (ctx.state === 'suspended') void ctx.resume().then(go).catch(() => undefined)
+    else go()
+  } catch (error) { console.warn('Bambú no pudo sonar la repetición:', error) }
+}
+
+/**
+ * La alarma del despertador: campanas fuertes cada 1.6 s hasta que la paras. Suena aunque el
+ * sonido de premios esté apagado (es una alarma, igual que la campana del bloque).
+ */
+let alarm: ReturnType<typeof setInterval> | undefined
+export const ALARM_SCORE: readonly Note[] = [['bell', 10, 0, 1], ['bell', 8, .18, 1], ['bell', 10, .36, 1], ['wood', 5, .54, 1], ['wood', 7, .62, 1]]
+export function startAlarm() {
+  stopAlarm()
+  try {
+    context ??= new AudioContext()
+    const ctx = context
+    const ring = () => { if (ctx.state !== 'running') { void ctx.resume().catch(() => undefined); return } const t0 = ctx.currentTime + .01; ALARM_SCORE.forEach(n => voice(ctx, n, t0)) }
+    ring()
+    alarm = setInterval(ring, 1600)
+  } catch (error) { console.warn('Bambú no pudo sonar la alarma:', error) }
+}
+export function stopAlarm() { if (alarm) clearInterval(alarm); alarm = undefined }
+export const alarmRinging = () => alarm !== undefined

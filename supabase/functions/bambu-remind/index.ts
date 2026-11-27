@@ -70,7 +70,11 @@ async function runCron() {
     // Paso barato primero: solo los ajustes. Si a esta hora no toca nada, no se carga el historial.
     const meta = await rowsOf(userId, 'meta')
     const settings = cleanSettings(meta.find(r => r.id === 'settings')?.payload.value)
-    if (!dueKinds(settings.reminders, settings.sleepTarget, now).length) continue
+    // El despertador insiste aunque los demás avisos estén apagados: una hora desde tu hora de despertar.
+    const d = new Date(now), [wh, wm] = settings.reminders.wake.split(':').map(Number)
+    const desde = d.getHours() * 60 + d.getMinutes() - (wh * 60 + wm)
+    const despierta = settings.despertador?.on === true && desde >= 0 && desde < 60
+    if (!despierta && !dueKinds(settings.reminders, settings.sleepTarget, now).length) continue
     const data = applyRecords({ ...EMPTY_DATA }, await rowsOf(userId))
     for (const note of dueNotes(data, now)) {
       // Se apunta ANTES de enviar: si dos corridas se cruzan, solo una gana la fila.

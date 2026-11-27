@@ -5,6 +5,7 @@
  * tendencias; el motor se calibra con TU peso, no con la tabla.
  */
 import type { FoodGroup, MealItem } from './model'
+import { MAS } from './foodsMas'
 
 export type Food = { id: string; name: string; unit: string; kcal: number; protein: number; group: FoodGroup; words?: string; estimated?: boolean; source?: string }
 
@@ -123,7 +124,10 @@ export const FOODS: Food[] = [
   f('chocolate', 'Chocolate', 'barra chica', 250, 3, 'dulce'),
   f('helado', 'Helado', '1/2 taza', 140, 2.5, 'dulce', 'nieve'),
   f('pastelito', 'Pastelito empaquetado', 'pieza', 180, 2, 'dulce', 'gansito'),
+  // v11: el catálogo grande (foodsMas.ts). Si un id ya existe arriba, gana el de arriba.
 ]
+const ARRIBA = new Set(FOODS.map(x => x.id))
+for (const [id, name, unit, kcal, protein, group, words] of MAS) if (!ARRIBA.has(id)) FOODS.push({ ...f(id, name, unit, kcal, protein, group, words), estimated: true })
 
 /**
  * A ojo con la mano (método de porciones con la mano de Precision Nutrition). Una palma de

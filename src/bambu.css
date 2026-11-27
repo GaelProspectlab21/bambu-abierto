@@ -198,3 +198,45 @@
 
 /* 14. v10.3 En 320 px el "120s" del descanso se salía del botón. */
 @media (max-width: 360px) { .d-seg button { padding-left: 2px; padding-right: 2px; font-size: 14px; min-width: 0; } }
+
+/* v11: despertador de lagartijas. Pantalla completa, grande y legible medio dormido. */
+.desp { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px); background: var(--d-page); color: var(--d-ink); text-align: center; overflow-y: auto; }
+.desp-inicio, .desp-falta { animation: desp-pulso 1.6s ease-in-out infinite; }
+.desp-hora { margin: 0; font-size: clamp(56px, 18vw, 96px); font-weight: 900; letter-spacing: -.03em; line-height: 1; color: var(--d-ink); font-variant-numeric: tabular-nums; }
+.desp h1 { margin: 4px 0 0; font-size: clamp(26px, 7vw, 36px); font-weight: 900; line-height: 1.1; }
+.desp p { margin: 0; max-width: 34ch; font-size: 17px; font-weight: 700; line-height: 1.45; color: var(--d-dim); }
+.desp-brote { display: block; transition: transform .5s cubic-bezier(.2, 1.4, .4, 1); }
+.desp-brote.arriba { transform: translateY(-8px) scale(1.08); }
+.desp-cta { max-width: 360px; min-height: 60px; font-size: 19px; }
+.desp-tap { width: min(62vw, 240px); aspect-ratio: 1; border-radius: 50%; border: 0; background: var(--d-green); color: var(--d-on-bright); font: inherit; font-size: 72px; font-weight: 900; box-shadow: 0 8px 0 var(--d-green-lip); cursor: pointer; touch-action: manipulation; }
+.desp-tap:active { transform: translateY(6px); box-shadow: 0 2px 0 var(--d-green-lip); }
+.desp-salir { margin-top: auto; max-width: 340px; min-height: 48px; padding: 10px 16px; border: 2px solid var(--d-line); border-radius: 14px; background: transparent; color: var(--d-faint); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+.desp-salir.on { border-color: var(--d-red); color: var(--d-red); background: var(--d-red-light); }
+@keyframes desp-pulso { 0%, 100% { background: var(--d-page); } 50% { background: var(--d-page-2); } }
+@media (prefers-reduced-motion: reduce) { .desp-inicio, .desp-falta { animation: none; } }
+
+/* v11: bienvenida personalizada (reporte, compromiso y hora). */
+.ob-reporte { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.ob-big { margin: 4px 0; font-size: 22px; font-weight: 900; color: var(--d-ink); }
+.ob-big b { display: block; font-family: var(--display); font-size: clamp(64px, 20vw, 96px); line-height: 1; color: var(--d-gold); letter-spacing: -.03em; }
+.ob-good { margin: 14px 0 0; padding: 14px 16px; border: 2px solid var(--d-green-lip); border-radius: 16px; background: var(--d-green-light); color: var(--d-ink); font-size: 17px; font-weight: 700; line-height: 1.45; }
+.ob-good b { color: var(--d-green-ink); }
+.ob-compromiso { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.ob-compromiso blockquote { margin: 4px 0; padding: 0 8px; font-family: var(--display); font-size: clamp(22px, 6vw, 28px); font-weight: 800; line-height: 1.3; color: var(--d-ink); }
+.ob-firma { position: relative; overflow: hidden; width: 100%; max-width: 380px; min-height: 64px; margin-top: 10px; border: 2px solid var(--d-green-lip); border-radius: 18px; background: var(--d-surface); color: var(--d-ink); font: inherit; font-size: 17px; font-weight: 900; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+.ob-firma::before { content: ''; position: absolute; inset: 0; width: var(--firme, 0%); background: var(--d-green); transition: width .09s linear; }
+.ob-firma span { position: relative; }
+.ob-firma.listo { color: var(--d-on-bright); }
+.ob-hora { max-width: 220px; margin: 8px auto; font-size: 32px; font-weight: 900; text-align: center; }
+
+/* v11: las pestañas tipo píldora caben siempre (antes la 4a se cortaba a 320 px y había que adivinar que había scroll). */
+:is(.d-shell, .d-scrim) .tabs:not(:has(> :nth-child(5))) { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); overflow: visible; }
+:is(.d-shell, .d-scrim) .tabs:not(:has(> :nth-child(5))) .tab { min-width: 0; padding-inline: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 360px) { :is(.d-shell, .d-scrim) .tabs .tab { font-size: 14px; } }
+@media (max-width: 360px) {
+  :is(.d-shell, .d-scrim) .tabs:not(:has(> :nth-child(5))) .tab { font-size: 13px; padding-inline: 2px; }
+  .d-unit2.today .d-unit2-head > div:first-child b { font-size: 20px; line-height: 1.15; text-wrap: balance; }
+  .d-unit2.today .d-unit2-head > div:first-child span { font-size: 13px; }
+  .d-unit2.today .d-anillos { width: 74px; height: 74px; }
+  .d-unit2.today .d-anillos-ley span, .d-unit2.today .d-anillos-ley b { font-size: 13px; }
+}
