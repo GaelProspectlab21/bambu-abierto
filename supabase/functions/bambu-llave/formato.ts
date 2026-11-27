@@ -16,7 +16,7 @@ export function salidaLlave(tipo: 'pase' | 'widget', row: Record<string, unknown
     if (!e || typeof e !== 'object' || Array.isArray(e)) return null
     const estado = e as Record<string, unknown>
     for (const k of ['dia', 'rutina']) fields[k] = { stringValue: typeof estado[k] === 'string' ? estado[k] as string : '' }
-    for (const k of ['racha', 'nivel', 'xpHoy', 'meta', 'minutos']) {
+    for (const k of ['racha', 'nivel', 'xpHoy', 'meta', 'minutos', 'retos']) {
       const n = estado[k]
       fields[k] = { integerValue: String(typeof n === 'number' && Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0) }
     }

@@ -18,7 +18,7 @@ import { planOf, routineFor, trainedOn } from './rutina'
 import { plural } from './text'
 import { despertadorDe, ranuraInsistir } from './despertador'
 
-export type ReminderKind = 'checkin' | 'read' | 'train' | 'trainLate' | 'sleep' | 'photos' | 'alarm'
+export type ReminderKind = 'checkin' | 'read' | 'train' | 'trainLate' | 'sleep' | 'photos' | 'alarm' | 'pase'
 export type Note = { kind: ReminderKind; key: string; title: string; body: string; url: string }
 
 /** Minutos de gracia: si el servidor se atrasa, el aviso todavía sale; después de esto ya no. */
@@ -97,7 +97,19 @@ export function reminderNote(kind: ReminderKind, data: AppData, now: number): No
 }
 
 /** Todo lo que toca mandar ahora, ya filtrado por lo que hiciste. */
-export function dueNotes(data: AppData, now: number): Note[] {
+/**
+ * Aviso al acabar tu pase de redes (idea de Ricardo, 27-nov, portada de Firebase al cron de Supabase).
+ * El cron corre cada 5 min, así que llega entre 0 y 5 min después de la hora. `real` es la hora real
+ * (epoch), no la del reloj de pared del usuario. Si cerraste con Ya terminé, `hasta` ya no existe.
+ */
+export const PASE_VENTANA_MS = 6 * 60000
+export function paseNote(data: AppData, real: number): Note | null {
+  const hasta = data.settings.candado?.hasta
+  if (!hasta || real < hasta || real >= hasta + PASE_VENTANA_MS) return null
+  return { kind: 'pase', key: `pase:${hasta}`, url: '/?candado=redes', title: 'Se acabó tu tiempo de redes', body: 'Cierra la app y vuelve a lo tuyo. Si necesitas más, gánalo con la cámara.' }
+}
+
+export function dueNotes(data: AppData, now: number, real = now): Note[] {
   const r = cleanReminders(data.settings.reminders)
   const kinds = dueKinds(r, data.settings.sleepTarget, now)
   if (r.on) {
@@ -115,6 +127,8 @@ export function dueNotes(data: AppData, now: number): Note[] {
     const reps = despertadorDe(data).reps
     notes.unshift({ kind: 'alarm', key: `alarm:${today}:${slot}`, url: '/?nfc=despertar', title: slot === 0 ? '¡Arriba! Tus lagartijas te esperan' : `Sigues sin tus ${reps} lagartijas`, body: slot === 0 ? `Haz ${reps} frente a la cámara y se apaga.` : `Te vuelvo a avisar en 5 minutos. ${reps} lagartijas y se acaba.` })
   }
+  const pase = paseNote(data, real)
+  if (pase) notes.unshift(pase)
   return notes
 }
 

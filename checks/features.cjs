@@ -27,7 +27,7 @@ const { normalizeData, EMPTY_DATA } = moduleOf('model')
   assert.equal(L.salidaLlave('pase', { hasta: 'ayer' }), null)
   assert.equal(L.salidaLlave('widget', { estado: [] }), null)
   const widget = L.salidaLlave('widget', { user_id: 'secreto', estado: { dia: '2026-11-25', rutina: 'Lista', racha: 3, nivel: 2, xpHoy: 20, meta: 100, minutos: -4, correo: 'privado' } })
-  assert.deepEqual(widget, { fields: { dia: { stringValue: '2026-11-25' }, rutina: { stringValue: 'Lista' }, racha: { integerValue: '3' }, nivel: { integerValue: '2' }, xpHoy: { integerValue: '20' }, meta: { integerValue: '100' }, minutos: { integerValue: '0' } } })
+  assert.deepEqual(widget, { fields: { dia: { stringValue: '2026-11-25' }, rutina: { stringValue: 'Lista' }, racha: { integerValue: '3' }, nivel: { integerValue: '2' }, xpHoy: { integerValue: '20' }, meta: { integerValue: '100' }, minutos: { integerValue: '0' }, retos: { integerValue: '0' } } })
   assert.doesNotMatch(JSON.stringify(widget), /secreto|privado|correo|user_id/)
   console.log('PASA v9 lectura por llave: validación, formato y minimización')
 }
@@ -2126,21 +2126,24 @@ ok('resumen de la semana: solo cámara, desde el lunes, récords nuevos contra l
   const js = W.scriptWidget('https://x.test/w?key=1')
   assert.ok(js.includes('const URL = "https://x.test/w?key=1"') && js.includes('Script.setWidget(w)') && !/innerHTML|eval\(/.test(js))
   assert.ok(js.includes('config.widgetFamily') && js.includes('accessoryRectangular') && js.includes('presentMedium'), 'un diseño por tamaño')
+  assert.deepEqual(W.ESTILOS_WIDGET.map(e => e.id), ['bosque', 'brote', 'logo'], 'tres diseños para elegir')
+  assert.equal(W.estadoWidget(d, hoy, 3).retos, 3, 'el widget sabe cuántos retos tienes pendientes')
   {
     class C { constructor(h) { this.h = h } static white() { return new C('#fff') } static clear() { return new C('') } }
     const font = s => ({ s })
     const Font = { heavyRoundedSystemFont: font, semiboldRoundedSystemFont: font }
-    class Nodo { constructor() { this.k = [] } addText(x) { const t = { x, centerAlignText() {}, rightAlignText() {} }; this.k.push(t); return t } addStack() { const n = new Nodo(); this.k.push(n); return n } addSpacer() {} addImage(i) { const n = { i }; this.k.push(n); return n } layoutHorizontally() {} layoutVertically() {} centerAlignContent() {} topAlignContent() {} setPadding() {} }
+    class Nodo { constructor() { this.k = [] } addText(x) { const t = { x, centerAlignText() {}, rightAlignText() {}, leftAlignText() {} }; this.k.push(t); return t } addStack() { const n = new Nodo(); this.k.push(n); return n } addSpacer() {} addImage(i) { const n = { i }; this.k.push(n); return n } layoutHorizontally() {} layoutVertically() {} centerAlignContent() {} topAlignContent() {} bottomAlignContent() {} setPadding() {} }
     class LW extends Nodo { presentSmall() {} presentMedium() {} }
     class DC { addPath() {} setFillColor() {} fillPath() {} getImage() { return {} } }
     class P { addRoundedRect() {} }
     const textos = n => n.k.flatMap(x => x.x !== undefined ? [x.x] : x.k ? textos(x) : [])
-    for (const fam of ['small', 'medium', 'large', 'accessoryRectangular', 'accessoryInline', 'accessoryCircular']) {
+    const dia = new Date(), hoyLocal = dia.getFullYear() + '-' + String(dia.getMonth() + 1).padStart(2, '0') + '-' + String(dia.getDate()).padStart(2, '0')
+    for (const estilo of ['bosque', 'brote', 'logo']) for (const fam of ['small', 'medium', 'large', 'accessoryRectangular', 'accessoryInline', 'accessoryCircular']) {
       let w
-      const datos = { fields: { dia: { stringValue: '2000-01-01' }, racha: { integerValue: '12' }, nivel: { integerValue: '5' } } }
-      const fn = new Function('Color', 'Font', 'Size', 'Rect', 'Path', 'DrawContext', 'ListWidget', 'Request', 'Script', 'config', `return (async () => {\n${js}\n})()`)
-      fn(C, Font, class { constructor(a, b) { this.w = a; this.h = b } }, class {}, P, DC, LW, class { loadJSON() { return Promise.resolve(datos) } }, { setWidget(x) { w = x }, complete() {} }, { widgetFamily: fam, runsInApp: false })
-        .then(() => { assert.ok(w && textos(w).some(t => /12/.test(t)), `el widget ${fam} enseña la racha`) })
+      const datos = { fields: { dia: { stringValue: hoyLocal }, racha: { integerValue: '12' }, nivel: { integerValue: '5' }, minutos: { integerValue: '63' }, retos: { integerValue: '2' }, xpHoy: { integerValue: '20' }, meta: { integerValue: '50' }, rutina: { stringValue: 'Rutina 1/9' } } }
+      const fn = new Function('Color', 'Font', 'Size', 'Rect', 'Path', 'DrawContext', 'ListWidget', 'Request', 'Script', 'config', 'LinearGradient', 'Point', `return (async () => {\n${W.scriptWidget('https://x.test/w', estilo)}\n})()`)
+      fn(C, Font, class { constructor(a, b) { this.w = a; this.h = b } }, class {}, P, DC, LW, class { loadJSON() { return Promise.resolve(datos) } loadImage() { return Promise.resolve({}) } }, { setWidget(x) { w = x }, complete() {} }, { widgetFamily: fam, runsInApp: false }, class {}, class {})
+        .then(() => { assert.ok(w && textos(w).some(t => /63/.test(t)), `el widget ${estilo} ${fam} enseña tus minutos de redes`); if (/^(small|medium|large)$/.test(fam) && estilo !== 'logo') assert.ok(textos(w).some(t => /reto/.test(t) || /⚔️/.test(t)), `el widget ${estilo} ${fam} avisa de retos`) })
     }
   }
   assert.equal(normalizeData({ ...d, settings: { ...d.settings, widget: { llave: 'corta' }, avisos: { hora: '25:00' } } }).settings.widget, undefined)
@@ -2714,7 +2717,9 @@ async function audioChecks() {
   const cand = leer('src/Candado.tsx'), cam = leer('src/CamaraReps.tsx'), sw = leer('public/avisos-sw.js')
   assert.ok(cand.includes('Buscar ejercicio') && cand.includes('sinAcentos'), 'buscador de ejercicios sin acentos')
   assert.ok(cand.includes('Minutos libres cada día') && cand.includes('LIBRES_OPCIONES'), 'los minutos libres se cambian en Ajustes')
-  assert.ok(cand.includes('Devolverme los minutos') && cand.includes('Emergencia: abrir'))
+  assert.ok(cand.includes('{!data.settings.sinUsoImportante && <button') && cand.includes('role="switch"'), 'el botón de uso importante se prende o apaga en Ajustes')
+  assert.equal(normalizeData({ ...EMPTY_DATA, settings: { sinUsoImportante: true } }).settings.sinUsoImportante, true)
+  assert.ok(cand.includes('Devolverme los minutos') && cand.includes('{EMERGENCIA_MIN} min para uso importante') && !cand.includes('🚨'), 'el pase rápido no es rojo ni se llama emergencia')
   assert.ok(cand.includes('Probar mi atajo') && /guardarPase\(llave, hastaTexto\(Date\.now\(\) \+ 60000\)\)/.test(cand), 'probar el atajo abre 1 minuto sin gastar minutos')
   assert.ok(cam.includes('d-cam-gana') && cam.includes("'minuto'"), 'la cámara dice cuánto vas ganando')
   assert.ok(sw.includes('Promise.race') && sw.includes('1500'), 'con señal lenta abre lo guardado')
@@ -2866,4 +2871,61 @@ async function audioChecks() {
   assert.equal(m.reading[0].location, 'Lucas 12'); assert.equal(m.reading[0].workId, 'work:x'); assert.equal(m.reading[0].minutes, 15)
   assert.equal(Lx.mergeDuplicateReadings(m), m, 'sin dobles no cambia nada')
   console.log('PASA v11.1 lectura por NFC sin duplicados y limpieza de los viejos')
+}
+
+{
+  const leer = f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')
+  const top = leer('src/DuoTop.tsx'), cand = leer('src/Candado.tsx')
+  assert.ok(top.includes("'?candado=redes'") && top.includes('saldo(data, today)'), 'arriba se ven tus minutos de redes y abren el candado dentro de la app')
+  assert.ok(cand.includes('Abrir mis redes') && cand.includes("new URL('?candado=redes', document.baseURI)"), 'en Redes se abre un pase sin pasar por Safari')
+  ok('abrir mis redes desde la app de la pantalla de inicio: botón en Redes y minutos arriba')
+}
+
+{
+  const leer = f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')
+  // Portado a Supabase: el cron de avisos lee candado.hasta de tus ajustes (ya no hay Firebase).
+  const R = moduleOf('reminders'), M = moduleOf('minutos')
+  const hasta = Date.parse('2026-11-27T18:00:00Z')
+  const conPase = normalizeData({ ...EMPTY_DATA, settings: { ...EMPTY_DATA.settings, candado: { llave: 'x'.repeat(24), desde: hasta - 600000, hasta, pase: 'p1' } } })
+  assert.equal(R.paseNote(conPase, hasta - 60000), null, 'antes de acabar no avisa')
+  assert.equal(R.paseNote(conPase, hasta + 120000).key, `pase:${hasta}`, 'al acabar avisa, una sola llave por pase')
+  assert.equal(R.paseNote(conPase, hasta + R.PASE_VENTANA_MS), null, 'pasada la ventana ya no')
+  assert.ok(R.dueNotes(conPase, 0, hasta + 60000).some(n => n.kind === 'pase'), 'dueNotes lo incluye con la hora real')
+  assert.equal(R.paseNote(M.terminarPase(conPase, hasta - 60000), hasta + 60000), null, 'Ya terminé lo cancela')
+  assert.equal(R.paseNote(M.devolverPase(conPase), hasta + 60000), null, 'devolver lo cancela')
+  const idx = fs.readFileSync(path.join(__dirname, '../supabase/functions/bambu-remind/index.ts'), 'utf8')
+  assert.ok(idx.includes('!paseRecien') && idx.includes('dueNotes(data, now, real)'), 'el paso barato del cron no se salta el aviso del pase')
+  ok('aviso al acabar el pase desde el cron de Supabase (y se cancela con Ya terminé o devolver)')
+}
+
+// v11.2: Tareas. El bloque muestra primero hoy y mañana; sapo único por día con bono; tablero semanal.
+{
+  const T = moduleOf('tareas'), X = moduleOf('xp')
+  const today = '2026-11-27'
+  const t = (id, dueDate, extra = {}) => ({ id, text: id, status: 'pending', minutes: 25, level: null, updatedAt: 1, ...(dueDate ? { dueDate } : {}), ...extra })
+  let d = normalizeData({ ...EMPTY_DATA, tasks: [t('dic5', '2026-12-05'), t('sin'), t('hoy', today), t('manana', '2026-11-28'), t('atrasada', '2026-11-25'), t('hecha', today, { status: 'done', completedOn: today })] })
+  const b = T.paraBloque(d, today)
+  assert.deepEqual(b.cerca.map(x => x.id), ['atrasada', 'hoy', 'manana'], 'cerca: atrasadas, hoy y mañana; nada del 5 de diciembre')
+  assert.deepEqual(b.despues.map(x => x.id), ['dic5', 'sin'])
+  d = T.marcarSapo(d, 'dic5', today)
+  assert.equal(T.sapoDe(d, today).id, 'dic5')
+  assert.equal(d.tasks.find(x => x.id === 'dic5').dueDate, today, 'el sapo se trae a hoy')
+  assert.equal(T.paraBloque(d, today).cerca[0].id, 'dic5', 'el sapo va primero en el bloque')
+  d = T.marcarSapo(d, 'hoy', today)
+  assert.deepEqual(d.tasks.filter(x => x.sapo === today).map(x => x.id), ['hoy'], 'un solo sapo por día')
+  assert.equal(T.marcarSapo(d, 'hoy', today).tasks.some(x => x.sapo), false, 'tocarlo otra vez lo quita')
+  assert.equal(normalizeData(d).tasks.find(x => x.id === 'hoy').sapo, today, 'el sapo sobrevive a la limpieza (nube)')
+  const sinSapo = X.xpOn({ ...d, tasks: d.tasks.map(x => x.id === 'manana' ? { ...x, status: 'done', completedOn: today } : x) }, today)
+  const conSapo = X.xpOn({ ...d, tasks: d.tasks.map(x => x.id === 'hoy' ? { ...x, status: 'done', completedOn: today } : x) }, today)
+  assert.equal(conSapo - sinSapo, X.XP.sapo, 'comerte el sapo vale más')
+  assert.equal(T.lunesDe('2026-11-27'), '2026-11-23'); assert.equal(T.lunesDe('2026-11-23'), '2026-11-23'); assert.equal(T.lunesDe('2026-11-29'), '2026-11-23')
+  const s = T.semanaDe(d, '2026-11-23')
+  assert.equal(s.dias.length, 7)
+  assert.deepEqual(s.dias[4].tareas.map(x => x.id), ['hoy', 'dic5', 'hecha'], 'viernes: el sapo arriba, la hecha al final (dic5 se quedó hoy al ser sapo)')
+  assert.deepEqual(s.sinFecha.map(x => x.id), ['sin'])
+  const m = T.moverTarea(d, 'hoy', '2026-11-29')
+  assert.equal(m.tasks.find(x => x.id === 'hoy').dueDate, '2026-11-29'); assert.equal(m.tasks.find(x => x.id === 'hoy').sapo, undefined, 'si mueves el sapo a otro día, deja de serlo')
+  assert.equal(T.moverTarea(d, 'sin', undefined), d, 'mover al mismo lugar no cambia nada')
+  assert.equal(T.moverTarea(d, 'manana', undefined).tasks.find(x => x.id === 'manana').dueDate, undefined, 'a sin fecha')
+  ok('tareas: bloque con hoy y mañana primero, sapo único con bono y tablero de la semana')
 }

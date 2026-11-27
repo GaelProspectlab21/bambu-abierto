@@ -1,7 +1,7 @@
 import { perfilOf, type Perfil } from './perfil'
 
 export type Duelo = { id: string; de: string; para: string; ejercicio: string; deReps: number; paraReps: number | null; estado: 'abierto' | 'listo'; creado: number; respondido: number }
-export type EstadoWidget = { dia: string; racha: number; nivel: number; xpHoy: number; meta: number; minutos: number; rutina: string }
+export type EstadoWidget = { dia: string; racha: number; nivel: number; xpHoy: number; meta: number; minutos: number; rutina: string; retos?: number }
 export type Amistad = { de: string; para: string; estado: 'pendiente' | 'aceptada' }
 
 export function codigoAmigo(codigo: string): string {

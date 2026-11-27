@@ -11,7 +11,7 @@ import { seasonXpOn } from './temporada'
 import { bossXpOn } from './jefe'
 import type { Mood } from './brote'
 
-export const XP = { habit: 10, task: 10, set: 2, routine: 30, goodDay: 20, read: 10 }
+export const XP = { habit: 10, task: 10, set: 2, routine: 30, goodDay: 20, read: 10, sapo: 20 }
 export const DAILY_GOAL = 50
 
 export function routineDone(data: AppData, day: string): boolean {
@@ -23,7 +23,9 @@ export function routineDone(data: AppData, day: string): boolean {
 
 export function xpOn(data: AppData, day: string): number {
   const habits = activeHabits(data.settings).filter(h => habitOn(data, h, day)).length * XP.habit
-  const tasks = data.tasks.filter(t => t.status === 'done' && t.completedOn === day).length * XP.task
+  const hechas = data.tasks.filter(t => t.status === 'done' && t.completedOn === day)
+  // El sapo vale doble más: comértelo el día que lo elegiste.
+  const tasks = hechas.length * XP.task + (hechas.some(t => t.sapo === day) ? XP.sapo : 0)
   const sets = data.sets.filter(s => s.day === day).length * XP.set
   const read = data.reading.some(r => r.day === day && realReading(r)) ? XP.read : 0
   const bonus = (routineDone(data, day) ? XP.routine : 0) + (dayScore(data, day).pct >= GOOD ? XP.goodDay : 0)

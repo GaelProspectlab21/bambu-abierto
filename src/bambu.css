@@ -258,3 +258,59 @@
 :is(.d-room-grid, .d-priv) button.on, .d-tb-row.me { border-color: var(--d-green); background: var(--d-green-light); }
 .d-priv button.on { box-shadow: 0 4px 0 var(--d-green-lip); }
 .d-filter-chip { border-color: var(--d-green); background: var(--d-green-light); color: var(--d-green-ink); }
+
+/* v11.2: el sapo del día */
+.sapo-card { display: flex; gap: 14px; align-items: flex-start; }
+.sapo-card > svg { flex: none; }
+.sapo-text { min-width: 0; flex: 1; display: grid; gap: 6px; }
+.sapo-text h2 { margin: 0; font-size: 19px; line-height: 1.25; overflow-wrap: anywhere; }
+.sapo-text p { margin: 0; color: var(--d-dim); font-size: 15px; line-height: 1.45; }
+.sapo-eyebrow { color: var(--d-gold) !important; font-size: 12px !important; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.sapo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.sapo-actions .d-btn { min-height: 44px; padding-inline: 16px; }
+.sapo-why { padding: 10px 12px; border-left: 3px solid var(--d-gold); background: var(--d-soft); border-radius: 0 10px 10px 0; }
+.sapo-card.on { border-color: var(--d-gold-lip); background: var(--d-gold-light); }
+.sapo-card.comido { border-color: var(--d-green-lip); background: var(--d-green-light); }
+.sapo-card.eligiendo { border-color: var(--d-gold); }
+.d-tasks.eligiendo .d-task { outline: 2px dashed var(--d-gold-lip); outline-offset: -2px; border-radius: 14px; }
+.d-tasks li.sapo .d-task-text b { color: var(--d-gold); }
+.d-box.sapo-box, .d-box.sapo-pick { display: grid; place-items: center; border-color: var(--d-gold-lip); }
+.fb-tasks button span { display: grid; gap: 2px; }
+.fb-tasks button small { color: var(--d-faint); font-size: 12px; font-weight: 800; }
+.fb-tasks button.sapo { border-color: var(--d-gold-lip); }
+.fb-tasks button.sapo small { color: var(--d-gold); }
+.fb-tasks.later { margin-top: 8px; }
+
+/* v11.2: tablero de la semana. En el iPhone, días uno debajo de otro; en la laptop, cuadrícula. */
+.sem { display: grid; gap: 12px; }
+.sem-nav { display: flex; align-items: center; gap: 10px; }
+.sem-nav > div { flex: 1; display: grid; text-align: center; }
+.sem-nav b { font-size: 18px; } .sem-nav small { color: var(--d-dim); font-weight: 700; }
+.sem-nav .d-btn { min-width: 48px; min-height: 44px; font-size: 22px; }
+.sem-hint { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--d-gold-light); color: var(--d-ink); font-size: 15px; }
+.sem-grid { display: grid; gap: 10px; }
+.sem-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.sem-day header small, .sem-day header b { white-space: nowrap; }
+.sem-day { display: grid; align-content: start; gap: 8px; padding: 12px; border: 2px solid var(--d-line); border-radius: 16px; background: var(--d-bg); min-height: 96px; }
+.sem-day.today { border-color: var(--d-green); }
+.sem-day.past { opacity: .72; }
+.sem-day.target { border-style: dashed; border-color: var(--d-gold-lip); }
+.sem-day header { display: flex; align-items: baseline; gap: 8px; min-height: 36px; }
+.sem-day header b { font-size: 16px; } .sem-day header small { color: var(--d-faint); font-weight: 700; }
+.sem-plus { margin-left: auto; width: 36px; height: 36px; border: 2px solid var(--d-line); border-radius: 10px; background: var(--d-soft); color: var(--d-green-ink); font: inherit; font-size: 20px; font-weight: 900; line-height: 1; cursor: pointer; }
+.sem-drop { width: 100%; min-height: 40px; border: 2px dashed var(--d-gold); border-radius: 10px; background: var(--d-gold-light); color: var(--d-ink); font: inherit; font-weight: 900; cursor: pointer; }
+.sem-day ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sem-task { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 2px solid var(--d-line); border-radius: 12px; background: var(--d-surface); }
+.sem-task.moving { border-color: var(--d-gold); background: var(--d-gold-light); }
+.sem-task.sapo { border-color: var(--d-gold-lip); }
+.sem-task.done .sem-text { color: var(--d-faint); text-decoration: line-through; }
+.sem-check { flex: none; width: 30px; height: 30px; border: 2px solid var(--d-line-2); border-radius: 8px; background: none; color: var(--d-page); font: inherit; font-weight: 900; cursor: pointer; }
+.sem-task.done .sem-check { background: var(--d-green); border-color: var(--d-green); }
+.sem-text { flex: 1; min-width: 0; min-height: 34px; display: flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--d-ink); font: inherit; font-size: 15px; font-weight: 800; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.sem-text:disabled { cursor: default; }
+.sem-text svg { flex: none; }
+.sem-empty { color: var(--d-faint); font-size: 14px; font-weight: 700; padding: 2px 4px; }
+.sem-add .d-input { min-height: 44px; }
+.d-seg button.on { background: var(--d-green-light); border-color: var(--d-green-lip); color: var(--d-green-ink); box-shadow: 0 3px 0 var(--d-green-lip); }
+.d-link { color: var(--d-green-ink); }
+@media (max-width: 899px) { .sem-day { min-height: 0; padding: 8px 12px; gap: 4px; } .sem-day:not(.target) .sem-empty { display: none; } .sem-day ul:empty { display: none; } }

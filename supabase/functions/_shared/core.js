@@ -80,6 +80,7 @@ function normalizeTasks(value) {
 			level: level !== null && Number.isFinite(level) && level >= 1 && level <= 4 ? level : null,
 			dueDate: taskDay(row.dueDate),
 			completedOn: taskDay(row.completedOn),
+			...taskDay(row.sapo) ? { sapo: taskDay(row.sapo) } : {},
 			notes: typeof row.notes === "string" ? row.notes.slice(0, 4e3) : "",
 			project: typeof row.project === "string" ? row.project.slice(0, 60) : "",
 			subtasks: Array.isArray(row.subtasks) ? row.subtasks.slice(0, 100).filter((s) => !!s && typeof s === "object" && typeof s.id === "string" && typeof s.text === "string").map((s) => ({
@@ -773,6 +774,7 @@ function cleanSettings(value) {
 		modo: v.modo === "competir" ? "competir" : void 0,
 		sinEdad: v.sinEdad === true ? true : void 0,
 		minLibres: int(v.minLibres, 0, 240),
+		sinUsoImportante: v.sinUsoImportante === true ? true : void 0,
 		legal: isRecord(v.legal) && typeof v.legal.version === "string" && /^\d{4}-\d\d-\d\d$/.test(v.legal.version) && typeof v.legal.fecha === "string" && v.legal.fecha.length <= 40 ? {
 			version: v.legal.version,
 			fecha: v.legal.fecha,
@@ -3041,7 +3043,24 @@ function reminderNote(kind, data, now) {
 	};
 }
 /** Todo lo que toca mandar ahora, ya filtrado por lo que hiciste. */
-function dueNotes(data, now) {
+/**
+* Aviso al acabar tu pase de redes (idea de Ricardo, 27-nov, portada de Firebase al cron de Supabase).
+* El cron corre cada 5 min, así que llega entre 0 y 5 min después de la hora. `real` es la hora real
+* (epoch), no la del reloj de pared del usuario. Si cerraste con Ya terminé, `hasta` ya no existe.
+*/
+var PASE_VENTANA_MS = 36e4;
+function paseNote(data, real) {
+	const hasta = data.settings.candado?.hasta;
+	if (!hasta || real < hasta || real >= hasta + 36e4) return null;
+	return {
+		kind: "pase",
+		key: `pase:${hasta}`,
+		url: "/?candado=redes",
+		title: "Se acabó tu tiempo de redes",
+		body: "Cierra la app y vuelve a lo tuyo. Si necesitas más, gánalo con la cámara."
+	};
+}
+function dueNotes(data, now, real = now) {
 	const r = cleanReminders(data.settings.reminders);
 	const kinds = dueKinds(r, data.settings.sleepTarget, now);
 	if (r.on) {
@@ -3064,6 +3083,8 @@ function dueNotes(data, now) {
 			body: slot === 0 ? `Haz ${reps} frente a la cámara y se apaga.` : `Te vuelvo a avisar en 5 minutos. ${reps} lagartijas y se acaba.`
 		});
 	}
+	const pase = paseNote(data, real);
+	if (pase) notes.unshift(pase);
 	return notes;
 }
 function testNote() {
@@ -3537,4 +3558,4 @@ function nfcServerAction(data, action, now, day, clock = clockOf(now)) {
 		text: `Para ${action.tag === "focus" ? "preparar tu bloque" : action.tag === "checkin" ? "tu check-in de la mañana" : "registrar tu peso"} necesitas la app.`
 	};
 }
-export { EMPTY_DATA, applyRecords, cleanSettings, diffRecords, dueKinds, dueNotes, nfcServerAction, parseNfc, testNote };
+export { EMPTY_DATA, PASE_VENTANA_MS, applyRecords, cleanSettings, diffRecords, dueKinds, dueNotes, nfcServerAction, parseNfc, testNote };

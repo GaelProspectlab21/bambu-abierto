@@ -8,6 +8,9 @@ import { haptic } from './lib/haptic'
 import { fmtDay } from './ui'
 import { newTask, removeTask, toggleTask } from './HoyLista'
 import { DuoIcon } from './DuoIcons'
+import { marcarSapo } from './lib/tareas'
+import { SapoArt, SapoCard } from './Sapo'
+import { TareasSemana } from './TareasSemana'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type When = 'hoy' | 'manana' | 'sin'
@@ -17,8 +20,10 @@ export function TareasSimple({ data, commit, onFocus }: { data: AppData; commit:
   const [text, setText] = useState('')
   const [when, setWhen] = useState<When>('hoy')
   const [showDone, setShowDone] = useState(false)
+  const [vista, setVista] = useState<'lista' | 'semana'>('lista')
+  const [eligiendo, setEligiendo] = useState(false)
   const live = data.tasks.filter(t => t.status !== 'archived')
-  const pending = live.filter(t => t.status !== 'done').sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || b.updatedAt - a.updatedAt)
+  const pending = live.filter(t => t.status !== 'done').sort((a, b) => Number(b.sapo === today) - Number(a.sapo === today) || (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || b.updatedAt - a.updatedAt)
   const done = live.filter(t => t.status === 'done').sort((a, b) => (b.completedOn ?? '').localeCompare(a.completedOn ?? '') || b.updatedAt - a.updatedAt).slice(0, 30)
   const doneToday = live.filter(t => t.status === 'done' && t.completedOn === today).length
 
@@ -28,6 +33,17 @@ export function TareasSimple({ data, commit, onFocus }: { data: AppData; commit:
     const due = when === 'hoy' ? today : when === 'manana' ? shiftDay(today, 1) : undefined
     commit(d => ({ ...d, tasks: [newTask(text, due), ...d.tasks] }))
     setText('')
+  }
+  function hecho(el: HTMLElement, id: string) {
+    const t = data.tasks.find(x => x.id === id)
+    const sapo = t?.sapo === today && t.status !== 'done'
+    reward(el, sapo ? `+${XP.task + XP.sapo} XP` : `+${XP.task} XP`)
+    if (sapo) playSound('achieve')
+    toggleTask(commit, id, today)
+  }
+  function tocar(el: HTMLElement, id: string) {
+    if (eligiendo) { haptic([10, 20, 10]); commit(d => marcarSapo(d, id, today)); setEligiendo(false); return }
+    hecho(el, id)
   }
   const tag = (due?: string) => !due || due === today ? '' : due < today ? `Atrasada, ${fmtDay(due)}` : fmtDay(due)
 
@@ -43,16 +59,21 @@ export function TareasSimple({ data, commit, onFocus }: { data: AppData; commit:
 
     <button type="button" className="d-btn green wide focus-cta" onClick={() => { haptic(12); onFocus() }}>Bloque de enfoque</button>
 
+    <div className="d-seg" role="tablist" aria-label="Vista de tareas">{([['lista', 'Lista'], ['semana', 'Semana']] as const).map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={vista === k} className={vista === k ? 'on' : ''} onClick={() => { setVista(k); setEligiendo(false) }}>{l}</button>)}</div>
+
+    {vista === 'semana' ? <TareasSemana data={data} commit={commit} today={today} /> : <>
+    <SapoCard data={data} commit={commit} today={today} eligiendo={eligiendo} onElegir={() => setEligiendo(!eligiendo)} onComer={onFocus} onHecho={hecho} />
+
     <form className="d-card d-form" onSubmit={e => { e.preventDefault(); add() }}>
       <input className="d-input" value={text} onChange={e => setText(e.target.value)} maxLength={200} placeholder="Escribe una tarea" />
       <div className="d-seg">{([['hoy', 'Hoy'], ['manana', 'Mañana'], ['sin', 'Sin fecha']] as [When, string][]).map(([k, l]) => <button key={k} type="button" className={when === k ? 'on' : ''} aria-pressed={when === k} onClick={() => setWhen(k)}>{l}</button>)}</div>
       <button type="submit" className="d-btn green wide" disabled={!text.trim()}>Agregar tarea</button>
     </form>
 
-    <ul className="d-tasks">
-      {pending.map(t => <li key={t.id} className={t.dueDate && t.dueDate < today ? 'late' : ''}>
-        <button type="button" className="d-task" onClick={e => { reward(e.currentTarget); toggleTask(commit, t.id, today) }}>
-          <span className="d-box" />
+    <ul className={`d-tasks ${eligiendo ? 'eligiendo' : ''}`}>
+      {pending.map(t => <li key={t.id} className={`${t.dueDate && t.dueDate < today ? 'late' : ''} ${t.sapo === today ? 'sapo' : ''}`}>
+        <button type="button" className="d-task" onClick={e => tocar(e.currentTarget, t.id)}>
+          {eligiendo ? <span className="d-box sapo-pick"><SapoArt size={22} /></span> : t.sapo === today ? <span className="d-box sapo-box"><SapoArt size={24} /></span> : <span className="d-box" />}
           <span className="d-task-text"><b>{t.text}</b>{tag(t.dueDate) && <small>{tag(t.dueDate)}</small>}</span>
         </button>
         <button type="button" className="d-x small focus-play" aria-label={`Bloque de enfoque con ${t.text}`} onClick={() => onFocus({ id: t.id, text: t.text })}>▶</button>
@@ -69,6 +90,7 @@ export function TareasSimple({ data, commit, onFocus }: { data: AppData; commit:
           <span className="d-task-text"><b>{t.text}</b>{t.completedOn && <small>{fmtDay(t.completedOn)}</small>}</span>
         </button>
       </li>)}</ul>}
+    </>}
     </>}
   </section>
 }
