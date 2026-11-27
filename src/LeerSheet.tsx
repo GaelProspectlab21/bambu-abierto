@@ -72,13 +72,13 @@ function Stats({ data }: { data: AppData }) {
   </div>
 }
 
-export function ReadSheet({ data, commit, onClose, onMessage }: { data: AppData; commit: Commit; onClose: () => void; onMessage: (t: string) => void }) {
+export function ReadSheet({ data, commit, onClose, onMessage, startBible = false }: { data: AppData; commit: Commit; onClose: () => void; onMessage: (t: string) => void; startBible?: boolean }) {
   const today = dateKey()
   const active = data.activeReading
   const [picked, setPicked] = useState<Ch[]>([])
   const [verses, setVerses] = useState('')
-  const [step, setStep] = useState<'ask' | 'yes' | 'no' | 'marcar' | 'done'>(readOn(data, today) ? 'done' : 'ask')
-  const [book, setBook] = useState(books(data)[0]?.title ?? '')
+  const [step, setStep] = useState<'ask' | 'yes' | 'no' | 'marcar' | 'done'>(startBible ? 'yes' : readOn(data, today) ? 'done' : 'ask')
+  const [book, setBook] = useState(startBible ? BIBLIA : books(data).filter(b => b.title !== BIBLIA)[0]?.title ?? '')
   const [minutes, setMinutes] = useState(20)
   const [page, setPage] = useState('')
   const [mode, setMode] = useState<'crono' | 'timer'>('crono')

@@ -1,5 +1,5 @@
 import { TrainingPage } from './TrainingPage'
-import { socialListo } from './lib/nube'
+import { amigosListo as socialListo } from './lib/nube'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { dateKey, type AppData, type Routine, type RoutineItem, type RoutineKind, type TrainPlan } from './lib/model'
 import { applyBump, bumps, CATALOG, clockOf, doneCount, label, lockActive, logSet, newItem, nextStep, planOf, seedWeek, usesCoach, quietBump, roundsOf, routineProgress, setsNeeded, stepsOf, undoLast, weekIndex, WEEK_DAYS, WEEK_SHORT, type Step } from './lib/rutina'

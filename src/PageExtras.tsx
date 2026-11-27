@@ -1,5 +1,5 @@
 import { dateKey, modulesOf, type AppData } from './lib/model'
-import { PAGE_VERSES } from './lib/pageVerses'
+import { pieDe } from './lib/pieDePagina'
 import { acceptIdea, habitAdvice, skipIdea } from './lib/habitCoach'
 import { habitDone } from './HabitsPage'
 import { BroteArt } from './Brote'
@@ -8,22 +8,16 @@ import { haptic } from './lib/haptic'
 
 type Commit = (update: (d: AppData) => AppData) => void
 
-/** Un número por día: el mismo versículo todo el día, otro mañana. */
-function dayIndex(day: string): number {
-  return Math.floor(Date.parse(`${day}T12:00:00`) / 86400000)
-}
-
 /**
- * Un versículo al pie de la página, pequeño y al final: no compite con lo que vienes a hacer.
- * Solo si usas la Biblia en bambú (no se le impone a un amigo que no la eligió).
+ * Al pie de la página, pequeño y al final: un día un versículo, otro una cita de alguien que vivió lo mismo.
+ * Sin módulo Biblia, solo citas.
  */
 export function PageVerse({ page, data }: { page: string; data: AppData }) {
-  const list = PAGE_VERSES[page]
-  if (!list?.length || !modulesOf(data.settings).bible) return null
-  const v = list[dayIndex(dateKey()) % list.length]
-  return <figure className="page-verse">
-    <blockquote>{v.text}</blockquote>
-    <figcaption>{v.ref}</figcaption>
+  const p = pieDe(page, dateKey(), modulesOf(data.settings).bible)
+  if (!p) return null
+  return <figure className={`page-verse ${p.kind}`}>
+    <blockquote>{p.text}</blockquote>
+    <figcaption>{p.kind === 'verso' ? p.ref : <><b>{p.who}</b> · {p.source}</>}</figcaption>
   </figure>
 }
 

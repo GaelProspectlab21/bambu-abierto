@@ -2234,3 +2234,101 @@ async function audioChecks() {
   assert.equal(twice.habits[day].filter(h => h === 'stretch').length, 1, 'el hábito no se duplica')
   console.log(' - etiqueta de estiramiento: 8 min variados, solo posturas conocidas, guarda y tacha')
 }
+
+// v10.2: bloque con varias tareas. Las palomeadas quedan hechas, las no hechas vuelven a pendientes, lo suelto va a la lista.
+{
+  const B = moduleOf('bloque')
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true }, tasks: [
+    { id: 't1', text: 'Guion', status: 'pending', minutes: 25, level: 4, updatedAt: 1 },
+    { id: 't2', text: 'Grabar', status: 'pending', minutes: 25, level: 2, updatedAt: 1 },
+  ] })
+  const t0 = Date.parse('2026-12-01T16:00:00')
+  d = B.startBlock(d, [{ id: 't1', text: 'Guion' }, { id: 't2', text: 'Grabar' }, { text: 'Miniatura' }], 45, t0)
+  assert.equal(d.activeFocus.task, 'Guion y 2 más')
+  assert.equal(d.activeFocus.level, 4, 'el nivel del bloque es el de su tarea más importante')
+  assert.deepEqual(d.activeFocus.taskIds, ['t1', 't2'])
+  assert.equal(d.activeFocus.phase, 'active', 'sin ritual obligatorio')
+  assert.equal(d.tasks.find(t => t.id === 't1').status, 'in_progress')
+  d = B.toggleItem(d, 'tarea:t1')
+  d = { ...d, activeFocus: { ...d.activeFocus, endedAt: t0 + 30 * 60000 } }
+  d = B.closeBlock(d, { score: 5, leftoversToTasks: true }, t0 + 31 * 60000)
+  assert.equal(d.activeFocus, null)
+  assert.equal(d.tasks.find(t => t.id === 't1').status, 'done', 'palomeada queda hecha')
+  assert.equal(d.tasks.find(t => t.id === 't2').status, 'pending', 'no hecha vuelve a pendientes')
+  assert.ok(d.tasks.some(t => t.text === 'Miniatura' && t.status === 'pending'), 'lo suelto no hecho va a la lista')
+  const f = d.focus.at(-1)
+  assert.equal(f.minutes, 30)
+  assert.equal(f.result, 'Terminé: Guion')
+  assert.equal(B.startBlock(d, [{ text: '  ' }], 25), d, 'sin tareas no arranca')
+  console.log(' - bloque con varias tareas: palomeadas hechas, no hechas a pendientes, sueltas a la lista')
+}
+
+// El 40% y el oro: un círculo es de oro solo si está cerrado Y hiciste su extra ese día. Puntos: 1 cerrado, 2 oro.
+{
+  const O = moduleOf('oro')
+  const day = '2026-12-02'
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  d = { ...d, settings: { ...d.settings, modules: { reading: true, bible: false, training: false, focus: false, food: false } } }
+  assert.equal(O.ofrecerOro(d, day), null, 'en descanso Cuerpo se cierra solo y no se pide extra')
+  const conExtraMente = O.hacerExtra(d, 'mente', '10 minutos más de lectura', day)
+  assert.equal(O.oroDe(conExtraMente, day).mente, false, 'un extra sin cerrar el círculo no da oro')
+  d = { ...d, reading: [{ id: 'r1', day, minutes: 20, note: '', title: 'Libro' }] }
+  assert.equal(O.ofrecerOro(d, day), 'mente', 'al cerrar Mente se ofrece su 40%')
+  d = O.hacerExtra(d, 'mente', '10 minutos más de lectura', day)
+  assert.equal(O.oroDe(d, day).mente, true)
+  assert.equal(O.ofrecerOro(d, day), null)
+  assert.equal(O.hacerExtra(d, 'mente', 'otra', day), d, 'un extra por círculo al día')
+  assert.equal(O.oroDe(d, '2026-12-03').mente, false, 'el oro es del día, no se arrastra')
+  const pts = O.puntosDia(d, day)
+  assert.ok(pts >= 3, `cuerpo 1 + mente oro 2: ${pts}`)
+  assert.ok(O.isExtra(d.activities.find(a => a.note.startsWith('Extra'))))
+  assert.equal(O.extraRing({ kind: 'other', note: 'Extra: inventado: x' }), null)
+  console.log(' - el 40% y el oro: solo cerrado + extra del día, uno por círculo, puntos 1 y 2')
+}
+
+// v10.2: tabla de la semana con amigos. Semana vieja cuenta cero, empates comparten lugar, dos ganadores.
+{
+  const T = moduleOf('tablaSemana')
+  const hoy = '2026-12-03' // jueves; lunes = 2026-12-01... se calcula con mondayOf
+  const lunes = moduleOf('libre').mondayOf(hoy)
+  const pasado = moduleOf('jardin').shiftDay(lunes, -7)
+  const r = T.tabla([
+    { uid: 'yo', apodo: 'Gael', avatar: 0, racha: 5, semanaDe: lunes, puntos: 12, puntosPrev: 4, oros: 2 },
+    { uid: 'r', apodo: 'Kiki', avatar: 0, racha: 9, semanaDe: lunes, puntos: 15, puntosPrev: 14, oros: 1 },
+    { uid: 'v', apodo: 'Viejo', avatar: 0, racha: 0, semanaDe: pasado, puntos: 30, oros: 6 },
+    { uid: 'e', apodo: 'Empate', avatar: 0, racha: 1, semanaDe: lunes, puntos: 12, puntosPrev: 12, oros: 2 },
+  ], 'yo', hoy)
+  assert.deepEqual(r.filas.map(f => f.uid), ['r', 'e', 'yo', 'v'], 'orden por puntos, luego oros, luego apodo')
+  assert.equal(r.filas.find(f => f.uid === 'v').puntos, 0, 'quien no publicó esta semana arranca en cero el lunes')
+  assert.equal(r.filas.find(f => f.uid === 'yo').lugar, r.filas.find(f => f.uid === 'e').lugar, 'empate comparte lugar')
+  assert.equal(r.lider, 'r')
+  assert.equal(r.mejoro, 'yo', 'el que más mejoró contra su semana pasada (+8) también gana')
+  assert.ok(r.filas.find(f => f.uid === 'yo').yo)
+  assert.equal(T.tabla([{ uid: 'yo', apodo: 'G', avatar: 0, racha: 0, semanaDe: lunes, puntos: 9 }], 'yo', hoy).lider, null, 'solo no hay líder')
+  assert.equal(T.tabla([{ uid: 'x', apodo: 'X', avatar: 0, racha: 0, semanaDe: lunes, puntos: 999 }, { uid: 'yo', apodo: 'G', avatar: 0, racha: 0, semanaDe: lunes, puntos: 1 }], 'yo', hoy).filas[0].puntos, 42, 'nadie pasa de 42 a la semana')
+  const d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  const s = T.miSemana(d, hoy)
+  assert.equal(s.semanaDe, lunes)
+  assert.ok(s.puntos >= 0 && s.puntos <= 42)
+  console.log(' - tabla de la semana: semana vieja en cero, empates, líder y el que más mejoró, tope 42')
+}
+
+// v10.2: pie de página. Alterna versículo y cita por día; sin módulo Biblia, solo citas; las citas llevan fuente y puntuación humana.
+{
+  const P = moduleOf('pieDePagina')
+  const { PAGE_QUOTES } = moduleOf('pageQuotes')
+  const dias = Array.from({ length: 14 }, (_, i) => `2026-12-${String(i + 1).padStart(2, '0')}`)
+  for (const page of ['Hoy', 'Entrenar', 'Comida', 'Tareas', 'Noche', 'Lectura', 'Amigos', 'Historial']) {
+    const kinds = dias.map(d => P.pieDe(page, d, true).kind)
+    assert.ok(kinds.includes('verso') && kinds.includes('cita'), `${page}: mezcla versículos y citas`)
+    assert.ok(dias.every(d => P.pieDe(page, d, false).kind === 'cita'), `${page}: sin Biblia solo citas`)
+    assert.deepEqual(P.pieDe(page, dias[3], true), P.pieDe(page, dias[3], true), 'mismo pie todo el día')
+    assert.ok(new Set(dias.map(d => P.pieDe(page, d, true).text)).size >= 4, `${page}: rota`)
+  }
+  assert.equal(P.pieDe('Ajustes', dias[0], true), null)
+  for (const list of Object.values(PAGE_QUOTES)) for (const q of list) {
+    assert.ok(q.who && q.source, 'toda cita lleva autor y fuente')
+    assert.ok(!/—| - |\.\.\.|…|\w\/\w/.test(q.text + q.source), `puntuación humana: ${q.text}`)
+  }
+  console.log(' - pie de página: alterna versículo y cita, sin Biblia solo citas, todas con fuente')
+}

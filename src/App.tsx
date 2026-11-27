@@ -8,8 +8,10 @@ import { FoodPage } from './FoodPage'
 import { HoyLista } from './HoyLista'
 import { MiRutina } from './MiRutina'
 import { TareasSimple } from './TareasSimple'
-import { FocusBlock, type Preset } from './FocusPage'
+import { type Preset } from './FocusPage'
+import { FocusBlock } from './FocusSimple'
 import { NfcQuick } from './NfcQuick'
+import { PageVerse } from './PageExtras'
 import { JardinPage } from './Jardin'
 import { AjustesSimple } from './AjustesSimple'
 import { StatsBar } from './DuoTop'
@@ -20,12 +22,15 @@ import { ajustarRutina2611, clockOf, deshacerRondas2611 } from './lib/rutina'
 import { applyRecords, diffRecords, toRecords, type RecordRow } from './lib/records'
 import { SyncEngine, type SyncStatus } from './lib/sync'
 import { supabase } from './lib/supabase'
-import { cuenta, cuentaActiva as cloudConfigured, remoto, socialListo, type Sesion } from './lib/nube'
+import { amigosListo, cuenta, cuentaActiva as cloudConfigured, remoto, type Sesion } from './lib/nube'
+import { AmigosSimple } from './AmigosSimple'
+import { publicarMiSemana } from './lib/amigosNube'
+import { miSemana } from './lib/tablaSemana'
 import { NightPage } from './Night'
 import { logAuth, setAuthLogOwner } from './lib/authLog'
 import { usePublicarPerfil } from './Tablas'
 import { usePublicarEstado } from './Widget'
-import { AMIGO_KEY, AmigosPage, useAmigosNuevos } from './Amigos'
+import { AMIGO_KEY, useAmigosNuevos } from './Amigos'
 import { clearAccountStorage, getLocalOwnerId, setStorageScope, loadAppData, parseBackup, readScope, requestPersistence, saveAppData, setLocalOwnerId, syncStore, wipeDevice } from './lib/storage'
 import { clearOwnPhotos, setPhotoOwner } from './lib/photos'
 import { clearNfcFromUrl, isRepeatScan, parseNfc, type NfcAction } from './lib/nfc'
@@ -284,6 +289,13 @@ export default function App() {
     if (ready && cloudReady && data.settings.rondas2611) commit(d => d.settings.rondas2611 ? deshacerRondas2611(d) : d)
   }, [ready, cloudReady, data.profile.onboardingComplete, data.settings.rutina2611, data.settings.rondas2611]) // eslint-disable-line react-hooks/exhaustive-deps
   const nuevosAmigos = useAmigosNuevos(data, cloudConfigured && cloudReady ? userId : undefined, section)
+  // Tus puntos de la semana llegan solos a la tabla de tus amigos (solo si ya creaste tu código).
+  const puntosSemana = miSemana(data).puntos
+  useEffect(() => {
+    if (!cloudConfigured || !cloudReady || !userId || !amigosListo) return
+    const t = window.setTimeout(() => { void publicarMiSemana(dataRef.current, userId, undefined, true).catch(() => undefined) }, 4000)
+    return () => window.clearTimeout(t)
+  }, [puntosSemana, cloudReady, userId])
   useEffect(() => {
     if (!cloudConfigured || !userId || !ready) return
     const client = remoto(userId)
@@ -555,7 +567,7 @@ export default function App() {
     : <div className={`sync-pill sync-${status?.phase ?? 'local'} ${extra}`} role="status">{syncText}</div>
   const mods = modulesOf(data.settings)
   // v9: Noche vuelve (la vara de Gael), Lectura abre también con solo Biblia, Amigos espera a que lo social esté en Supabase.
-  const allowed = (id: Section) => id === 'Lectura' ? mods.reading || mods.bible : id === 'Entrenar' ? mods.training : id === 'Tareas' ? mods.focus : id === 'Comida' ? mods.food : id === 'Amigos' ? socialListo : id !== 'Hábitos' && id !== 'Enfoque'
+  const allowed = (id: Section) => id === 'Lectura' ? mods.reading || mods.bible : id === 'Entrenar' ? mods.training : id === 'Tareas' ? mods.focus : id === 'Comida' ? mods.food : id === 'Amigos' ? amigosListo : id !== 'Hábitos' && id !== 'Enfoque'
   const nav = NAV.filter(n => allowed(n.id))
   const tabs = nav.filter(n => n.id !== 'Ajustes')
   const page: Section = allowed(section) ? section : 'Hoy'
@@ -580,14 +592,15 @@ export default function App() {
           {page === 'Entrenar' && <MiRutina key={trainingKey} data={data} commit={commit} onMessage={message} onIr={go} />}
           {page === 'Tareas' && (focusOpen || data.activeFocus
             ? <section className="d-page focus-page">
-                {!data.activeFocus && <button type="button" className="d-btn white" onClick={() => { setFocusOpen(false); setFocusPreset(null) }}>← Tareas</button>}
+                {!data.activeFocus && <button type="button" className="d-link fb-back" onClick={() => { setFocusOpen(false); setFocusPreset(null) }}>← Tareas</button>}
                 <FocusBlock key={focusKey} data={data} commit={commit} onMessage={message} preset={focusPreset} onPresetUsed={() => setFocusPreset(null)} />
               </section>
             : <TareasSimple data={data} commit={commit} onFocus={t => { setFocusPreset(t ? { task: t.text, taskId: t.id } : null); setFocusKey(k => k + 1); setFocusOpen(true); window.scrollTo({ top: 0 }) }} />)}
           {page === 'Comida' && <FoodPage data={data} commit={commit} onMessage={message} />}
           {page === 'Historial' && <JardinPage data={data} />}
-          {page === 'Amigos' && <AmigosPage data={data} commit={commit} onMessage={message} />}
+          {page === 'Amigos' && <AmigosSimple data={data} onMessage={message} />}
           {page === 'Ajustes' && <AjustesSimple data={data} commit={commit} onMessage={message} cloud={cloudConfigured} onExport={exportBackup} onImport={f => void importBackup(f)} onSignOut={() => void signOut()} onDelete={deleteEverything} />}
+          {!lost && <PageVerse page={page} data={data} />}
         </div></Guard>}
         <footer className="foot">Lo que repites echa raíces.</footer>
       </div>

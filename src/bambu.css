@@ -102,3 +102,78 @@
   .d-mascot { width: 80px; }
   .d-mascot-say { padding: 4px 6px; font-size: 11px; }
 }
+
+/* v10.2: bloque de enfoque simple, para celular y laptop. */
+.fb { display: grid; gap: 16px; align-items: start; }
+@media (min-width: 900px) { .fb { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); } }
+.fb-card { display: grid; gap: 12px; padding: 18px; }
+.fb-title { margin: 0; font-size: 22px; font-weight: 900; color: var(--d-ink); }
+.fb-label { font-size: 14px; font-weight: 900; color: var(--d-green-ink); }
+.fb-tasks, .fb-check { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.fb-tasks button, .fb-check button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 10px 14px; border: 2px solid var(--d-line); border-radius: 14px; background: var(--d-soft); color: var(--d-ink); font: inherit; font-weight: 800; text-align: left; cursor: pointer; }
+.fb-tasks button span, .fb-check button span { min-width: 0; overflow-wrap: anywhere; }
+.fb-tasks button i, .fb-check button i { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--d-line-2); border-radius: 8px; font-style: normal; font-weight: 900; color: var(--d-page); }
+.fb-tasks button.on, .fb-check button.on { border-color: var(--d-green); background: var(--d-green-light); }
+.fb-tasks button.on i, .fb-check button.on i { background: var(--d-green); border-color: var(--d-green); }
+.fb-check button.on span { color: var(--d-dim); text-decoration: line-through; }
+.fb-loose { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--d-green-light); font-weight: 800; }
+.fb-add { display: flex; gap: 8px; }
+.fb-add .d-input { flex: 1; min-width: 0; }
+.fb-today { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.fb-today li { display: flex; justify-content: space-between; gap: 10px; color: var(--d-dim); font-weight: 700; }
+.fb-clock-card { text-align: center; justify-items: stretch; }
+.fb-clock { display: block; font-size: clamp(64px, 18vw, 120px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; color: var(--d-green-ink); }
+.fb-run.paused .fb-clock { color: var(--d-gold); }
+.fb-goal { margin: 0; color: var(--d-dim); font-weight: 700; }
+.fb-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.fb-actions > * { flex: 1 1 140px; }
+.fb-pause summary { list-style: none; width: 100%; }
+.fb-pause summary::-webkit-details-marker { display: none; }
+.fb-pause[open] .d-chips { margin-top: 10px; }
+.fb-full { justify-self: center; }
+.fb-keep { display: flex; gap: 10px; align-items: center; font-weight: 700; color: var(--d-dim); }
+/* Pantalla completa: solo el reloj y las tareas, en grande. En iPhone se agranda dentro de la página. */
+.fb-run.full { position: fixed; inset: 0; z-index: 60; overflow: auto; padding: max(24px, env(safe-area-inset-top)) 24px 24px; background: var(--d-page); align-content: center; }
+.fb-run:fullscreen { padding: 32px; background: var(--d-page); align-content: center; }
+.fb-run.full .fb-clock, .fb-run:fullscreen .fb-clock { font-size: clamp(96px, 22vw, 260px); }
+/* En laptop el bloque usa el ancho: la columna de celular (640 px) se queda para las demás páginas. */
+@media (min-width: 900px) { .d-shell .page:has(.focus-page) { max-width: 1080px; } }
+.fb-back { justify-self: start; }
+.fb .d-bar i { background: var(--d-green); }
+/* El 40% y el oro (producto/GAMIFICACION.md): el círculo de oro brilla, la invitación sale bajo los círculos. */
+.d-anillo.oro .fill { stroke: var(--d-gold); filter: drop-shadow(0 0 3px var(--d-gold)); }
+.d-oro-invite { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin: -14px 0 24px; padding: 12px 14px; border: 2px solid var(--d-gold-lip); border-radius: var(--d-radius); background: var(--d-gold-light); color: var(--d-ink); font: inherit; font-size: 15px; font-weight: 800; text-align: left; box-shadow: 0 4px 0 var(--d-gold-lip); cursor: pointer; }
+.d-oro-invite i { flex: none; padding: 6px 12px; border-radius: var(--pill); background: var(--d-gold); color: var(--d-page); font-style: normal; font-weight: 900; }
+.d-oro-invite:active { transform: translateY(4px); box-shadow: none; }
+
+/* v10.2: Amigos, la tabla de la semana. */
+.am { display: grid; gap: 16px; }
+.am-card { display: grid; gap: 12px; padding: 18px; }
+.am-rule { margin: 0; font-size: 19px; font-weight: 900; line-height: 1.3; color: var(--d-ink); }
+.am-tabla { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.am-tabla li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 12px; border: 2px solid var(--d-line); border-radius: 14px; background: var(--d-soft); }
+.am-tabla li.yo { border-color: var(--d-green); background: var(--d-green-light); }
+.am-tabla li:first-child .am-lugar { background: var(--d-gold); color: var(--d-page); }
+.am-lugar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--d-off); font-weight: 900; color: var(--d-ink); }
+.am-nombre { display: grid; min-width: 0; }
+.am-nombre b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; color: var(--d-ink); }
+.am-nombre small { color: var(--d-gold); font-weight: 800; font-size: 13px; }
+.am-pts { display: grid; justify-items: end; line-height: 1; }
+.am-pts b { font-size: 24px; font-weight: 900; color: var(--d-ink); font-variant-numeric: tabular-nums; }
+.am-pts small { font-size: 12px; color: var(--d-faint); font-weight: 800; }
+.am-sol { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 14px; background: var(--d-soft); }
+.am-sol > b, .am-sol > span { flex: 1 1 120px; min-width: 0; overflow-wrap: anywhere; color: var(--d-ink); }
+.am-sol.pend { background: none; border: 2px dashed var(--d-line-2); }
+.am-code { text-transform: uppercase; letter-spacing: .12em; font-weight: 900; }
+.am-mio-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.am-codigo { font-size: 30px; font-weight: 900; letter-spacing: .12em; color: var(--d-green-ink); font-variant-numeric: tabular-nums; }
+.am-code::placeholder { text-transform: none; letter-spacing: 0; }
+
+/* v10.2: pie de página, versículo o cita. */
+.page-verse { margin: 32px auto 8px; padding: 18px 8px 0; border-top: 2px solid var(--d-line); max-width: 520px; text-align: center; }
+.page-verse blockquote { margin: 0; font-family: var(--title); font-variation-settings: 'SOFT' 100; font-size: 17px; font-style: italic; line-height: 1.5; color: var(--d-dim); }
+.page-verse figcaption { margin-top: 8px; font-size: 13px; font-weight: 800; letter-spacing: 0; text-transform: none; color: var(--d-faint); }
+.page-verse.cita figcaption b { color: var(--d-green-ink); }
+.d-anillos-ley .oro i { background: var(--d-gold); box-shadow: 0 0 6px var(--d-gold); }
+/* Brote baja un poco para no chocar con el letrero del paso en curso (¡BUENOS DÍAS!). */
+.d-mascot { top: 30px; }

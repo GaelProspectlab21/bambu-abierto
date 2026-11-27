@@ -90,6 +90,10 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     { title: 'Cama', where: 'En la cabecera. Al tenderla tachas tu cama y queda tu hora de despertar.', icon: 'cama', action: { tag: 'cama' } },
     ...(mods.training ? [{ title: 'Piso de entreno', where: 'Donde entrenas. Un toque abre tu rutina, otro la cierra. Solo cuenta con series.', icon: 'pesa' as DuoIconName, action: { tag: 'training' } as NfcAction }] : []),
     ...(mods.reading ? [{ title: 'Lectura', where: 'En tu libro. Un toque empieza, otro termina.', icon: 'libro' as DuoIconName, action: { tag: 'reading' } as NfcAction }] : []),
+    { title: 'Estiramiento', where: 'Junto al tapete o la cama. 8 minutos guiados que cambian cada día; de mañana movilidad, de noche estiramiento.', icon: 'caminar', action: { tag: 'estirar' } },
+    ...(mods.focus ? [{ title: 'Bloque de enfoque', where: 'En tu escritorio. Abre tu bloque; si ya hay uno, te lleva a él.', icon: 'reloj' as DuoIconName, action: { tag: 'focus' } as NfcAction }] : []),
+    { title: 'Buenos días', where: 'En tu buró. Abre tus preguntas de la mañana.', icon: 'sol', action: { tag: 'checkin' } },
+    { title: 'Noche', where: 'Junto a la cama. ¿Diste lo que traías? Funciona aunque Safari no tenga sesión.', icon: 'luna', action: { tag: 'night' } },
   ]
 
   return <section className="d-page">

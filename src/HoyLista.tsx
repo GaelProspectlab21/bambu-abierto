@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Sheet } from './Sheet'
 import { activeHabits, dateKey, makeId, modulesOf, type AppData } from './lib/model'
 import type { PersonalTask } from './lib/personal'
-import { firstDay, habitOn, shiftDay, tasksFor } from './lib/jardin'
+import { dayScore, firstDay, GOOD, habitOn, shiftDay, tasksFor } from './lib/jardin'
 import { clockOf, COACH_FUTURE, lockActive, routineFor, routineProgress } from './lib/rutina'
 import { readOn } from './lib/lectura'
 import { broteLine, xpOn, XP } from './lib/xp'
@@ -20,6 +20,8 @@ import { CardioSheet } from './Cardio'
 import type { Section } from './TodayPage'
 import { anillosDe, cerrados } from './lib/anillos'
 import { AnillosDia, AnillosLeyenda } from './Anillos'
+import { ofrecerOro, oroDe, type Ring } from './lib/oro'
+import { OroInvite, OroSheet } from './Oro'
 
 type Commit = (update: (d: AppData) => AppData) => void
 
@@ -120,6 +122,8 @@ function Node({ n, x, onTap, mascot }: { n: PathNode; x: number; onTap: (el: HTM
 export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commit: Commit; go: (s: Section) => void; onMessage: (t: string) => void }) {
   const today = dateKey()
   const [sheet, setSheet] = useState<'list' | 'read' | 'manana' | 'walk' | null>(null)
+  const [oro, setOro] = useState<Ring | null>(null)
+  const [bible, setBible] = useState(false)
   const [text, setText] = useState('')
   const [daily, setDaily] = useState(false)
   const [edit, setEdit] = useState(false)
@@ -127,11 +131,13 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
   const live = !!data.activeReading
   const now = useNow(live, 1000)
   const xpToday = xpOn(data, today)
-  const line = broteLine(data)
   const started = firstDay(data, today)
   const past = [shiftDay(today, -2), shiftDay(today, -1)].filter(d => d >= started && d < today)
   const todayNodes = dayNodes(data, today, today).map(n => n.kind === 'read' && data.activeReading ? { ...n, live: true, sub: `Leyendo ${Math.floor(readingSeconds(data.activeReading, now) / 60)} min` } : n)
-  const allDone = todayNodes.length > 0 && todayNodes.every(n => n.state === 'done')
+  const line = broteLine(data, Date.now(), { done: todayNodes.filter(n => n.state === 'done').length, total: todayNodes.length })
+  // El cofre se abre con la misma regla que da los XP del día bueno y prende la racha: 80%.
+  const score = dayScore(data, today)
+  const allDone = score.total > 0 && score.pct >= GOOD
   const items = listItems(data, today, today)
   const anillos = anillosDe(data, today)
 
@@ -162,7 +168,7 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     if (n.state === 'locked') { onMessage(`Se abre el ${dayTitle(day).toLowerCase()}.`); return }
     if (day !== today) { onMessage(n.state === 'done' ? 'Ese día lo cumpliste.' : 'Ese día ya pasó. Hoy cuenta más.'); return }
     if (n.kind === 'train') go('Entrenar')
-    else if (n.kind === 'bible') go('Lectura')
+    else if (n.kind === 'bible') { setBible(true); setSheet('read') }
     else if (n.kind === 'night') go('Noche')
     else setSheet(n.kind)
   }
@@ -198,14 +204,15 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
       <header className="d-unit2-head">
         <div><b>{kind === 'today' ? 'Hoy' : kind === 'future' && day === shiftDay(today, 1) ? 'Mañana' : dayTitle(day)}</b>
           <span>{kind === 'today' ? `${dayTitle(day)} · ${cerrados(anillos)} de ${[anillos.cuerpo, anillos.mente, anillos.alma].filter(v => v !== null).length} anillos` : kind === 'future' ? (rt ? rt.title : 'Día de descanso') : `${done} de ${nodes.length} hechos`}</span></div>
-        {kind === 'today' ? <AnillosDia a={anillos} />
+        {kind === 'today' ? <AnillosDia a={anillos} oro={oroDe(data, today, anillos)} />
           : <DuoIcon name={kind === 'future' ? 'candado' : kind === 'past' && done === nodes.length && nodes.length ? 'check' : 'casa'} size={36} />}
-        {kind === 'today' && <AnillosLeyenda a={anillos} />}
+        {kind === 'today' && <AnillosLeyenda a={anillos} oro={oroDe(data, today, anillos)} />}
       </header>
+      {kind === 'today' && ofrecerOro(data, today, anillos) && <OroInvite ring={ofrecerOro(data, today, anillos)!} onOpen={() => setOro(ofrecerOro(data, today, anillos))} />}
       {nodes.map((n, i) => <Node key={n.kind} n={n} x={WAVE[(offset + i) % WAVE.length]} onTap={() => tap(n, day)}
         mascot={kind === 'today' && n.state === 'now' ? <div className={`d-mascot ${WAVE[(offset + i) % WAVE.length] > 0 ? 'left' : 'right'}`}><div className="d-mascot-say">{line.text}</div><BroteArt mood={line.mood} size={70} /></div> : undefined} />)}
       {kind === 'today' && <div className="d-step2 chest">
-        <button type="button" className={`d-chest ${allDone ? 'open' : ''}`} onClick={() => allDone ? celebrate({ kind: 'day', title: '¡Día completo!', text: `Ganaste ${xpToday} XP hoy. Tu bambú está en flor.` }) : onMessage(`Te faltan ${todayNodes.filter(n => n.state !== 'done').length} para abrir el cofre.`)} aria-label="Cofre del día">
+        <button type="button" className={`d-chest ${allDone ? 'open' : ''}`} onClick={() => allDone ? celebrate({ kind: 'day', title: '¡Día completo!', text: `Ganaste ${xpToday} XP hoy. Tu bambú está en flor.` }) : onMessage(`Vas en ${Math.round(score.pct * 100)}%. Al 80% se abre el cofre.`)} aria-label="Cofre del día">
           <DuoIcon name="cofre" size={64} off={!allDone} />
         </button>
         <span className="d-step2-label"><b>{allDone ? '¡Cofre abierto!' : 'Cofre del día'}</b><small>+{XP.goodDay} XP al 80%</small></span>
@@ -255,6 +262,7 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     </Sheet>}
     {sheet === 'walk' && <CardioSheet data={data} commit={commit} onClose={() => setSheet(null)} onMessage={onMessage} />}
     {sheet === 'manana' && <MorningSheet data={data} commit={commit} onClose={() => setSheet(null)} />}
-    {sheet === 'read' && <ReadSheet data={data} commit={commit} onClose={() => setSheet(null)} onMessage={onMessage} />}
+    {oro && <OroSheet ring={oro} day={today} commit={commit} onClose={() => setOro(null)} />}
+    {sheet === 'read' && <ReadSheet data={data} commit={commit} onClose={() => { setSheet(null); setBible(false) }} onMessage={onMessage} startBible={bible} />}
   </section>
 }
