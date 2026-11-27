@@ -58,7 +58,7 @@ export function AuthScreen({ recovery = false, onRecoveryComplete }: Props) {
   return <main className="d-auth ob-fondo">
     <Cielo />
     <section className="d-auth-card">
-      <div className="d-auth-brand"><img src="icon.svg" width="44" height="44" alt="" /><img className="d-auth-nombre" src="logo-nombre.png" width="104" height="30" alt="bambú" /></div>
+      <div className="d-auth-brand"><img src="icon.svg" width="44" height="44" alt="" /><span className="d-auth-nombre">bambú</span></div>
       <h1>{title}</h1>
       <p className="d-auth-copy">{copy}</p>
       {!recovery && view === 'entrar' && <>

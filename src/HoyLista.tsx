@@ -97,10 +97,7 @@ function dayNodes(data: AppData, day: string, today: string): PathNode[] {
     const done = readOn(data, day)
     out.push({ kind: 'read', label: '¿Leíste?', sub: future ? 'Lectura' : done ? 'Sí leíste' : undefined, icon: 'libro', state: future ? 'locked' : done ? 'done' : day < today ? 'missed' : 'todo', xp: XP.read })
   }
-  if (mods.bible) {
-    const done = data.bible.some(m => m.day === day)
-    out.push({ kind: 'bible', label: 'Biblia', sub: future ? 'Un capítulo' : done ? 'Leíste hoy' : 'Un capítulo', icon: 'libro', state: future ? 'locked' : done ? 'done' : day < today ? 'missed' : 'todo', xp: XP.read })
-  }
+  // La Biblia ya no es un paso aparte (v11.1): leer es leer lo que leas. Sus capítulos se marcan en Lectura.
   // Cierra el día: ¿diste lo que traías? (la vara de Gael). Solo para quien la usa o ya pasó de las 7 pm.
   const usaNoche = data.checkins.some(c => typeof c.given === 'number')
   if (usaNoche || (day === today && new Date().getHours() >= 19)) {

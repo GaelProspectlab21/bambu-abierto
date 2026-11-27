@@ -2264,11 +2264,11 @@ async function versionChecks() {
   const leido = logReading(base, day, { minutes: 10, mode: 'manual' })
   assert.equal(anillosDe(leido, day).mente, 1, 'leer cierra Mente')
   const conHabito = { ...leido, habits: { [day]: ['agua'] } }
-  assert.equal(anillosDe(conHabito, day).alma, 0.5, 'hábito hecho y Biblia pendiente: media Alma')
+  assert.equal(anillosDe(conHabito, day).alma, 1, 'v11.1: la Biblia ya no es un paso aparte, el hábito cierra Alma')
   const conBiblia = { ...conHabito, bible: [{ id: 'b1', book: 43, chapter: 1, day }] }
   assert.equal(anillosDe(conBiblia, day).alma, 1)
   const usaNoche = { ...conBiblia, checkins: [{ id: '2026-11-24', day: '2026-11-24', given: 80 }] }
-  assert.equal(Math.round(anillosDe(usaNoche, day).alma * 100), 67, 'quien ya usa la Noche: falta contestarla hoy')
+  assert.equal(anillosDe(usaNoche, day).alma, 0.5, 'quien ya usa la Noche: falta contestarla hoy')
   assert.equal(anillosDe({ ...usaNoche, checkins: [...usaNoche.checkins, { id: day, day, given: 90 }] }, day).alma, 1)
   assert.equal(cerrados(anillosDe({ ...usaNoche, checkins: [...usaNoche.checkins, { id: day, day, given: 90 }] }, day)), 3)
   const sinLectura = { ...base, settings: { ...base.settings, modules: { ...base.settings.modules, reading: false } } }
@@ -2839,4 +2839,31 @@ async function audioChecks() {
   assert.equal(B.reporteCel(3, undefined).hasta, 65, 'sin edad se usa 15')
   assert.ok(!/—| - |\.\.\.|…/.test(B.compromiso('Gael') + B.METAS.map(m => m.label + m.text).join(' ') + B.HORAS_CEL.map(h => h.label).join(' ')), 'puntuación humana')
   ok('bienvenida: metas encienden módulos y hábitos, reporte con la cuenta honesta y compromiso con tu nombre')
+}
+// v11.1: la lectura del NFC no se duplica. Toque 1 empieza, toque 2 guarda (servidor), Terminar ACTUALIZA esa fila.
+{
+  const N = moduleOf('nfcActions'), Lx = moduleOf('lectura')
+  const t0 = Date.parse('2026-11-27T07:00:00-06:00'), day = '2026-11-27'
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  d = N.nfcServerAction(d, { tag: 'reading' }, t0, day).next
+  d = N.nfcServerAction(d, { tag: 'reading' }, t0 + 1527000, day).next
+  assert.equal(d.reading.length, 1, 'el segundo toque guarda una')
+  assert.ok(d.activeReading?.endedAt, 'queda detenida para completar detalles')
+  d = Lx.stopReading(d, t0 + 1600000)
+  assert.equal(d.reading.length, 1, 'Terminar no crea otra fila')
+  assert.equal(d.reading[0].seconds, 1527)
+  assert.equal(d.activeReading, null)
+  // Capítulos de la Biblia después del cronómetro: se pegan a la misma lectura.
+  d = Lx.markBible(d, day, [{ book: 42, chapter: 13 }])
+  assert.equal(d.reading.length, 1)
+  assert.equal(d.reading[0].bible.length, 1)
+  // Datos que ya quedaron dobles: se juntan, conservando capítulos y libro de la copia.
+  const a = { id: 'reading:a', day: '2026-11-26', minutes: 14, seconds: 870, note: '', title: 'La Biblia', captureMode: 'timer', source: 'bambu' }
+  const b = { id: 'reading:b', day: '2026-11-26', minutes: 15, seconds: 870, note: '', title: 'La Biblia', captureMode: 'timer', source: 'bambu', bible: [{ book: 42, from: 12, to: 12 }], location: 'Lucas 12', workId: 'work:x' }
+  const c = { id: 'reading:c', day: '2026-11-26', minutes: 10, seconds: 600, note: '', captureMode: 'timer', source: 'bambu' }
+  const m = Lx.mergeDuplicateReadings({ ...d, reading: [a, b, c] })
+  assert.deepEqual(m.reading.map(r => r.id), ['reading:a', 'reading:c'])
+  assert.equal(m.reading[0].location, 'Lucas 12'); assert.equal(m.reading[0].workId, 'work:x'); assert.equal(m.reading[0].minutes, 15)
+  assert.equal(Lx.mergeDuplicateReadings(m), m, 'sin dobles no cambia nada')
+  console.log('PASA v11.1 lectura por NFC sin duplicados y limpieza de los viejos')
 }

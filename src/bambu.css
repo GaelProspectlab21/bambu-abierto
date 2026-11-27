@@ -240,3 +240,21 @@
   .d-unit2.today .d-anillos { width: 74px; height: 74px; }
   .d-unit2.today .d-anillos-ley span, .d-unit2.today .d-anillos-ley b { font-size: 13px; }
 }
+
+/* v11.1: el nombre va en la serif de la app (Fraunces), no en una imagen redonda tipo Duolingo. */
+.d-auth-nombre { font-family: var(--title); font-weight: 700; font-size: 30px; letter-spacing: -.01em; color: var(--d-ink); line-height: 1; }
+.d-auth-brand img { border-radius: 11px; }
+.tallo-art { display: block; width: 150px; height: 150px; }
+
+/* v11.1: fuera el azul de Duolingo en botones secundarios, chips elegidos y enlaces. Lo elegido es verde, como el resto. */
+.d-btn.white { color: var(--d-ink); }
+:is(.d-shell, .d-scrim) .quiet-button, .nfc-quick .quiet-button { color: var(--d-green-ink); }
+.quiet-button.wide { width: 100%; }
+.d-chips button.on { background: var(--d-green-light); border-color: var(--d-green); color: var(--d-green-ink); box-shadow: none; }
+.d-more summary { color: var(--d-green-ink); }
+.d-btn.d-btn:disabled { color: var(--d-faint); background: var(--d-soft); }
+.d-mode button.on { box-shadow: inset 0 0 0 2px var(--d-green); }
+.d-days button.on { background: var(--d-green); border-color: var(--d-green); color: var(--d-on-bright); box-shadow: 0 3px 0 var(--d-green-lip); }
+:is(.d-room-grid, .d-priv) button.on, .d-tb-row.me { border-color: var(--d-green); background: var(--d-green-light); }
+.d-priv button.on { box-shadow: 0 4px 0 var(--d-green-lip); }
+.d-filter-chip { border-color: var(--d-green); background: var(--d-green-light); color: var(--d-green-ink); }

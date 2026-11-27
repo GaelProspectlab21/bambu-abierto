@@ -24,15 +24,45 @@ export function ensureBook(data: AppData, title: string): { data: AppData; id: s
   return { data: { ...data, works: [...data.works, work] }, id: work.id }
 }
 
-export function logReading(data: AppData, day: string, opts: { minutes: number; seconds?: number; book?: string; pageTo?: number; mode: 'manual' | 'timer' }): AppData {
+/**
+ * Guarda una lectura. Con `rowId` (la lectura del cronómetro), si esa fila ya existe se
+ * ACTUALIZA en lugar de crear otra: el segundo toque de la etiqueta ya la había guardado
+ * en el servidor y el botón Terminar la duplicaba (26 y 27-nov-2026).
+ */
+export function logReading(data: AppData, day: string, opts: { minutes: number; seconds?: number; book?: string; pageTo?: number; mode: 'manual' | 'timer'; rowId?: string }): AppData {
   const { data: withBook, id } = ensureBook(data, opts.book ?? '')
   const minutes = Math.max(0, Math.round(opts.minutes))
   const row: Reading = {
-    id: `reading:${makeId()}`, day, minutes, note: '', captureMode: opts.mode, source: 'bambu',
+    id: opts.rowId ?? `reading:${makeId()}`, day, minutes, note: '', captureMode: opts.mode, source: 'bambu',
     ...(opts.seconds ? { seconds: Math.round(opts.seconds) } : {}), ...(id ? { workId: id } : {}), ...(opts.pageTo ? { pageTo: opts.pageTo } : {}),
   } as Reading
   const works = id && opts.pageTo ? withBook.works.map(w => w.id === id ? { ...w, currentPage: Math.max(w.currentPage ?? 0, opts.pageTo!) } : w) : withBook.works
-  return { ...withBook, works, reading: [...withBook.reading, row] }
+  const old = withBook.reading.find(r => r.id === row.id)
+  const reading = old ? withBook.reading.map(r => r.id === row.id ? { ...old, ...row, note: old.note || row.note } : r) : [...withBook.reading, row]
+  return { ...withBook, works, reading }
+}
+
+/**
+ * Junta las lecturas que quedaron dobles por el error de arriba: mismo día, mismo cronómetro
+ * (segundos idénticos). Se queda con la primera y le suma lo que traía la otra (libro, capítulos, idea).
+ */
+export function mergeDuplicateReadings(data: AppData): AppData {
+  const keep = new Map<string, Reading>()
+  let changed = false
+  const out: Reading[] = []
+  for (const r of data.reading) {
+    const key = r.captureMode === 'timer' && r.seconds ? `${r.day}|${r.seconds}` : ''
+    const first = key ? keep.get(key) : undefined
+    if (!first) { if (key) keep.set(key, r); out.push(r); continue }
+    changed = true
+    const merged: Reading = { ...r, ...first, minutes: Math.max(first.minutes, r.minutes) }
+    for (const k of Object.keys(r) as (keyof Reading)[]) if (!first[k] && r[k]) (merged as Record<string, unknown>)[k] = r[k]
+    if (merged.title === 'Lectura' && r.title) merged.title = r.title
+    merged.id = first.id
+    keep.set(key, merged)
+    out[out.indexOf(first)] = merged
+  }
+  return changed ? { ...data, reading: out } : data
 }
 
 export function startReading(data: AppData, day: string, book: string, timerMinutes: number | null, now = Date.now()): AppData {
@@ -51,7 +81,7 @@ export function stopReading(data: AppData, now = Date.now()): AppData {
   const seconds = readingSeconds(done, now)
   const next = { ...data, activeReading: null }
   if (seconds < 30) return next
-  return logReading(next, s.day, { minutes: Math.max(1, Math.round(seconds / 60)), seconds, book: s.title, mode: 'timer' })
+  return logReading(next, s.day, { minutes: Math.max(1, Math.round(seconds / 60)), seconds, book: s.title, mode: 'timer', rowId: s.id })
 }
 
 export type ReadingStats = { weekMinutes: number; todayMinutes: number; streak: number; best: number; recent: { day: string; minutes: number; book: string }[]; perBook: { title: string; minutes: number; page?: number }[] }

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { dateKey, makeId, modulesOf, type AppData, type BibleMark, type Reading, type Work } from './lib/model'
 import { firstDay } from './lib/jardin'
 import { finishReading, pauseReading, readingSeconds, type ActiveReading } from './lib/readingSession'
-import { CANON, ETAPAS, TOTAL_CHAPTERS, addChapterMarks, book, bibleProgress, describeRanges, etapaDe, nextChapters, toRanges } from './lib/bible'
+import { CANON, ETAPAS, TOTAL_CHAPTERS, addChapterMarks, book, bibleProgress, describeRanges, nextChapters, toRanges } from './lib/bible'
 import { backfillDays, streak, realReading } from './lib/progress'
 import { BinauralAudio } from './BinauralAudio'
 import { Card, Chips, Empty, Heading, Stepper, Tabs, fmtDay, mmss, useNow, useWakeLock } from './ui'
@@ -26,8 +26,6 @@ export function ReadingPage(props: Props) {
   return <>
     <Heading eyebrow="LECTURA" title="Tu rincón de lectura." text="Cinco minutos cuentan. El tiempo real va aparte." aside={<div className="completion"><strong>{s.current}</strong><span>días seguidos · mejor {s.best}</span></div>} />
     <Tabs label="Lectura" value={tab} onChange={setTab} options={[['sesion', props.data.activeReading ? 'Leyendo' : 'Leer'], ...(modulesOf(props.data.settings).bible ? [['biblia', 'Biblia'] as [Tab, string]] : []), ['libros', 'Libros'], ['cronica', 'Crónica']]} />
-    {tab === 'sesion' && modulesOf(props.data.settings).bible && !props.data.activeReading && <button type="button" className="verses-quick" onClick={() => { try { sessionStorage.setItem(OPEN_BIBLE_KEY, '1') } catch { /* abre la pestaña igual */ } setTab('biblia') }}>
-      <span><strong>¿Leíste solo unos versículos?</strong><small>Ábrelos, tócalos y guarda cuánto tiempo les diste. Con tu nota si quieres.</small></span><i aria-hidden="true">→</i></button>}
     {tab === 'sesion' && <Session {...props} />}
     {tab === 'biblia' && <BibleView {...props} direct={direct} />}
     {tab === 'libros' && <Works {...props} />}
@@ -72,9 +70,8 @@ function Session({ data, commit, onMessage }: Props) {
       <span className="eyebrow">ABRE TU LIBRO</span>
       <h2>Un rato para ti.</h2>
       <p>Empieza aquí o acerca el teléfono a tu etiqueta. Al terminar, vuelve a acercarlo.</p>
-      {suggestions[0] && <p className="note note-logro">Lo que sigue en tu ruta: <strong>{book(suggestions[0].book).name} {suggestions[0].chapter}</strong> ({etapaDe(suggestions[0].book)?.nombre})</p>}
-      <button className="primary-button wide" onClick={() => commit(d => d.activeReading ? d : ({ ...d, activeReading: freshReading() }))}>Empezar lectura <span>↗</span></button>
-      <button className="quiet-button" onClick={() => setManual(manual ? null : dateKey())}>Ya leí, registrar a mano</button>
+      <button className="primary-button wide" onClick={() => commit(d => d.activeReading ? d : ({ ...d, activeReading: freshReading() }))}>Empezar lectura</button>
+      <button className="quiet-button wide" onClick={() => setManual(manual ? null : dateKey())}>Ya leí, registrar a mano</button>
     </Card>
     <DayBand data={data} selected={manual} onPick={day => setManual(manual === day ? null : day)} />
     {manual && <ManualReading key={manual} data={data} commit={commit} day={manual} onSaved={msg => { setManual(null); onMessage(msg) }} />}

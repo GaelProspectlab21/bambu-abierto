@@ -32,7 +32,7 @@ export function LoadingScreen({ text }: { text: string }) {
 }
 
 type Tone = 'error' | 'offline' | 'lost'
-const ART: Record<Tone, string> = { error: 'img/error.webp', offline: 'img/sin-senal.webp', lost: 'img/perdido.webp' }
+const ART: Record<Tone, string> = { error: 'img/error.svg', offline: 'img/sin-senal.svg', lost: 'img/perdido.svg' }
 
 /** Pantalla completa para cuando no se puede abrir la app. */
 export function ProblemScreen({ tone, title, text, children }: { tone: Tone; title: string; text: string; children?: ReactNode }) {

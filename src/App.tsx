@@ -1,3 +1,4 @@
+import { mergeDuplicateReadings } from './lib/lectura'
 import { Component, Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AuthScreen } from './AuthScreen'
 import { AudioMiniPlayer } from './BinauralAudio'
@@ -480,6 +481,13 @@ export default function App() {
     return () => window.removeEventListener('message', onMsg)
   }, [ready]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Lecturas dobles del cronómetro (error del 26-nov): se juntan una vez, ya con los datos de la nube.
+  const cuentaLista = ready && (!cloudConfigured || (cloudReady && !!session))
+  useEffect(() => {
+    if (!cuentaLista) return
+    if (mergeDuplicateReadings(dataRef.current) !== dataRef.current) commit(d => mergeDuplicateReadings(d))
+  }, [cuentaLista, commit])
+
   // ── NFC: se resuelve una sola vez, cuando ya están los datos de la cuenta ──
   const appReady = ready && (!cloudConfigured || (cloudReady && !!session)) && data.profile.onboardingComplete
   useEffect(() => {
@@ -511,7 +519,7 @@ export default function App() {
       const r = bedAction(d, dateKey(), clockOf(now))
       commit(x => bedAction(x, dateKey(), clockOf(now)).next)
       if (r.next === d) message(`${r.title}. ${r.text}`)
-      else { rewardSound(true); celebrate({ kind: 'achievement', title: r.title, text: `${r.text} +${XP.habit} XP`, image: 'img/tallo-cheer.webp' }) }
+      else { rewardSound(true); celebrate({ kind: 'achievement', title: r.title, text: `${r.text} +${XP.habit} XP`, image: 'img/brote-coach.svg' }) }
       go('Hoy')
     } else if (action.tag === 'focus') {
       go('Enfoque')
@@ -527,7 +535,7 @@ export default function App() {
       else {
         commit(x => ({ ...x, habits: { ...x.habits, [day]: [...(x.habits[day] ?? []), habit.id] } }))
         rewardSound(true)
-        celebrate({ kind: 'achievement', title: `¡${habit.label}!`, text: `Marcado con tu etiqueta. +${XP.habit} XP`, image: 'img/tallo-cheer.webp' })
+        celebrate({ kind: 'achievement', title: `¡${habit.label}!`, text: `Marcado con tu etiqueta. +${XP.habit} XP`, image: 'img/brote-coach.svg' })
       }
       go('Hoy')
     } else if (action.tag === 'night') {

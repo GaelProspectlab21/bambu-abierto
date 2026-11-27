@@ -115,8 +115,8 @@ export function Onboarding({ initialName, onComplete }: Props) {
     if (step !== 'grow') return
     if (ticks >= checklist.length) {
       const t = window.setTimeout(() => {
-        if (competir) celebrate({ kind: 'rank', title: `¡A competir${name.trim() ? `, ${name.trim()}` : ''}!`, text: 'Agrega a tus amigos en Amigos y reta a quien quieras.', image: 'img/rango-02-brote.webp' })
-        else celebrate({ kind: 'rank', title: `Ya echaste raíz${name.trim() ? `, ${name.trim()}` : ''}.`, text: 'Tu bambú ya está plantado. Lo que repites echa raíces.', image: 'img/rango-02-brote.webp' })
+        if (competir) celebrate({ kind: 'rank', title: `¡A competir${name.trim() ? `, ${name.trim()}` : ''}!`, text: 'Agrega a tus amigos en Amigos y reta a quien quieras.', image: 'img/rango-02-brote.svg' })
+        else celebrate({ kind: 'rank', title: `Ya echaste raíz${name.trim() ? `, ${name.trim()}` : ''}.`, text: 'Tu bambú ya está plantado. Lo que repites echa raíces.', image: 'img/rango-02-brote.svg' })
         onComplete({ name: name.trim(), modules, habits: competir ? [] : habits(), firstVotes: [], competir, age: sinEdad ? undefined : age, sinEdad: sinEdad || undefined,
           metas, wake, despertador: desp && modules.training, deporteDias: dias, horasCel: cel ? horas : undefined })
       }, 500)

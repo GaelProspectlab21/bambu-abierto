@@ -31,7 +31,6 @@ export function anillosDe(data: AppData, day: string): Anillos {
   const alma: number[] = []
   const habits = activeHabits(data.settings)
   if (habits.length) alma.push(habits.filter(h => habitOn(data, h, day)).length / habits.length)
-  if (mods.bible) alma.push(data.bible.some(m => m.day === day) ? 1 : 0)
   // La noche (¿diste lo que traías?) cuenta solo para quien ya la usa: a nadie se le pide algo que no eligió.
   if (data.checkins.some(c => typeof c.given === 'number')) alma.push(data.checkins.some(c => c.day === day && typeof c.given === 'number') ? 1 : 0)
 

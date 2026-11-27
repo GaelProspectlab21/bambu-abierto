@@ -1,4 +1,4 @@
-const CACHE = 'bambu-shell-v11'
+const CACHE = 'bambu-shell-v11-1'
 // Recordatorios: el servidor manda {title, body, url, tag}. iOS exige mostrar SIEMPRE una
 // notificación por cada push; si no, revoca el permiso.
 self.addEventListener('push', (event) => {
@@ -21,7 +21,7 @@ self.addEventListener('notificationclick', (event) => {
 // Las imágenes de error y sin señal se precargan: justo se ven cuando no hay red.
 // Los dibujos técnicos pesan casi nada: se precargan para que la técnica se vea sin señal desde el primer día.
 const DRAWN = ['pike', 'pike-elevated', 'pike-parallettes', 'curl-towel', 'hollow', 'tuck-lsit', 'copenhagen', 'nordic', 'floor-towel-pull'].flatMap((id) => [`/ejercicios/${id}-0.svg`, `/ejercicios/${id}-1.svg`])
-const CORE = ['/', '/manifest.webmanifest', '/icon.svg', '/brote.svg', '/img/error.webp', '/img/sin-senal.webp', '/img/perdido.webp', ...DRAWN]
+const CORE = ['/', '/manifest.webmanifest', '/icon.svg', '/brote.svg', '/img/error.svg', '/img/sin-senal.svg', '/img/perdido.svg', ...DRAWN]
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE)

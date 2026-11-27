@@ -102,7 +102,8 @@ export function ReadSheet({ data, commit, onClose, onMessage, biblia = false }: 
   function saveYes(el: HTMLElement) {
     const p = Number(page)
     if (isBible) playSound('bible')
-    if (isBible) commit(d => markBible(logReading(d, today, { minutes, book: BIBLIA, mode: 'manual' }), today, picked, verses))
+    // Si hoy ya hay lectura (la del cronómetro), los capítulos se le pegan a ESA: no se crea otra.
+    if (isBible) commit(d => markBible(readOn(d, today) ? d : logReading(d, today, { minutes, book: BIBLIA, mode: 'manual' }), today, picked, verses))
     else commit(d => logReading(d, today, { minutes, book, pageTo: Number.isInteger(p) && p > 0 ? p : undefined, mode: 'manual' }))
     setPicked([]); setVerses('')
     reward(el, `+${XP.read} XP`)

@@ -13,7 +13,7 @@ export type NfcAction = { tag: NfcTag; stretch?: { when: 'manana' | 'noche'; sec
 export const NFC_TAGS: { tag: Exclude<NfcTag, 'habit' | 'pause'>; title: string; where: string; does: string }[] = [
   { tag: 'cama', title: 'Cama', where: 'Pegada en la cabecera de tu cama.', does: 'Al tenderla, un toque tacha Tender la cama y guarda a qué hora despertaste.' },
   { tag: 'training', title: 'Piso de entreno', where: 'En el piso donde entrenas.', does: 'Primer toque abre tu rutina de hoy. Segundo toque la cierra. Solo cuenta si registraste series. Si no lo tocas antes de tu hora límite, tus redes se bloquean.' },
-  { tag: 'reading', title: 'Lectura', where: 'Pegada en tu Biblia o en el buró donde lees.', does: 'Primer toque empieza el cronómetro. Segundo toque lo para y abre tu reflexión y los capítulos.' },
+  { tag: 'reading', title: 'Lectura', where: 'Pegada en tu libro o en el buró donde lees.', does: 'Primer toque empieza el cronómetro. Segundo toque lo para y abre tu reflexión y los capítulos.' },
   { tag: 'focus', title: 'Bloque de enfoque', where: 'En tu escritorio.', does: 'Sin bloque abierto: abre Tareas con tu siguiente tarea lista. Con bloque abierto: lo cierra.' },
   { tag: 'despertar', title: 'Despertador', where: 'No es etiqueta: es un Atajo del iPhone que se corre al detener tu alarma.', does: 'Abre Bambú con una alarma que solo se apaga cuando la cámara cuenta tus lagartijas. Si no las haces, te aviso cada 5 minutos durante una hora.' },
   { tag: 'estirar', title: 'Estiramiento', where: 'En tu cuarto, junto al tapete o la cama.', does: 'Día o noche: 8 minutos guiados que cambian cada día. De mañana movilidad, de noche estiramiento. Al terminar se guarda solo y tacha Estiramiento.' },
