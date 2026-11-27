@@ -2234,3 +2234,26 @@ async function audioChecks() {
   assert.equal(twice.habits[day].filter(h => h === 'stretch').length, 1, 'el hábito no se duplica')
   console.log(' - etiqueta de estiramiento: 8 min variados, solo posturas conocidas, guarda y tacha')
 }
+
+// El 40% y el oro: un círculo es de oro solo si está cerrado Y hiciste su extra ese día. Puntos: 1 cerrado, 2 oro.
+{
+  const O = moduleOf('oro')
+  const day = '2026-12-02'
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  d = { ...d, settings: { ...d.settings, modules: { reading: true, bible: false, training: false, focus: false, food: false } } }
+  assert.equal(O.ofrecerOro(d, day), null, 'en descanso Cuerpo se cierra solo y no se pide extra')
+  const conExtraMente = O.hacerExtra(d, 'mente', '10 minutos más de lectura', day)
+  assert.equal(O.oroDe(conExtraMente, day).mente, false, 'un extra sin cerrar el círculo no da oro')
+  d = { ...d, reading: [{ id: 'r1', day, minutes: 20, note: '', title: 'Libro' }] }
+  assert.equal(O.ofrecerOro(d, day), 'mente', 'al cerrar Mente se ofrece su 40%')
+  d = O.hacerExtra(d, 'mente', '10 minutos más de lectura', day)
+  assert.equal(O.oroDe(d, day).mente, true)
+  assert.equal(O.ofrecerOro(d, day), null)
+  assert.equal(O.hacerExtra(d, 'mente', 'otra', day), d, 'un extra por círculo al día')
+  assert.equal(O.oroDe(d, '2026-12-03').mente, false, 'el oro es del día, no se arrastra')
+  const pts = O.puntosDia(d, day)
+  assert.ok(pts >= 3, `cuerpo 1 + mente oro 2: ${pts}`)
+  assert.ok(O.isExtra(d.activities.find(a => a.note.startsWith('Extra'))))
+  assert.equal(O.extraRing({ kind: 'other', note: 'Extra: inventado: x' }), null)
+  console.log(' - el 40% y el oro: solo cerrado + extra del día, uno por círculo, puntos 1 y 2')
+}

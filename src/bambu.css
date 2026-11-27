@@ -102,3 +102,9 @@
   .d-mascot { width: 80px; }
   .d-mascot-say { padding: 4px 6px; font-size: 11px; }
 }
+
+/* El 40% y el oro (producto/GAMIFICACION.md): el círculo de oro brilla, la invitación sale bajo los círculos. */
+.d-anillo.oro .fill { stroke: var(--d-gold); filter: drop-shadow(0 0 3px var(--d-gold)); }
+.d-oro-invite { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin: -14px 0 24px; padding: 12px 14px; border: 2px solid var(--d-gold-lip); border-radius: var(--d-radius); background: var(--d-gold-light); color: var(--d-ink); font: inherit; font-size: 15px; font-weight: 800; text-align: left; box-shadow: 0 4px 0 var(--d-gold-lip); cursor: pointer; }
+.d-oro-invite i { flex: none; padding: 6px 12px; border-radius: var(--pill); background: var(--d-gold); color: var(--d-page); font-style: normal; font-weight: 900; }
+.d-oro-invite:active { transform: translateY(4px); box-shadow: none; }

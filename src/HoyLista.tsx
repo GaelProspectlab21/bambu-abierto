@@ -20,6 +20,8 @@ import { CardioSheet } from './Cardio'
 import type { Section } from './TodayPage'
 import { anillosDe, cerrados } from './lib/anillos'
 import { AnillosDia, AnillosLeyenda } from './Anillos'
+import { ofrecerOro, oroDe, type Ring } from './lib/oro'
+import { OroInvite, OroSheet } from './Oro'
 
 type Commit = (update: (d: AppData) => AppData) => void
 
@@ -120,6 +122,7 @@ function Node({ n, x, onTap, mascot }: { n: PathNode; x: number; onTap: (el: HTM
 export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commit: Commit; go: (s: Section) => void; onMessage: (t: string) => void }) {
   const today = dateKey()
   const [sheet, setSheet] = useState<'list' | 'read' | 'manana' | 'walk' | null>(null)
+  const [oro, setOro] = useState<Ring | null>(null)
   const [text, setText] = useState('')
   const [daily, setDaily] = useState(false)
   const [edit, setEdit] = useState(false)
@@ -198,10 +201,11 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
       <header className="d-unit2-head">
         <div><b>{kind === 'today' ? 'Hoy' : kind === 'future' && day === shiftDay(today, 1) ? 'Mañana' : dayTitle(day)}</b>
           <span>{kind === 'today' ? `${dayTitle(day)} · ${cerrados(anillos)} de ${[anillos.cuerpo, anillos.mente, anillos.alma].filter(v => v !== null).length} anillos` : kind === 'future' ? (rt ? rt.title : 'Día de descanso') : `${done} de ${nodes.length} hechos`}</span></div>
-        {kind === 'today' ? <AnillosDia a={anillos} />
+        {kind === 'today' ? <AnillosDia a={anillos} oro={oroDe(data, today, anillos)} />
           : <DuoIcon name={kind === 'future' ? 'candado' : kind === 'past' && done === nodes.length && nodes.length ? 'check' : 'casa'} size={36} />}
         {kind === 'today' && <AnillosLeyenda a={anillos} />}
       </header>
+      {kind === 'today' && ofrecerOro(data, today, anillos) && <OroInvite ring={ofrecerOro(data, today, anillos)!} onOpen={() => setOro(ofrecerOro(data, today, anillos))} />}
       {nodes.map((n, i) => <Node key={n.kind} n={n} x={WAVE[(offset + i) % WAVE.length]} onTap={() => tap(n, day)}
         mascot={kind === 'today' && n.state === 'now' ? <div className={`d-mascot ${WAVE[(offset + i) % WAVE.length] > 0 ? 'left' : 'right'}`}><div className="d-mascot-say">{line.text}</div><BroteArt mood={line.mood} size={70} /></div> : undefined} />)}
       {kind === 'today' && <div className="d-step2 chest">
@@ -255,6 +259,7 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     </Sheet>}
     {sheet === 'walk' && <CardioSheet data={data} commit={commit} onClose={() => setSheet(null)} onMessage={onMessage} />}
     {sheet === 'manana' && <MorningSheet data={data} commit={commit} onClose={() => setSheet(null)} />}
+    {oro && <OroSheet ring={oro} day={today} commit={commit} onClose={() => setOro(null)} />}
     {sheet === 'read' && <ReadSheet data={data} commit={commit} onClose={() => setSheet(null)} onMessage={onMessage} />}
   </section>
 }
