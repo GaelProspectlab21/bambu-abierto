@@ -1987,6 +1987,16 @@ ok('rutina de inicio: 3 días, 2 rondas, sin candado, todo del catálogo; la de 
   assert.match(vercel.find(h => h.key === 'Permissions-Policy').value, /camera=\(self\)/, 'la cámara que cuenta necesita permiso')
 }
 ok('csp unica: la meta y la cabecera de Vercel coinciden, con WebAssembly, Supabase, Google y cámara')
+{
+  const src = f => fs.readFileSync(path.join(__dirname, '../src', f), 'utf8')
+  const DUO = ['#58cc02', '#46a302', '#1cb0f6', '#1899d6', '#ffc800', '#ff4b4b', '#ce82ff', '#ff9600']
+  for (const f of ['tokens.css', 'duo.css', 'bambu.css', 'lib/widget.ts']) DUO.forEach(h => assert.ok(!src(f).toLowerCase().includes(h), `${f} no usa el color de Duolingo ${h}`))
+  assert.equal((src('bambu.css').replace(/\/\*[\s\S]*?\*\//g, '').match(/#[0-9a-fA-F]{3,8}/g) || []).length, 0, 'bambu.css solo usa tokens')
+  assert.match(src('main.tsx'), /import '\.\/duo\.css'\r?\nimport '\.\/bambu\.css'/, 'la capa Bambú carga al final')
+  for (const f of ['AjustesSimple.tsx', 'ShareCard.tsx', 'CamaraReps.tsx']) assert.ok(!src(f).includes('tuagentedeia'), `${f} no manda ni anuncia otro dominio`)
+  assert.ok(!src('AjustesSimple.tsx').includes('postMessage'), 'Ajustes no envía tus datos a otra ventana')
+}
+ok('identidad v10: paleta propia (sin hex de Duolingo), capa Bambú solo con tokens y ningún dato sale a otro dominio')
 
 require('./social-edge.cjs')(moduleOf).then(() => ok('v9 Edge real: 404 uniforme, lectura mínima, sin caché y errores privados')).then(() => require('./share-auth.cjs')()).then(() => audioChecks()).then(() => syncChecks()).then(() => console.log(`PASS ${passed.length} grupos:\n - ${passed.join('\n - ')}`)).catch(error => { console.error(error); process.exit(1) })
 
@@ -2170,4 +2180,57 @@ async function audioChecks() {
   assert.equal(O.isInviteRejection('Database error saving new user'), true)
   assert.equal(O.isInviteRejection('Invalid nonce'), false)
   ok('google: rechazo por invitación reconocido')
+}
+
+// v10.1: registrar Biblia desde el registro rápido (capítulos y versículos sueltos).
+{
+  const { markBible, logReading, BIBLIA } = moduleOf('lectura')
+  const day = '2026-11-26'
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  d = logReading(d, day, { minutes: 15, mode: 'manual' })
+  d = markBible(d, day, [{ book: 43, chapter: 1 }, { book: 43, chapter: 2 }])
+  assert.equal(d.reading.length, 1, 'los capítulos van en la lectura recién guardada, no en otra')
+  assert.equal(d.reading[0].title, BIBLIA)
+  assert.equal(d.bible.length, 2)
+  assert.ok(d.bible.every(m => !m.verses))
+  d = markBible(d, day, [{ book: 43, chapter: 3 }], '1 al 16')
+  assert.equal(d.reading.length, 2, 'la lectura que ya tiene capítulos no se pisa')
+  const parcial = d.bible.find(m => m.id === '43:3')
+  assert.equal(parcial.verses, '1 al 16', 'un capítulo con versículos queda parcial')
+  d = markBible(d, day, [{ book: 43, chapter: 1 }], '5')
+  assert.ok(!d.bible.find(m => m.id === '43:1').verses, 'versículos no degradan un capítulo ya completo')
+  assert.equal(markBible(d, day, []), d)
+  console.log(' - biblia en el registro rápido: capítulos, versículos y sin pisar')
+}
+
+// v10.1: etiqueta de estiramiento. ~8 min que cambian cada día, solo posturas con foto, y el servidor la guarda.
+{
+  const S = moduleOf('stretch')
+  const { nfcServerAction } = moduleOf('nfcActions')
+  const { parseNfc } = moduleOf('nfc')
+  const known = new Set([...S.ROUTINES.manana.moves, ...S.ROUTINES.noche.moves].map(m => m.name))
+  const firmas = new Set()
+  for (const when of ['manana', 'noche']) for (let d = 1; d <= 20; d++) {
+    const day = `2026-12-${String(d).padStart(2, '0')}`
+    const steps = S.variedSteps(when, day)
+    const t = S.totalSeconds(steps)
+    assert.ok(t >= 420 && t <= 520, `${when} ${day}: ${t} s no son ~8 min`)
+    assert.ok(steps.every(s => known.has(s.name)), 'solo posturas con foto y evidencia')
+    assert.deepEqual(S.variedSteps(when, day).map(s => s.name), steps.map(s => s.name), 'el mismo día da la misma rutina')
+    if (when === 'manana') assert.equal(steps[0].kind, 'dynamic', 'en la mañana arranca con movilidad')
+    firmas.add(when + steps.map(s => s.name).join('|'))
+  }
+  assert.ok(firmas.size >= 8, `la rutina casi no cambia: ${firmas.size} distintas en 40 días`)
+  assert.deepEqual(parseNfc('?nfc=estirar&k=x'), { tag: 'estirar' })
+  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  const day = '2026-12-01'
+  const r = nfcServerAction(base, { tag: 'estirar', stretch: { when: 'noche', seconds: 470 } }, Date.now(), day)
+  assert.equal(r.next.activities.length, 1)
+  assert.ok(S.isStretch(r.next.activities[0]) && S.stretchWhen(r.next.activities[0]) === 'noche')
+  assert.ok((r.next.habits[day] ?? []).includes('stretch'), 'tacha el hábito Estiramiento')
+  assert.equal(nfcServerAction(base, { tag: 'estirar', stretch: { when: 'noche', seconds: 20 } }, Date.now(), day).next, base, 'menos de un minuto no cuenta')
+  assert.equal(nfcServerAction(base, { tag: 'estirar' }, Date.now(), day).next, base)
+  const twice = S.logStretch(r.next, 'manana', 300, day)
+  assert.equal(twice.habits[day].filter(h => h === 'stretch').length, 1, 'el hábito no se duplica')
+  console.log(' - etiqueta de estiramiento: 8 min variados, solo posturas conocidas, guarda y tacha')
 }

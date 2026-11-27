@@ -18,7 +18,7 @@ type Props = {
   onExport: () => void; onImport: (file?: File) => void; onSignOut: () => void; onDelete: (password?: string) => Promise<void>
 }
 
-const MODS: [keyof Modules, string, DuoIconName][] = [['training', 'Entreno', 'pesa'], ['focus', 'Tareas', 'lista'], ['reading', 'Lectura', 'libro'], ['food', 'Comida', 'plato']]
+const MODS: [keyof Modules, string, DuoIconName][] = [['training', 'Entreno', 'pesa'], ['focus', 'Tareas', 'lista'], ['reading', 'Lectura', 'libro'], ['bible', 'Biblia', 'estrella'], ['food', 'Comida', 'plato']]
 
 function Toggle({ on, onClick, title, text }: { on: boolean; onClick: () => void; title: string; text?: string }) {
   return <button type="button" className={`d-toggle ${on ? 'on' : ''}`} aria-pressed={on} onClick={onClick}>
@@ -73,18 +73,6 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     if (!navigator.clipboard) { onMessage(url); return }
     navigator.clipboard.writeText(url).then(() => onMessage('Enlace copiado. Grábalo en la etiqueta con NFC Tools como URL.')).catch(() => onMessage(url))
   }
-  function sendData() {
-    const target = 'https://tuagentedeia.com'
-    const win = window.open(`${target}/bambu/?recibir=1`, '_blank')
-    if (!win) { onMessage('Tu navegador bloqueó la ventana nueva. Intenta otra vez.'); return }
-    const onMsg = (e: MessageEvent) => {
-      if (e.origin !== target || e.source !== win) return
-      if (e.data?.type === 'bambu-listo') win.postMessage({ type: 'bambu-datos', data: JSON.parse(JSON.stringify(data)) }, target)
-      if (e.data?.type === 'bambu-recibido') { onMessage('Listo: tus datos ya están en la versión nueva.'); window.removeEventListener('message', onMsg) }
-    }
-    window.addEventListener('message', onMsg)
-    window.setTimeout(() => window.removeEventListener('message', onMsg), 10 * 60000)
-  }
   function saveName() {
     const clean = name.trim().slice(0, 40)
     if (!clean || clean === data.profile.name) { setName(data.profile.name); return }
@@ -107,11 +95,6 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
   return <section className="d-page">
     <h1 className="d-title">Ajustes</h1>
 
-    {window.location.protocol === 'http:' && <div className="d-card d-move">
-      <h2>Pasar mis datos a la versión nueva</h2>
-      <p className="d-hint left">Abre tuagentedeia.com/bambu y le pasa todo lo de aquí: tu perfil, tu rutina, tus series de hoy y tus lecturas. Allá te pide confirmar.</p>
-      <button type="button" className="d-btn green wide" onClick={sendData}>Pasar mis datos</button>
-    </div>}
 
     <div className="d-card">
       <h2>Perfil</h2>

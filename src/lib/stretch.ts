@@ -6,7 +6,7 @@
  * Se guarda como actividad 'other' con la nota "Estiramiento: noche" (igual que el rescate), así
  * que no cambia la forma de ningún registro y los teléfonos viejos y el servidor lo conservan.
  */
-import { dateKey, makeId, type Activity, type AppData } from './model'
+import { activeHabits, dateKey, makeId, type Activity, type AppData } from './model'
 import { shiftDay } from './progress'
 import type { Muscle } from './exercises'
 
@@ -30,7 +30,7 @@ export const ROUTINES: Record<StretchWhen, { title: string; why: string; rounds:
   },
   noche: {
     title: 'Antes de dormir',
-    why: 'Después de entrenar o por la noche. Camina suave unos minutos antes. Dos vueltas con tensión cómoda, sin dolor ni rebotes.',
+    why: 'Después de entrenar o por la noche. Camina suave unos minutos antes. Tensión cómoda, sin dolor ni rebotes.',
     rounds: 2,
     moves: [
       { name: 'Flexor de cadera', steps: ['Hinca una rodilla en una almohada. El otro pie va adelante, plano, con la rodilla en ángulo recto.', 'Aprieta la nalga de la pierna que está en el piso, como si guardaras una moneda.', 'Sin arquear la espalda, mueve la cadera unos centímetros hacia adelante y quédate ahí.'], feel: 'el frente de la cadera de la pierna que está en el piso', how: 'Apoya la rodilla en algo suave. Aprieta el glúteo y mueve apenas la cadera adelante, sin arquear la espalda.', seconds: 20, sides: true, photo: 'flexor', frame: 1, muscle: 'Flexores de cadera', why: 'Trabaja su flexibilidad después del fútbol.', kind: 'static', evidence: 'stretch-dose' },
@@ -101,3 +101,37 @@ export function stretchStreak(data: AppData, today = dateKey()): number {
 /** Abre el reproductor desde cualquier parte (Hoy, Entrenar, Noche, el +, un enlace). Lo escucha App. */
 export const STRETCH_EVENT = 'bambu:estirar'
 export function openStretch(when: StretchWhen) { window.dispatchEvent(new CustomEvent(STRETCH_EVENT, { detail: when })) }
+
+/** Número estable a partir de un texto: el mismo día da la misma rutina, el siguiente cambia. */
+function seedOf(text: string): number { let h = 2166136261; for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0 }
+function rotate<T>(list: T[], by: number): T[] { const k = list.length ? by % list.length : 0; return [...list.slice(k), ...list.slice(0, k)] }
+const expand = (m: StretchMove, round: number): StretchStep[] => m.sides ? [{ ...m, round, side: 'Lado izquierdo' }, { ...m, round, side: 'Lado derecho' }] : [{ ...m, round }]
+
+/**
+ * La rutina de la etiqueta: unos 8 minutos que cambian cada día. Solo usa posturas que ya tienen
+ * foto y evidencia (las dos rutinas), rota el orden con la fecha y llena hasta ~8 min.
+ * Mañana: primero movilidad, luego posturas suaves. Noche: estiramiento, luego una segunda vuelta.
+ */
+export function variedSteps(when: StretchWhen, day = dateKey(), target = 480): StretchStep[] {
+  const seed = seedOf(`${day}:${when}`)
+  const main = rotate(ROUTINES[when].moves, seed % ROUTINES[when].moves.length)
+  const other = rotate(ROUTINES.noche.moves, (seed >>> 4) % ROUTINES.noche.moves.length)
+  // Mañana: después de la movilidad, posturas suaves. Noche: segunda y tercera vuelta en otro orden.
+  const fill = when === 'manana' ? other.map(m => ({ m, round: 2 })) : [...other.map(m => ({ m, round: 2 })), ...rotate(other, 3).map(m => ({ m, round: 3 }))]
+  const out: StretchStep[] = main.flatMap(m => expand(m, 1))
+  let total = totalSeconds(out)
+  for (const { m, round } of fill) {
+    const add = expand(m, round)
+    if (total + totalSeconds(add) > target + 20) continue
+    out.push(...add); total += totalSeconds(add)
+    if (total >= target - 20) break
+  }
+  return out
+}
+
+/** Guarda un estiramiento y tacha el hábito Estiramiento si lo tienes. Lo usan la app y la etiqueta. */
+export function logStretch(data: AppData, when: StretchWhen, seconds: number, day = dateKey(), row = stretchRow(when, seconds, day)): AppData {
+  const habit = activeHabits(data.settings).find(h => h.id === 'stretch')
+  const marked = (data.habits[day] ?? []).includes('stretch')
+  return { ...data, activities: [...data.activities, row], habits: habit && !marked ? { ...data.habits, [day]: [...(data.habits[day] ?? []), 'stretch'] } : data.habits }
+}

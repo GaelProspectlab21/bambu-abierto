@@ -82,7 +82,7 @@ function dayNodes(data: AppData, day: string, today: string): PathNode[] {
   const items = listItems(data, day, today)
   if (items.length) {
     const d = items.filter(i => i.done).length
-    out.push({ kind: 'list', label: 'Tu lista', sub: future ? `${items.length} cosas` : `${d} de ${items.length}`, icon: 'lista', state: future ? 'locked' : d === items.length ? 'done' : day < today ? 'missed' : 'todo', partial: d / items.length, xp: XP.habit * items.length })
+    out.push({ kind: 'list', label: 'Tu lista', sub: future ? `${items.length} ${items.length === 1 ? 'cosa' : 'cosas'}` : `${d} de ${items.length}`, icon: 'lista', state: future ? 'locked' : d === items.length ? 'done' : day < today ? 'missed' : 'todo', partial: d / items.length, xp: XP.habit * items.length })
   }
   if (mods.reading) {
     const done = readOn(data, day)
@@ -130,7 +130,6 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
   const line = broteLine(data)
   const started = firstDay(data, today)
   const past = [shiftDay(today, -2), shiftDay(today, -1)].filter(d => d >= started && d < today)
-  const future = [1, 2, 3].map(n => shiftDay(today, n))
   const todayNodes = dayNodes(data, today, today).map(n => n.kind === 'read' && data.activeReading ? { ...n, live: true, sub: `Leyendo ${Math.floor(readingSeconds(data.activeReading, now) / 60)} min` } : n)
   const allDone = todayNodes.length > 0 && todayNodes.every(n => n.state === 'done')
   const items = listItems(data, today, today)
@@ -219,11 +218,18 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
   const blocks: ReactNode[] = []
   for (const d of past) { const nodes = dayNodes(data, d, today); blocks.push(unit(d, 'past', nodes, offset)); offset += nodes.length }
   blocks.push(unit(today, 'today', todayNodes, offset)); offset += todayNodes.length + 1
-  for (const d of future) { const nodes = dayNodes(data, d, today); blocks.push(unit(d, 'future', nodes, offset)); offset += nodes.length }
+  // Mañana se ve como una sola tarjeta corta: qué toca y cuántos pasos. Tres días bloqueados repetidos eran ruido.
+  const manana = shiftDay(today, 1)
+  const mananaNodes = dayNodes(data, manana, today)
+  const mananaRt = routineFor(data, manana)
+  blocks.push(<section className="d-next" key={manana} aria-label="Mañana">
+    <div><b>Mañana</b><span>{mananaRt ? mananaRt.title : 'Descanso'} · {mananaNodes.length} {mananaNodes.length === 1 ? 'paso' : 'pasos'}</span></div>
+    <ul>{mananaNodes.map(n => <li key={n.kind}><DuoIcon name={n.icon} size={22} off />{n.kind === 'train' ? (mananaRt?.title ?? n.label) : n.label}</li>)}</ul>
+  </section>)
   const doneItems = items.filter(i => i.done).length
 
   return <section className="d-page d-home">
-    <div className="d-road">{blocks}<p className="d-road-end">El camino sigue mañana</p></div>
+    <div className="d-road">{blocks}</div>
 
     {sheet === 'list' && <Sheet title="Tu lista de hoy" tall onClose={() => { setSheet(null); setEdit(false) }}>
       <div className="d-goal-top"><b>{doneItems} de {items.length} hechas</b><button type="button" className="d-link" onClick={() => setEdit(!edit)}>{edit ? 'Listo' : 'Editar'}</button></div>

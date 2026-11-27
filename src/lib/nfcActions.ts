@@ -18,6 +18,7 @@ import { verdict } from './measure'
 import { pauseActivity, pauseApp, pauseStats } from './pause'
 import { clockOf, lockActive, routineFor } from './rutina'
 import { WAKE_PREFIX } from './jardin'
+import { logStretch } from './stretch'
 
 export type NfcResult = { next: AppData; title: string; text: string; open?: boolean; locked?: boolean }
 export const BED_HABIT = { id: 'cama', label: 'Tender la cama', mark: 'T' }
@@ -61,6 +62,12 @@ const SAME_TOUCH = 8000
 
 export function nfcServerAction(data: AppData, action: NfcAction, now: number, day: string, clock = clockOf(now)): NfcResult {
   if (action.tag === 'cama') return bedAction(data, day, clock)
+  if (action.tag === 'estirar') {
+    const s = action.stretch
+    if (!s || !(s.seconds >= 60)) return { next: data, title: 'Estiramiento sin guardar', text: 'Para que cuente, estira al menos un minuto.' }
+    const min = Math.round(Math.min(s.seconds, 1800) / 60)
+    return { next: logStretch(data, s.when, Math.min(s.seconds, 1800), day), title: 'Estiramiento guardado', text: `${min} min. Tu cuerpo te lo agradece.` }
+  }
   if (action.tag === 'reading') {
     const s = data.activeReading
     if (s && s.endedAt) return { next: data, open: true, title: 'Tu lectura está detenida', text: 'Abre Bambú desde el ícono para completar los detalles de tu lectura.' }

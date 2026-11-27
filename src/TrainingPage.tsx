@@ -14,15 +14,15 @@ import { ADAPTATIONS, PRINCIPLES, SOURCES } from './lib/juanma'
 import { Card, Chips, Empty, Heading, Sparkline, Stepper, Tabs, mmss, useNow, useWakeLock } from './ui'
 import { plural } from './lib/text'
 
-type Props = { data: AppData; commit: Commit; onMessage: (text: string, undo?: () => void) => void }
+type Props = { data: AppData; commit: Commit; onMessage: (text: string, undo?: () => void) => void; embedded?: boolean }
 type Tab = 'hoy' | 'recuperacion' | 'progreso' | 'coach' | 'ejercicios'
 
-export function TrainingPage({ data, commit, onMessage }: Props) {
+export function TrainingPage({ data, commit, onMessage, embedded = false }: Props) {
   const [tab, setTab] = useState<Tab>('hoy')
   return <>
-    <Heading eyebrow="ENTRENAMIENTO" title="Construye tu físico." text="Registra cada serie. El coach decide qué toca con tus datos y el método de Juanma." />
+    {!embedded && <Heading eyebrow="ENTRENAMIENTO" title="Construye tu físico." text="Registra cada serie. El coach decide qué toca con tus datos y el método de Juanma." />}
     <Tabs label="Secciones de entrenamiento" value={tab} onChange={setTab} options={[['hoy', 'Hoy'], ['recuperacion', 'Recuperación'], ['progreso', 'Progreso'], ['coach', 'Coach'], ['ejercicios', 'Ejercicios']]} />
-    {tab === 'hoy' && <><StretchCard data={data} mode="entrenar" /><TodayTab data={data} commit={commit} onMessage={onMessage} /></>}
+    {tab === 'hoy' && <><TodayTab data={data} commit={commit} onMessage={onMessage} /><StretchCard data={data} mode="entrenar" /></>}
     {tab === 'recuperacion' && <RecoveryTab data={data} />}
     {tab === 'progreso' && <ProgressTab data={data} commit={commit} onMessage={onMessage} />}
     {tab === 'coach' && <CoachTab data={data} />}

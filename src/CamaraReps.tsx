@@ -45,7 +45,7 @@ function errorTexto(e: unknown): string {
   const n = e instanceof Error ? e.name : ''
   if (n === 'NotAllowedError' || n === 'SecurityError') return 'No me diste permiso de usar la cámara. En el iPhone: Ajustes → Safari → Cámara → Permitir, y vuelve a intentar.'
   if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'No encontré una cámara en este aparato.'
-  if (!window.isSecureContext) return 'La cámara solo funciona en la página segura: tuagentedeia.com/bambu.'
+  if (!window.isSecureContext) return 'La cámara solo funciona en la página segura (https). Abre Bambú desde tu enlace de siempre.'
   return 'No pude arrancar la cámara. Cierra otras apps que la usen y vuelve a intentar.'
 }
 

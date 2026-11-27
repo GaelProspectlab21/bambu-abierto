@@ -41,13 +41,16 @@ Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: h })
   const fail = (status: number, title: string, text: string) => new Response(JSON.stringify({ ok: false, title, text }), { status, headers: h })
   try {
-    const body = await req.json().catch(() => ({})) as { k?: unknown; search?: unknown; peek?: unknown; night?: unknown }
+    const body = await req.json().catch(() => ({})) as { k?: unknown; search?: unknown; peek?: unknown; night?: unknown; stretch?: unknown }
     const k = typeof body.k === 'string' ? body.k : ''
     const parsed = typeof body.search === 'string' ? parseNfc(body.search) : null
     const n = body.night as { capacity?: unknown; given?: unknown; reflection?: unknown } | undefined
     const night = parsed?.tag === 'night' && n && Number.isFinite(Number(n.capacity)) && Number.isFinite(Number(n.given))
       ? { capacity: Number(n.capacity), given: Number(n.given), reflection: typeof n.reflection === 'string' ? n.reflection.slice(0, 600) : undefined } : undefined
-    const action = parsed ? { ...parsed, ...(night ? { night } : {}) } : null
+    const st = body.stretch as { when?: unknown; seconds?: unknown } | undefined
+    const stretch = parsed?.tag === 'estirar' && st && (st.when === 'manana' || st.when === 'noche') && Number.isFinite(Number(st.seconds))
+      ? { when: st.when as 'manana' | 'noche', seconds: Math.max(0, Math.min(1800, Number(st.seconds))) } : undefined
+    const action = parsed ? { ...parsed, ...(night ? { night } : {}), ...(stretch ? { stretch } : {}) } : null
     if (k.length < 32 || k.length > 64) return fail(401, 'Etiqueta sin llave válida', 'Grábala de nuevo con el enlace de Ajustes.')
     if (!action) return fail(400, 'Etiqueta desconocida', 'Grábala de nuevo con el enlace de Ajustes.')
     const { data: owner } = await db.from('bambu_nfc_keys').select('user_id, uses').eq('key', k).maybeSingle()

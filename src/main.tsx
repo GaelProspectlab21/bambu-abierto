@@ -16,6 +16,7 @@ import './v8.css'
 import './tokens.css'
 import '@fontsource-variable/nunito/index.css'
 import './duo.css'
+import './bambu.css'
 import { applyTheme, watchSystemTheme } from './lib/theme'
 
 applyTheme()

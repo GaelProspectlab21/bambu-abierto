@@ -4,9 +4,17 @@
 
 Hecha por Gael y Ricardo (Kiki).
 
+## Dónde trabajamos (los únicos links)
+
+| Qué | Link | Para qué |
+|---|---|---|
+| **El repo** | https://github.com/GaelProspectlab21/bambu-abierto | El único lugar del código. Todo cambio entra por PR a `main`. |
+| **La lista** | https://github.com/GaelProspectlab21/bambu-abierto/issues | Bugs e ideas. Si no está aquí, no existe. |
+| **Revisión** | https://bambu-v9-revision.vercel.app | Siempre muestra `main`. Modo sin cuenta, no toca datos reales. Cada PR además recibe su propio link de prueba (Vercel lo comenta en el PR). |
+| **Producción** | https://bambu-personal-gael.vercel.app | La app que usamos. Solo recibe lo que ya está en `main`. |
+
 | | |
 |---|---|
-| Revisión de la v9 | https://bambu-v9-revision.vercel.app (modo sin cuenta, no toca datos reales) |
 | Por qué es así | [producto/ANALISIS_V9.md](producto/ANALISIS_V9.md): análisis, 10 apps investigadas y decisiones |
 | Cómo trabajamos | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Lo que hizo Kiki y cómo | [producto/kiki/](producto/kiki/) (describe su versión con Firebase; la v9 ya usa Supabase) |

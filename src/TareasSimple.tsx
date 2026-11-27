@@ -11,7 +11,7 @@ import { DuoIcon } from './DuoIcons'
 type Commit = (update: (d: AppData) => AppData) => void
 type When = 'hoy' | 'manana' | 'sin'
 
-export function TareasSimple({ data, commit }: { data: AppData; commit: Commit }) {
+export function TareasSimple({ data, commit, onFocus }: { data: AppData; commit: Commit; onFocus: (task?: { id: string; text: string }) => void }) {
   const today = dateKey()
   const [text, setText] = useState('')
   const [when, setWhen] = useState<When>('hoy')
@@ -40,6 +40,8 @@ export function TareasSimple({ data, commit }: { data: AppData; commit: Commit }
       <DuoIcon name="lista" size={64} />
     </div>
 
+    <button type="button" className="d-btn green wide focus-cta" onClick={() => { haptic(12); onFocus() }}>Bloque de enfoque</button>
+
     <form className="d-card d-form" onSubmit={e => { e.preventDefault(); add() }}>
       <input className="d-input" value={text} onChange={e => setText(e.target.value)} maxLength={200} placeholder="Escribe una tarea" />
       <div className="d-seg">{([['hoy', 'Hoy'], ['manana', 'Mañana'], ['sin', 'Sin fecha']] as [When, string][]).map(([k, l]) => <button key={k} type="button" className={when === k ? 'on' : ''} aria-pressed={when === k} onClick={() => setWhen(k)}>{l}</button>)}</div>
@@ -52,6 +54,7 @@ export function TareasSimple({ data, commit }: { data: AppData; commit: Commit }
           <span className="d-box" />
           <span className="d-task-text"><b>{t.text}</b>{tag(t.dueDate) && <small>{tag(t.dueDate)}</small>}</span>
         </button>
+        <button type="button" className="d-x small focus-play" aria-label={`Bloque de enfoque con ${t.text}`} onClick={() => onFocus({ id: t.id, text: t.text })}>▶</button>
         <button type="button" className="d-x small" aria-label={`Borrar ${t.text}`} onClick={() => removeTask(commit, t.id)}>×</button>
       </li>)}
       {!pending.length && <li className="d-empty">Nada pendiente. Escribe una arriba.</li>}

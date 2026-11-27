@@ -2832,7 +2832,8 @@ function parseNfc(search) {
 		"checkin",
 		"weigh",
 		"night",
-		"cama"
+		"cama",
+		"estirar"
 	].includes(tag) ? { tag } : null;
 }
 function gave(capacity, given) {
@@ -2855,6 +2856,43 @@ function verdict(capacity, given) {
 //#endregion
 //#region src/lib/jardin.ts
 var WAKE_PREFIX = "Despertar:";
+//#endregion
+//#region src/lib/stretch.ts
+/**
+* Estiramiento diario: al despertar (movilidad suave, unos 5 min) y antes de dormir (posturas
+* sostenidas). Dosis conservadora adaptada de ACSM: 20 s, dos vueltas, sin dolor.
+* La movilidad previa no sustituye el calentamiento completo del equipo.
+*
+* Se guarda como actividad 'other' con la nota "Estiramiento: noche" (igual que el rescate), así
+* que no cambia la forma de ningún registro y los teléfonos viejos y el servidor lo conservan.
+*/
+var STRETCH_PREFIX = "Estiramiento";
+var WHEN_NOTE = {
+	manana: "mañana",
+	noche: "noche"
+};
+function stretchRow(when, seconds, day = dateKey()) {
+	return {
+		id: makeId(),
+		day,
+		kind: "other",
+		minutes: Math.max(1, Math.round(seconds / 60)),
+		note: `${STRETCH_PREFIX}: ${WHEN_NOTE[when]}`
+	};
+}
+/** Guarda un estiramiento y tacha el hábito Estiramiento si lo tienes. Lo usan la app y la etiqueta. */
+function logStretch(data, when, seconds, day = dateKey(), row = stretchRow(when, seconds, day)) {
+	const habit = activeHabits(data.settings).find((h) => h.id === "stretch");
+	const marked = (data.habits[day] ?? []).includes("stretch");
+	return {
+		...data,
+		activities: [...data.activities, row],
+		habits: habit && !marked ? {
+			...data.habits,
+			[day]: [...data.habits[day] ?? [], "stretch"]
+		} : data.habits
+	};
+}
 //#endregion
 //#region src/lib/nfcActions.ts
 /**
@@ -2960,6 +2998,20 @@ function trainingAction(data, now, day) {
 var SAME_TOUCH = 8e3;
 function nfcServerAction(data, action, now, day, clock = clockOf(now)) {
 	if (action.tag === "cama") return bedAction(data, day, clock);
+	if (action.tag === "estirar") {
+		const s = action.stretch;
+		if (!s || !(s.seconds >= 60)) return {
+			next: data,
+			title: "Estiramiento sin guardar",
+			text: "Para que cuente, estira al menos un minuto."
+		};
+		const min = Math.round(Math.min(s.seconds, 1800) / 60);
+		return {
+			next: logStretch(data, s.when, Math.min(s.seconds, 1800), day),
+			title: "Estiramiento guardado",
+			text: `${min} min. Tu cuerpo te lo agradece.`
+		};
+	}
 	if (action.tag === "reading") {
 		const s = data.activeReading;
 		if (s && s.endedAt) return {

@@ -282,7 +282,7 @@ export function MiRutina({ data, commit, onMessage, onIr }: { data: AppData; com
   if (mode === 'aventura') return <div className="d-page">{modeBar}<AventuraPage data={data} commit={commit} /></div>
   // Sin rutina propia manda el coach original: distribución por tus días de fútbol, fotos de cada ejercicio y sesión guiada.
   if (usesCoach(data)) return <div className="d-page">{modeBar}
-    <TrainingPage data={data} commit={commit} onMessage={onMessage} />
+    <TrainingPage data={data} commit={commit} onMessage={onMessage} embedded />
     <button type="button" className="d-link d-coach-switch" onClick={() => { savePlan(seedWeek()); onMessage('Listo, ahora armas tu propia rutina por día.') }}>Prefiero armar mi propia rutina por día</button>
   </div>
   return <section className="d-page">

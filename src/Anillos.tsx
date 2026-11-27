@@ -13,7 +13,7 @@ export function AnillosDia({ a, size = 76 }: { a: Anillos; size?: number }) {
   return <svg className="d-anillos" width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={label}>
     {shown.map(x => <g key={x.key} className={`d-anillo ${x.key}`}>
       <circle className="track" cx="50" cy="50" r={x.r} pathLength="100" />
-      <circle className="fill" cx="50" cy="50" r={x.r} pathLength="100" strokeDasharray="100" strokeDashoffset={100 - Math.min(1, a[x.key] ?? 0) * 100} />
+      <circle className={(a[x.key] ?? 0) > 0 ? 'fill' : 'fill cero'} cx="50" cy="50" r={x.r} pathLength="100" strokeDasharray="100" strokeDashoffset={100 - Math.min(1, a[x.key] ?? 0) * 100} />
     </g>)}
   </svg>
 }
