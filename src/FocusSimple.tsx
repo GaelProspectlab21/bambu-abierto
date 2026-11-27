@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AppData } from './lib/model'
 import { dateKey } from './lib/model'
-import { BINAURAL, PAUSE_REASONS, activeSeconds, counts, hm } from './lib/focusStats'
+import { PAUSE_REASONS, activeSeconds, counts, hm } from './lib/focusStats'
 import { addItem, closeBlock, startBlock, toggleItem, type Pick } from './lib/bloque'
 import { BinauralAudio } from './BinauralAudio'
 import { chime, mmss, useNow, useWakeLock } from './ui'
@@ -81,7 +81,6 @@ function Running({ data, commit, onMessage }: Props) {
   const a = data.activeFocus!
   const now = useNow(true)
   useWakeLock(!a.pausedAt)
-  const [profile, setProfile] = useState<string | null>(null)
   const [text, setText] = useState('')
   const [full, setFull] = useState(false)
   const box = useRef<HTMLDivElement>(null)
@@ -135,9 +134,8 @@ function Running({ data, commit, onMessage }: Props) {
       <form className="fb-add" onSubmit={e => { e.preventDefault(); if (text.trim()) { commit(d => addItem(d, text)); setText(''); onMessage('Agregada al bloque.') } }}>
         <input className="d-input" value={text} maxLength={200} onChange={e => setText(e.target.value)} placeholder="Agregar otra al bloque" />
       </form>
-      <details className="d-more"><summary>Sonido para concentrarte</summary>
-        <div className="d-chips">{BINAURAL.map(b => <button key={b.id} type="button" className={profile === b.id ? 'on' : ''} onClick={() => setProfile(profile === b.id ? null : b.id)}>{b.label}</button>)}</div>
-        {profile && <BinauralAudio key={profile} enabled={!a.pausedAt} beat={BINAURAL.find(b => b.id === profile)!.hz} />}
+      <details className="d-more fb-sonido"><summary>Sonido para concentrarte</summary>
+        <BinauralAudio enabled={!a.pausedAt} />
       </details>
     </section>
   </div>

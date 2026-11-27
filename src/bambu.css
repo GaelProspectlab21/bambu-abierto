@@ -360,3 +360,72 @@
 .d-btn.blue .duo-icon { --ia: var(--d-page); }
 /* Ninguna tarjeta puede ser más ancha que la pantalla por un hijo largo (pasaba con Etiquetas NFC a 320 px). */
 .d-card { grid-template-columns: minmax(0, 1fr); }
+
+/* v11.4: diagnóstico de fuerza y escalera de progresión */
+.diag-card { display: flex; gap: 14px; align-items: center; border-color: var(--d-green-lip); }
+.diag-card > svg { flex: none; }
+.diag-card h2 { margin: 0 0 4px; font-size: 19px; }
+.diag-card p { margin: 0 0 10px; color: var(--d-dim); font-size: 15px; line-height: 1.45; }
+.diag-repetir { justify-self: center; text-transform: none; letter-spacing: 0; }
+.diag { display: grid; gap: 14px; }
+.diag-progreso { display: flex; gap: 6px; }
+.diag-progreso i { flex: 1; height: 6px; border-radius: 9px; background: var(--d-off); }
+.diag-progreso i.on { background: var(--d-green); } .diag-progreso i.now { background: var(--d-gold); }
+.diag-head { display: flex; align-items: center; gap: 12px; }
+.diag-eyebrow { margin: 0; color: var(--d-gold); font-size: 13px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.diag h2 { margin: 0; font-size: 24px; line-height: 1.2; }
+.diag-como { margin: 0; color: var(--d-dim); font-size: 15px; line-height: 1.5; }
+.diag-opciones { display: grid; gap: 10px; }
+.diag-opciones .d-btn { justify-content: flex-start; text-align: left; padding-inline: 18px; }
+.diag-opciones .d-btn.on { border-color: var(--d-green); color: var(--d-green-ink); }
+.diag-resultado { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.diag-resultado li { display: grid; gap: 2px; padding: 12px 14px; border: 2px solid var(--d-line); border-radius: 14px; background: var(--d-soft); }
+.diag-resultado span { color: var(--d-faint); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.diag-resultado b { font-size: 17px; } .diag-resultado small { color: var(--d-green-ink); font-weight: 800; }
+.escalera { display: grid; gap: 6px; margin: -2px 0 6px; }
+.escalera-pasos { display: flex; gap: 4px; }
+.escalera-pasos i { flex: 1; max-width: 36px; height: 6px; border-radius: 9px; background: var(--d-off); }
+.escalera-pasos i.hecho { background: var(--d-green-lip); } .escalera-pasos i.aqui { background: var(--d-green); }
+.escalera small { color: var(--d-dim); font-weight: 700; }
+.verdict-bajar { border-left-color: var(--d-gold) !important; }
+
+/* v11.4: panel de sonido */
+.snd { display: grid; gap: 14px; margin-top: 10px; }
+.snd-modos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.snd-modo { position: relative; display: grid; gap: 2px; align-content: start; min-height: 84px; padding: 12px; border: 2px solid var(--d-line); border-radius: 16px; background: var(--d-soft); color: var(--d-ink); font: inherit; text-align: left; cursor: pointer; }
+.snd-modo b { font-size: 17px; font-weight: 900; } .snd-modo small { color: var(--d-dim); font-size: 13px; font-weight: 700; line-height: 1.3; }
+.snd-modo i { margin-top: auto; padding-top: 6px; color: var(--d-faint); font-size: 12px; font-style: normal; font-weight: 800; }
+.snd-modo.on { border-color: var(--d-green); background: var(--d-green-light); }
+.snd-modo.on b, .snd-modo.on i { color: var(--d-green-ink); }
+.snd-modo.sonando::after { content: ''; position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--d-green); box-shadow: 0 0 0 0 var(--d-green); animation: snd-pulso 1.6s ease-out infinite; }
+@keyframes snd-pulso { 0% { box-shadow: 0 0 0 0 rgba(55, 203, 105, .6); } 100% { box-shadow: 0 0 0 10px rgba(55, 203, 105, 0); } }
+.snd-play { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 16px; border: 2px solid var(--d-line); border-radius: 18px; background: var(--d-bg); color: var(--d-ink); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 4px 0 var(--d-line); }
+.snd-play:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--d-line); }
+.snd-play > span:last-child { display: grid; gap: 2px; } .snd-play b { font-size: 17px; } .snd-play small { color: var(--d-dim); font-weight: 700; }
+.snd-icono { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--d-green); }
+.snd-icono svg { width: 24px; height: 24px; fill: var(--d-page); }
+.snd-play.on { border-color: var(--d-green-lip); }
+.snd-play.on .snd-icono { background: var(--d-gold); }
+.snd-fila { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 10px; }
+.snd-et { color: var(--d-dim); font-size: 14px; font-weight: 800; }
+.snd-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.snd-seg button { min-height: 40px; padding: 0 12px; border: 2px solid var(--d-line); border-radius: 12px; background: var(--d-soft); color: var(--d-ink); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.snd-seg button.on { border-color: var(--d-green-lip); background: var(--d-green-light); color: var(--d-green-ink); }
+.snd-vol { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 99px; background: linear-gradient(to right, var(--d-green) var(--v, 50%), var(--d-off) var(--v, 50%)); cursor: pointer; }
+.snd-vol::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--d-ink); border: 4px solid var(--d-green); }
+.snd-vol::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--d-ink); border: 4px solid var(--d-green); }
+.snd-nota { margin: 0; color: var(--d-faint); font-size: 13px; line-height: 1.45; }
+.snd-error { margin: 0; color: var(--d-red); font-weight: 800; }
+@media (max-width: 380px) { .snd-modos { grid-template-columns: 1fr; } .snd-modo { min-height: 0; } }
+
+/* v11.4: bloque en pantalla completa en laptop: el reloj se mide por su tarjeta, no por la ventana, y nada se corta arriba. */
+.fb-run.full, .fb-run:fullscreen { align-content: safe center; }
+.fb-run:fullscreen { overflow: auto; }
+@media (min-width: 900px) {
+  .fb-run.full, .fb-run:fullscreen { grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr); max-width: 1600px; margin-inline: auto; gap: 24px; }
+  .fb-run.full .fb-clock, .fb-run:fullscreen .fb-clock { font-size: min(11.5vw, 230px); }
+  .fb-run.full .fb-clock-card, .fb-run:fullscreen .fb-clock-card { padding: 32px; align-content: center; min-height: min(70vh, 640px); }
+  .fb-run.full .fb-actions, .fb-run:fullscreen .fb-actions { max-width: 640px; margin-inline: auto; width: 100%; }
+}
+.fb-clock-card { container-type: inline-size; }
+@supports (font-size: 1cqi) { .fb-run.full .fb-clock, .fb-run:fullscreen .fb-clock { font-size: min(30cqi, 230px); } .fb-clock { font-size: min(30cqi, 120px); } }

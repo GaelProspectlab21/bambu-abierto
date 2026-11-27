@@ -13,6 +13,7 @@ import { PhotoLab } from './PhotoLab'
 import { ADAPTATIONS, PRINCIPLES, SOURCES } from './lib/juanma'
 import { Card, Chips, Empty, Heading, Sparkline, Stepper, Tabs, mmss, useNow, useWakeLock } from './ui'
 import { plural } from './lib/text'
+import { DiagnosticoCard, DiagnosticoSheet } from './Diagnostico'
 
 type Props = { data: AppData; commit: Commit; onMessage: (text: string, undo?: () => void) => void; embedded?: boolean }
 type Tab = 'hoy' | 'recuperacion' | 'progreso' | 'coach' | 'ejercicios'
@@ -67,8 +68,11 @@ function TodayTab({ data, commit, onMessage }: Props) {
     onMessage(sets ? `Sesión cerrada: ${plural(sets, 'serie', 'series')}. Ahora come proteína y duerme tus horas.` : 'Sesión cerrada sin series.')
   }
   const guided = !!workout && !list && fitted.items.length > 0
+  const [diag, setDiag] = useState(false)
   return <>
     <FootballAsk data={data} commit={commit} onMessage={onMessage} />
+    {!workout && !data.settings.diagnostico && <DiagnosticoCard data={data} onOpen={() => setDiag(true)} />}
+    {diag && <DiagnosticoSheet data={data} commit={commit} onClose={() => setDiag(false)} onMessage={t => onMessage(t)} />}
     {guided ? <SessionRunner data={data} commit={commit} onMessage={onMessage} grouped={fitted.grouped} express={fitted.express} now={now} onList={() => setList(true)} onEnd={endWorkout} onSwap={swap} />
       : <Card tone={plan.urgent ? 'warn' : 'accent'} className="coach-card">
         <span className="eyebrow">TU PLAN DE HOY</span>
@@ -86,6 +90,7 @@ function TodayTab({ data, commit, onMessage }: Props) {
         {plan.items.length > 0 && !workout && <p className="hint">Calienta con una serie ligera del primer ejercicio, a la mitad de repeticiones. Sin estiramientos largos.</p>}
       </Card>}
     {!guided && <TalloCard data={data} now={now} compact />}
+    {!guided && !workout && data.settings.diagnostico && <DiagnosticoCard data={data} onOpen={() => setDiag(true)} />}
     {!guided && <WeekStrip data={data} now={now} />}
     {!guided && <RestTimer data={data} commit={commit} now={now} />}
     {!guided && fitted.items.length > 0 && <Card>

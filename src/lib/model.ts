@@ -83,6 +83,10 @@ export type Settings = {
   footballDays: number[]; weeklyFocusGoal: number; restSeconds: number
   /** Desde qué escalón arranca el coach a quien no tiene historial: 1 nuevo, 2 algo, 3 constante, 4 avanzado. */
   trainingLevel?: number
+  /** v11.4: el escalón elegido a mano por patrón (diagnóstico o "no me sale, bájale"). Gana si es más nuevo que tu última serie. */
+  escalones?: Record<string, { id: string; at: number }>
+  /** Día en que hiciste el diagnóstico de entreno. */
+  diagnostico?: string
   leverageLabels: Record<string, string>; distractions: ChecklistItem[]; pendingCue?: string
   habits: HabitDef[]; age: number; bibleOrder: 'ruta' | 'canonico'
   sleepTarget: number; stepsTarget: number; equipment: string[]; reminders: Reminders
@@ -439,6 +443,15 @@ function cleanAmigos(value: unknown): string[] | undefined {
   const ids = [...new Set(value.filter((x): x is string => typeof x === 'string' && /^[A-Za-z0-9]{6,128}$/.test(x)))].slice(0, 200)
   return ids.length ? ids : undefined
 }
+function cleanEscalones(value: unknown): Settings['escalones'] {
+  if (!isRecord(value)) return undefined
+  const out: Record<string, { id: string; at: number }> = {}
+  for (const [slot, e] of Object.entries(value).slice(0, 40)) {
+    if (!/^[a-z_]{2,20}$/.test(slot) || !isRecord(e) || typeof e.id !== 'string' || !/^[a-z0-9-]{2,40}$/.test(e.id) || typeof e.at !== 'number' || !Number.isFinite(e.at)) continue
+    out[slot] = { id: e.id, at: e.at }
+  }
+  return Object.keys(out).length ? out : undefined
+}
 function cleanCandado(value: unknown): Settings['candado'] {
   if (!isRecord(value) || typeof value.llave !== 'string' || !/^[A-Za-z0-9]{16,40}$/.test(value.llave)) return undefined
   const ms = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v > 0 && v < 8.64e15 ? Math.round(v) : undefined
@@ -469,6 +482,8 @@ export function cleanSettings(value: unknown): Settings {
     habits: cleanHabitDefs(v.habits),
     age: int(v.age, 8, 99) ?? DEFAULT_SETTINGS.age,
     trainingLevel: int(v.trainingLevel, 1, 4) ?? undefined,
+    escalones: cleanEscalones(v.escalones),
+    diagnostico: typeof v.diagnostico === 'string' && /^\d{4}-\d\d-\d\d$/.test(v.diagnostico) ? v.diagnostico : undefined,
     bibleOrder: v.bibleOrder === 'canonico' ? 'canonico' : 'ruta',
     sleepTarget: num(v.sleepTarget, 6, 12) ?? DEFAULT_SETTINGS.sleepTarget,
     stepsTarget: int(v.stepsTarget, 1000, 40000) ?? DEFAULT_SETTINGS.stepsTarget,

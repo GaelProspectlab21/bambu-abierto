@@ -2943,3 +2943,46 @@ async function audioChecks() {
   assert.ok(!Object.values(O.EXTRAS).flat().some(x => /Biblia/.test(x)), 'la Biblia ya no es un paso aparte')
   ok('anillos: cada uno dice qué cuenta y qué falta, y Alma ahora es Hábitos')
 }
+
+// v11.4: progresiones y diagnóstico. Si no sale ni una pica, primero se aprende la posición; se baja y se sube de escalón.
+{
+  const E = moduleOf('exercises'), C = moduleOf('coach'), G = moduleOf('diagnostico')
+  const hombro = E.ladder('hombro').map(e => e.id)
+  assert.deepEqual(hombro.slice(0, 3), ['pike-hold', 'pike-negative', 'pike'], 'antes de la pica: sostenida y negativa')
+  assert.equal(E.nextInLadder('pike-hold').id, 'pike-negative', 'de segundos a repeticiones cuando no hay otro igual')
+  assert.equal(E.nextInLadder('plank').id, 'hollow', 'la plancha sigue yendo a hollow (mismo tipo primero)')
+  assert.equal(E.prevInLadder('pike').id, 'pike-negative')
+  assert.equal(E.prevInLadder('pushup-knee', ['nada']), undefined, 'sin pared ni silla no hay escalón de abajo disponible')
+  assert.equal(E.prevInLadder('pushup-knee', ['nada', 'pared']).id, 'pushup-wall')
+  assert.deepEqual(E.pasoDe('pike'), { n: 3, total: E.ladder('hombro').length })
+  for (const p of G.PRUEBAS) for (const o of p.opciones) assert.ok(E.exercise(o.id) && E.exercise(o.id).slot === p.slot, `${o.id} existe y es de ${p.slot}`)
+  const day = '2026-11-27', now = Date.parse('2026-11-27T10:00:00-06:00')
+  let d = normalizeData({ ...EMPTY_DATA, settings: { ...EMPTY_DATA.settings, equipment: ['nada'] } })
+  d = G.aplicarDiagnostico(d, { empuje: 0, hombro: 0, pierna: 2 }, day, now)
+  assert.equal(d.settings.diagnostico, day)
+  assert.equal(C.currentForSlot(d, 'hombro').id, 'pike-hold', 'cero picas: arrancas sosteniendo la posición')
+  assert.equal(C.currentForSlot(d, 'empuje').id, 'pushup-knee', 'sin silla, la inclinada baja a la que sí puedes (rodillas)')
+  assert.equal(C.currentForSlot(d, 'pierna').id, 'lunge')
+  assert.equal(G.escalonPara('row-backpack', ['nada']).id, 'row-backpack', 'espalda sin equipo: se queda el de tu respuesta, no queda vacío')
+  assert.deepEqual(normalizeData(d).settings.escalones, d.settings.escalones, 'los escalones sobreviven a la limpieza (nube)')
+  // Serie registrada después del diagnóstico: manda la serie.
+  const conSerie = { ...d, sets: [{ id: 's1', day, exercise: 'pike', reps: 1, at: now + 1000 }] }
+  assert.equal(C.currentForSlot(conSerie, 'hombro').id, 'pike')
+  // "No me sale con técnica": bajar gana sobre la serie anterior.
+  const bajado = G.bajarEscalon(conSerie, 'hombro', 'pike-negative', now + 2000)
+  assert.equal(C.currentForSlot(bajado, 'hombro').id, 'pike-negative')
+  // El coach sugiere bajar si la vez pasada no llegó ni a la mitad del mínimo.
+  const ayer = { ...d, sets: [{ id: 'a', day: '2026-11-26', exercise: 'pike', reps: 1, at: now - 86400000 }, { id: 'b', day: '2026-11-26', exercise: 'pike', reps: 2, at: now - 86300000 }] }
+  const pr = C.progression(ayer, E.exercise('pike'), 2, day)
+  assert.equal(pr.verdict, 'bajar'); assert.equal(pr.prev.id, 'pike-negative')
+  assert.ok(!/—| - |…|\.\.\./.test(pr.message + G.PRUEBAS.map(p => p.pregunta + p.como + p.opciones.map(o => o.label).join('')).join('')), 'puntuación humana')
+  ok('progresiones y diagnóstico: escalones antes de la pica, arranque por respuesta y equipo, bajar gana, el coach sugiere bajar')
+}
+
+// v11.4: todo sonido que se ofrece existe en el motor (16 y 40 Hz tronaban con "Frecuencia no admitida").
+{
+  const { BINAURAL } = moduleOf('focusStats'), { AUDIO_PRESETS, binauralWav } = moduleOf('binaural')
+  for (const b of BINAURAL) assert.ok(AUDIO_PRESETS.some(p => p.beat === b.hz), `${b.label}: ${b.hz} Hz no lo genera el motor`)
+  for (const p of AUDIO_PRESETS) assert.ok(binauralWav(p.beat).byteLength > 1000, `${p.name} genera audio`)
+  ok('sonido: cada modo ofrecido genera audio de verdad')
+}

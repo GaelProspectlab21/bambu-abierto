@@ -689,6 +689,18 @@ function cleanAmigos(value) {
 	const ids = [...new Set(value.filter((x) => typeof x === "string" && /^[A-Za-z0-9]{6,128}$/.test(x)))].slice(0, 200);
 	return ids.length ? ids : void 0;
 }
+function cleanEscalones(value) {
+	if (!isRecord(value)) return void 0;
+	const out = {};
+	for (const [slot, e] of Object.entries(value).slice(0, 40)) {
+		if (!/^[a-z_]{2,20}$/.test(slot) || !isRecord(e) || typeof e.id !== "string" || !/^[a-z0-9-]{2,40}$/.test(e.id) || typeof e.at !== "number" || !Number.isFinite(e.at)) continue;
+		out[slot] = {
+			id: e.id,
+			at: e.at
+		};
+	}
+	return Object.keys(out).length ? out : void 0;
+}
 function cleanCandado(value) {
 	if (!isRecord(value) || typeof value.llave !== "string" || !/^[A-Za-z0-9]{16,40}$/.test(value.llave)) return void 0;
 	const ms = (v) => typeof v === "number" && Number.isFinite(v) && v > 0 && v < 864e13 ? Math.round(v) : void 0;
@@ -739,6 +751,8 @@ function cleanSettings(value) {
 		habits: cleanHabitDefs(v.habits),
 		age: int(v.age, 8, 99) ?? DEFAULT_SETTINGS.age,
 		trainingLevel: int(v.trainingLevel, 1, 4) ?? void 0,
+		escalones: cleanEscalones(v.escalones),
+		diagnostico: typeof v.diagnostico === "string" && /^\d{4}-\d\d-\d\d$/.test(v.diagnostico) ? v.diagnostico : void 0,
 		bibleOrder: v.bibleOrder === "canonico" ? "canonico" : "ruta",
 		sleepTarget: num(v.sleepTarget, 6, 12) ?? DEFAULT_SETTINGS.sleepTarget,
 		stepsTarget: int(v.stepsTarget, 1e3, 4e4) ?? DEFAULT_SETTINGS.stepsTarget,
@@ -1327,10 +1341,48 @@ var EXERCISES = [
 		mistakes: ["Mochila suelta que se resbala al cuello"]
 	},
 	{
+		id: "pike-hold",
+		name: "Pica sostenida",
+		slot: "hombro",
+		level: 1,
+		mode: "seconds",
+		range: [20, 40],
+		muscles: {
+			hombros: 1,
+			triceps: .5
+		},
+		equipment: ["nada"],
+		cues: [
+			"Desde lagartija, camina con los pies hacia las manos hasta que tu cuerpo sea una V al revés",
+			"Brazos estirados, orejas entre los brazos, empuja el piso lejos de ti",
+			"Cadera arriba y piernas lo más rectas que puedas; respira tranquilo"
+		],
+		mistakes: ["Hombros encogidos hacia las orejas", "Espalda redonda por doblar mucho las rodillas"]
+	},
+	{
+		id: "pike-negative",
+		name: "Pica negativa (solo bajar)",
+		slot: "hombro",
+		level: 2,
+		mode: "reps",
+		range: [4, 8],
+		muscles: {
+			hombros: 1,
+			triceps: .5
+		},
+		equipment: ["nada"],
+		cues: [
+			"En posición de pica, baja la cabeza hacia el piso en 4 segundos",
+			"Codos hacia atrás, no hacia los lados",
+			"Abajo, apoya las rodillas y vuelve a la V sin empujar: solo cuenta la bajada"
+		],
+		mistakes: ["Caer de golpe en lugar de frenar", "Bajar la frente en lugar de la coronilla"]
+	},
+	{
 		id: "pike",
 		name: "Lagartija pica (pike)",
 		slot: "hombro",
-		level: 1,
+		level: 3,
 		mode: "reps",
 		range: [6, 12],
 		muscles: {
@@ -1354,7 +1406,7 @@ var EXERCISES = [
 		id: "pike-elevated",
 		name: "Pike con pies en silla",
 		slot: "hombro",
-		level: 2,
+		level: 4,
 		mode: "reps",
 		range: [6, 12],
 		muscles: {
@@ -1374,7 +1426,7 @@ var EXERCISES = [
 		id: "pike-parallettes",
 		name: "Pike en mini paralelas",
 		slot: "hombro",
-		level: 3,
+		level: 5,
 		mode: "reps",
 		range: [6, 12],
 		muscles: {
@@ -1985,7 +2037,14 @@ function ladder(slot) {
 function nextInLadder(id) {
 	const e = exercise(id);
 	if (!e) return void 0;
-	return ladder(e.slot).find((x) => x.level > e.level && x.mode === e.mode);
+	const up = ladder(e.slot).filter((x) => x.level > e.level);
+	return up.find((x) => x.mode === e.mode) ?? up[0];
+}
+/** El escalón de abajo, para cuando todavía no sale con buena técnica. */
+function prevInLadder(id, equipment) {
+	const e = exercise(id);
+	if (!e) return void 0;
+	return ladder(e.slot).filter((x) => x.level < e.level && (!equipment || x.equipment.every((q) => q === "nada" || equipment.includes(q)))).pop();
 }
 // src/lib/coach.ts
 /**
@@ -2129,6 +2188,9 @@ function currentForSlot(data, slot) {
 	const options = ladder(slot);
 	const ids = new Set(options.map((e) => e.id));
 	const last = [...data.sets].filter((s) => ids.has(s.exercise)).sort((a, b) => b.at - a.at)[0];
+	const elegido = data.settings.escalones?.[slot];
+	const ex = elegido && ids.has(elegido.id) ? exercise(elegido.id) : void 0;
+	if (ex && (!last || elegido.at > last.at)) return ex;
 	if (last) return exercise(last.exercise) ?? options[0];
 	const level = data.settings.trainingLevel;
 	if (level && LEVELED.includes(slot)) {
@@ -2173,6 +2235,14 @@ function progression(data, ex, plannedSets = 2, today = dateKey()) {
 			message: next ? `Llegaste al tope (${hi}${unit}) en todas tus series. Sube a ${next.name} y vuelve a ${lo}.` : loaded ? `Tope alcanzado con peso. Súbele 1 o 2 kg a la mochila y vuelve a ${lo}.` : `Tope alcanzado. Métele peso con la mochila o libros y vuelve a ${lo}.`
 		};
 	}
+	const prev = prevInLadder(ex.id, data.settings.equipment);
+	if (prev && working.length && Math.max(...working) < Math.ceil(lo / 2)) return {
+		verdict: "bajar",
+		last,
+		target: Array(plannedSets).fill(prev.range[0]),
+		prev,
+		message: `La vez pasada no llegaste ni a ${Math.ceil(lo / 2)}${unit}. Primero domina ${prev.name}: cuando hagas ${prev.range[1]}${prev.mode === "seconds" ? "s" : ""} en tus series, regresas aquí más fuerte.`
+	};
 	if (prevTotal && lastTotal < prevTotal * .8) return {
 		verdict: "fatiga",
 		last,

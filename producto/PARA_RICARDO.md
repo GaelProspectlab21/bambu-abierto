@@ -1,11 +1,11 @@
-# Para Ricardo: Bambú al 27 de noviembre (v11.3)
+# Para Ricardo: Bambú al 27 de noviembre (v11.4)
 
 Todo lo tuyo hasta `4c6395b` (rama `kiki` de tu fork) ya está unido aquí y en producción: https://bambu-personal-gael.vercel.app
 
 ## 1. Cómo trabajar a partir de hoy
 
 - **Trabaja en ramas de `bambu-abierto`, no en tu fork.** Rama nueva desde `gael/v11-debug` (o desde `main` cuando se fusione), PR hacia esa rama. Así Gael lo integra con un merge, sin parches a mano.
-- Antes de abrir el PR: `pnpm build` y `node checks/features.cjs` tienen que pasar (hoy son 105 grupos). Si agregas lógica, agrega su prueba.
+- Antes de abrir el PR: `pnpm build` y `node checks/features.cjs` tienen que pasar (hoy son 107 grupos). Si agregas lógica, agrega su prueba.
 - **Ya no hay Firebase.** Todo vive en Supabase: `src/lib/nube.ts` (datos) y `src/lib/nubeSocial.ts` (amigos, retos, widget, pases). Si necesitas algo del servidor, va como tabla con RLS y RPC en `supabase/migrations/`.
 - Tu `avisarFinPase` se portó al servidor: el cron de avisos (`bambu-remind`, cada 5 min) lee `settings.candado.hasta` y avisa al acabar el pase. Se cancela solo con "Ya terminé" o "Devolverme los minutos".
 
@@ -29,6 +29,9 @@ node scripts/dibuja_marca.cjs   # regenera los SVG de Brote, rangos y pantallas 
 | La Biblia ya no es paso del camino: leer es leer. Su pestaña sigue en Lectura | `src/HoyLista.tsx` |
 | Lectura por NFC sin duplicados (Terminar actualiza la fila del cronómetro) | `src/lib/lectura.ts` |
 | Despertador de lagartijas, cámara con GPU, 468 alimentos, bienvenida nueva | `producto/V11_DEBUG.md` |
+| Progresiones: pica sostenida y negativa antes de la pica, botón "No me sale con técnica" que baja un escalón, el coach sugiere bajar si no llegaste ni a la mitad del mínimo | `src/lib/exercises.ts` (`prevInLadder`, `pasoDe`), `src/lib/coach.ts` |
+| Diagnóstico de fuerza: 5 preguntas que fijan tu escalón por patrón (`settings.escalones`, gana si es más nuevo que tu última serie) | `src/lib/diagnostico.ts`, `src/Diagnostico.tsx` |
+| Sonido para concentrarte en un solo panel (antes había dos listas y 16 y 40 Hz no sonaban); bloque en pantalla completa medido por su tarjeta | `src/BinauralAudio.tsx`, `src/FocusSimple.tsx` |
 
 ## 3. Reglas de la marca (para que todo se vea de la misma app)
 
@@ -48,11 +51,12 @@ node scripts/dibuja_marca.cjs   # regenera los SVG de Brote, rangos y pantallas 
 
 ## 5. Ideas listas para tomar (de más a menos valor)
 
-1. **Aviso del sapo en la mañana:** "¿Cuál es tu sapo de hoy?" a la hora de despertar si no hay sapo elegido (`reminders.ts` + paso barato del cron).
-2. **El sapo en el widget:** una línea con el sapo del día o "sapo comido".
-3. **Arrastrar en el iPhone dentro del tablero semanal** (hoy es tocar la tarea y tocar el día; en laptop ya se arrastra).
-4. **Afinar la cámara con cuerpos reales** (umbrales en `src/CamaraReps.tsx` y `src/lib/conteo.ts`). Solo se ha probado con la cámara falsa de Chrome.
-5. **Mapa de músculos a 320 px:** las etiquetas de series quedan fuera de la pantalla (`src/Musculos.tsx`).
-6. **Libros en laptop:** cuando haya varios, tarjetas a dos columnas al lado del formulario.
+1. **Diagnóstico para los demás patrones** (bisagra, jalón ancho, cuello): hoy solo pregunta empuje, hombro, jalón, pierna y core.
+2. **Aviso del sapo en la mañana:** "¿Cuál es tu sapo de hoy?" a la hora de despertar si no hay sapo elegido (`reminders.ts` + paso barato del cron).
+3. **El sapo en el widget:** una línea con el sapo del día o "sapo comido".
+4. **Arrastrar en el iPhone dentro del tablero semanal** (hoy es tocar la tarea y tocar el día; en laptop ya se arrastra).
+5. **Afinar la cámara con cuerpos reales** (umbrales en `src/CamaraReps.tsx` y `src/lib/conteo.ts`). Solo se ha probado con la cámara falsa de Chrome.
+6. **Mapa de músculos a 320 px:** las etiquetas de series quedan fuera de la pantalla (`src/Musculos.tsx`).
+7. **Libros en laptop:** cuando haya varios, tarjetas a dos columnas al lado del formulario.
 
 Pendiente que no es de código: los datos del responsable en el aviso de privacidad (nombre, domicilio, correo) y la protección de contraseñas filtradas (plan Pro de Supabase).

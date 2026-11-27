@@ -15,8 +15,9 @@ export const PAUSE_REASONS = ['me pidieron algo en casa', 'comer, baño o agua',
 export const BLOCKER_TAGS = ['redes sociales', 'notificaciones', 'hambre o sed', 'cansancio', 'tarea mal definida', 'interrupción externa', 'ansiedad o sobrecarga', 'otra']
 export const BINAURAL = [
   { id: 'lectura', label: 'Lectura y flow', hz: 10 },
-  { id: 'analisis', label: 'Código y análisis', hz: 16 },
-  { id: 'creativo', label: 'Trabajo creativo', hz: 40 },
+  // v11.4: solo frecuencias que el motor de audio genera (6, 10 y 14 Hz). 16 y 40 tronaban con "Frecuencia no admitida".
+  { id: 'analisis', label: 'Código y análisis', hz: 14 },
+  { id: 'calma', label: 'Calma', hz: 6 },
 ]
 
 export function counts(row: Focus): boolean {
