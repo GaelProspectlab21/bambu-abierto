@@ -2929,3 +2929,17 @@ async function audioChecks() {
   assert.equal(T.moverTarea(d, 'manana', undefined).tasks.find(x => x.id === 'manana').dueDate, undefined, 'a sin fecha')
   ok('tareas: bloque con hoy y mañana primero, sapo único con bono y tablero de la semana')
 }
+
+// v11.3: los anillos dicen qué cuentan (Gael no distinguía Mente de Alma con un porcentaje).
+{
+  const A = moduleOf('anillos'), O = moduleOf('oro')
+  const day = '2026-11-25'
+  const base = normalizeData({ ...EMPTY_DATA, settings: { ...EMPTY_DATA.settings, walkDaily: false, modules: { reading: true, bible: false, training: false, focus: true, food: false }, habits: [{ id: 'agua', label: 'Agua', mark: 'A' }, { id: 'cama', label: 'Cama', mark: 'C' }] }, tasks: [{ id: 't1', text: 'a', status: 'done', completedOn: day, dueDate: day, minutes: 25, level: null, updatedAt: 1 }, { id: 't2', text: 'b', status: 'pending', dueDate: day, minutes: 25, level: null, updatedAt: 1 }], habits: { [day]: ['agua'] } })
+  const d = A.detalleAnillos(base, day)
+  assert.equal(d.cuerpo, 'descanso')
+  assert.equal(d.mente, 'sin leer · 1 de 2 tareas')
+  assert.equal(d.alma, '1 de 2 hábitos')
+  assert.equal(O.RING_NAME.alma, 'Hábitos', 'el tercer anillo se llama por lo que mide')
+  assert.ok(!Object.values(O.EXTRAS).flat().some(x => /Biblia/.test(x)), 'la Biblia ya no es un paso aparte')
+  ok('anillos: cada uno dice qué cuenta y qué falta, y Alma ahora es Hábitos')
+}

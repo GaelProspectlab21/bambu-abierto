@@ -632,13 +632,13 @@ export default function App() {
   const live = { Tareas: !!data.activeFocus, Lectura: !!data.activeReading, Entrenar: !!(data.activeWorkout && !data.activeWorkout.endedAt), Amigos: nuevosAmigos > 0 } as Partial<Record<Section, boolean>>
   return <div className="shell d-shell">
     <aside className="side">
-      <button className="brand" onClick={() => go('Hoy')}><span>bambú</span></button>
+      <button className="brand" onClick={() => go('Hoy')}><img src="icon.svg" width="38" height="38" alt="" /><span>bambú</span></button>
       <nav className="side-nav" aria-label="Secciones">{nav.map(n => <button key={n.id} className={page === n.id ? 'side-item on' : 'side-item'} aria-current={page === n.id ? 'page' : undefined} onClick={() => go(n.id)}><DuoIcon name={n.icon} size={32} />{n.label}{live[n.id] && <i className="live-dot" aria-label="en curso" />}</button>)}</nav>
       {pill()}
     </aside>
     <main className="main">
       <header className="top" aria-label={lost ? 'No encontrada' : labelOf(page)}><StatsBar data={data} go={go} /><button type="button" className={`top-gear ${page === 'Ajustes' ? 'on' : ''}`} aria-label="Ajustes" onClick={() => go('Ajustes')}><DuoIcon name="engrane" size={30} /></button></header>
-      <div className="page">
+      <div className="page" data-seccion={lost ? undefined : page}>
         {!online && <OfflineBanner pending={status?.pending ?? 0} cloud={cloudConfigured} />}
         <PaseAbierto data={data} commit={commit} onMessage={t => message(t)} />
         {update && <button type="button" className="update-banner" onClick={() => window.location.reload()}><span><strong>Versión nueva lista.</strong> Toca para estrenarla.</span><i aria-hidden="true">↻</i></button>}

@@ -19,7 +19,7 @@ import { setupMorning } from './lib/manana'
 import { removeWalkFromRoutine, walkDone, walkLabel, walkProgress, WALK_KM, WALK_MIN } from './lib/cardio'
 import { CardioSheet } from './Cardio'
 import type { Section } from './TodayPage'
-import { anillosDe, cerrados } from './lib/anillos'
+import { anillosDe, cerrados, detalleAnillos } from './lib/anillos'
 import { AnillosDia, AnillosLeyenda } from './Anillos'
 import { ofrecerOro, oroDe, type Ring } from './lib/oro'
 import { OroInvite, OroSheet } from './Oro'
@@ -211,7 +211,7 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
           <span>{kind === 'today' ? <>{dayTitle(day)}<br />{cerrados(anillos)} de {[anillos.cuerpo, anillos.mente, anillos.alma].filter(v => v !== null).length} anillos</> : kind === 'future' ? (rt ? rt.title : 'Día de descanso') : `${done} de ${nodes.length} hechos`}</span></div>
         {kind === 'today' ? <AnillosDia a={anillos} oro={oroDe(data, today, anillos)} />
           : <DuoIcon name={kind === 'future' ? 'candado' : kind === 'past' && done === nodes.length && nodes.length ? 'check' : 'casa'} size={36} />}
-        {kind === 'today' && <AnillosLeyenda a={anillos} oro={oroDe(data, today, anillos)} />}
+        {kind === 'today' && <AnillosLeyenda a={anillos} oro={oroDe(data, today, anillos)} detalle={detalleAnillos(data, today)} />}
       </header>
       {kind === 'today' && ofrecerOro(data, today, anillos) && <OroInvite ring={ofrecerOro(data, today, anillos)!} onOpen={() => setOro(ofrecerOro(data, today, anillos))} />}
       {nodes.map((n, i) => <Node key={n.kind} n={n} x={WAVE[(offset + i) % WAVE.length]} onTap={() => tap(n, day)}

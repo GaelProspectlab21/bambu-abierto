@@ -330,7 +330,7 @@ export function MiRutina({ data, commit, onMessage, onIr }: { data: AppData; com
         <h1>{rt ? rt.title : 'Descanso'}</h1>
         {rt ? <span>{rt.rounds} rondas · {rt.items.length} ejercicios</span> : isToday && aj && rtBase?.items.length ? <span>Por {lista(aj.nombres.map(n => n.toLowerCase()))}: ya cumpliste</span> : null}
       </div>
-      <DuoIcon name={locked && isToday ? 'candado' : 'pesa'} size={64} />
+      <BroteArt mood={locked && isToday ? 'susto' : rt ? 'animo' : 'calma'} look="coach" size={104} />
     </div>
 
     {isToday && !editing && <div className="d-deporte-hoy">

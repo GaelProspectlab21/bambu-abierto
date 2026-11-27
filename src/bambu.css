@@ -314,3 +314,49 @@
 .d-seg button.on { background: var(--d-green-light); border-color: var(--d-green-lip); color: var(--d-green-ink); box-shadow: 0 3px 0 var(--d-green-lip); }
 .d-link { color: var(--d-green-ink); }
 @media (max-width: 899px) { .sem-day { min-height: 0; padding: 8px 12px; gap: 4px; } .sem-day:not(.target) .sem-empty { display: none; } .sem-day ul:empty { display: none; } }
+
+/* v11.3: en laptop, Lectura y Tareas usan el ancho (la columna de 640 px las apretaba). Hoy sigue angosto: es un camino. */
+@media (min-width: 900px) {
+  .d-shell .page:is([data-seccion="Lectura"], [data-seccion="Tareas"]) { max-width: 1080px; }
+}
+@media (min-width: 900px) { [data-seccion="Tareas"] .sem-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.lec-top, .lec-libros { display: contents; }
+@media (min-width: 900px) {
+  .lec-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; align-items: stretch; }
+  .lec-top > * { margin: 0; }
+  .lec-libros { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .lec-libros > :first-child { grid-row: span 20; }
+}
+
+/* v11.3: la leyenda de los anillos dice qué cuenta cada uno */
+.d-anillos-ley.detalle { display: grid; gap: 4px; }
+.d-anillos-ley.detalle span { display: grid; grid-template-columns: 10px auto 1fr; align-items: center; column-gap: 8px; white-space: normal; }
+.d-anillos-ley.detalle small { font-size: 13px; font-weight: 700; opacity: .85; }
+.d-anillos-ley.detalle .cerrado small { opacity: 1; font-weight: 900; }
+.d-unit2.today .d-unit2-head > .d-anillos-ley.detalle { flex: 1 0 100%; margin-top: 10px; padding-top: 10px; border-top: 2px solid rgba(0, 0, 0, .12); }
+.d-anillos-ley.detalle span { grid-template-columns: 10px 72px 1fr; }
+
+/* v11.3: Brote con más protagonismo: en los encabezados de Tareas y Entrenar, y más grande en Hoy. */
+.d-hero > .brote-art { flex: none; margin: -18px -8px -22px 0; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, .18)); }
+.d-mascot { width: 128px; }
+.d-mascot .brote-art { width: 112px; height: 112px; }
+@media (max-width: 420px) { .d-mascot { width: 112px; } .d-mascot .brote-art { width: 100px; height: 100px; } .d-hero > .brote-art { width: 88px; height: 88px; } }
+
+/* v11.3: la marca en todos lados igual: ícono crema + nombre en Fraunces. */
+.d-shell .side .brand { font-family: var(--title); font-weight: 700; font-size: 28px; color: var(--d-ink); letter-spacing: -.01em; gap: 10px; }
+.d-shell .side .brand img { border-radius: 10px; flex: none; }
+/* v11.3: a 320 px los dos botones de Privacidad empujaban la tarjeta fuera de la pantalla. */
+.d-row2 { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.d-row2 > .d-btn { min-width: 0; white-space: normal; }
+.top-gear.on .duo-icon { --ia: var(--d-green-ink); }
+.d-row2 { flex-wrap: wrap; }
+/* v11.3: a 320 px el séptimo círculo (hoy) se salía de la tarjeta. Ahora se encogen si no caben. */
+.d-comida-semana { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.d-comida-semana i { width: 100%; max-width: 38px; height: auto; aspect-ratio: 1; }
+.d-comida-semana .some i { border-color: var(--d-green-lip); color: var(--d-green-ink); }
+.d-card > .d-hint { min-width: 0; overflow-wrap: anywhere; }
+/* v11.3: el azul no es de la marca. La acción secundaria va en sol (el dorado de Bambú). */
+.d-btn.blue { background: var(--d-gold); color: var(--d-page); box-shadow: 0 4px 0 var(--d-gold-lip); }
+.d-btn.blue .duo-icon { --ia: var(--d-page); }
+/* Ninguna tarjeta puede ser más ancha que la pantalla por un hijo largo (pasaba con Etiquetas NFC a 320 px). */
+.d-card { grid-template-columns: minmax(0, 1fr); }

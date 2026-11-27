@@ -202,21 +202,23 @@ function BibleView({ data, commit, onMessage, direct = false }: Props & { direct
   const groups = order === 'ruta' ? ETAPAS.map(e => ({ name: e.nombre, why: e.porQue, books: e.libros })) : [{ name: 'Antiguo Testamento', why: '', books: CANON.filter(id => book(id).testament === 'AT') }, { name: 'Nuevo Testamento', why: '', books: CANON.filter(id => book(id).testament === 'NT') }]
   if (reading) return <BibleReader data={data} commit={commit} onMessage={onMessage} start={reading} onClose={() => setReading(null)} />
   return <>
+    <div className="lec-top">
     {p.next && <Card className="read-here"><span className="eyebrow">LEER AQUÍ</span><h2>{book(p.next.book).name} {p.next.chapter}</h2>
       <p className="hint">Lees dentro de bambú y al terminar el capítulo se marca solo.</p>
-      <button type="button" className="primary-button wide" onClick={() => setReading(p.next)}>Abrir la Biblia <span>↗</span></button></Card>}
+      <button type="button" className="primary-button wide" onClick={() => setReading(p.next)}>Abrir la Biblia</button></Card>}
     <TravelCard />
     <Card tone="accent"><span className="eyebrow">LA BIBLIA</span><h2>{p.read.toLocaleString('es-MX')} de {TOTAL_CHAPTERS.toLocaleString('es-MX')} capítulos · {p.percent}%</h2>
       <div className="bar"><span style={{ width: `${p.percent}%` }} /></div>
       <p>{p.next ? <>Sigue: <strong>{book(p.next.book).name} {p.next.chapter}</strong>. </> : '¡La terminaste! '}{p.finishOn ? `A tu ritmo de 30 días (${p.perDay30.toFixed(1)} capítulos al día) terminas el ${new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${p.finishOn}T12:00:00`))}.` : 'Lee unos días y te digo cuándo terminas.'}{p.partial ? ` ${plural(p.partial, 'capítulo', 'capítulos')} a medias.` : ''}</p>
       <Chips label="Orden" value={order} onChange={v => commit(d => ({ ...d, settings: { ...d.settings, bibleOrder: v } }))} options={[['ruta', 'Ruta recomendada'], ['canonico', 'Orden de la Biblia']]} /></Card>
+    </div>
     {groups.map(g => <Card key={g.name}><h2>{g.name}</h2>{g.why && <p className="hint">{g.why}</p>}
       <div className="books">{g.books.map(id => {
         const b = book(id), done = p.byBook.get(id)
         const count = done ? [...done.values()].filter(m => !m.verses).length : 0
         return <div key={id} className="book">
           <button className="book-head" onClick={() => setOpenBook(openBook === id ? null : id)} aria-expanded={openBook === id}><strong>{b.name}</strong><small>{count}/{b.chapters}</small><span className="trazo" style={{ ['--pct' as string]: `${count / b.chapters * 100}%` }} /></button>
-          {openBook === id && <button type="button" className="quiet-button read-book" onClick={() => setReading({ book: id, chapter: Array.from({ length: b.chapters }, (_, i) => i + 1).find(c => !done?.get(c) || done.get(c)!.verses) ?? 1 })}>Leer {b.name} aquí ↗</button>}
+          {openBook === id && <button type="button" className="quiet-button read-book" onClick={() => setReading({ book: id, chapter: Array.from({ length: b.chapters }, (_, i) => i + 1).find(c => !done?.get(c) || done.get(c)!.verses) ?? 1 })}>Leer {b.name} aquí</button>}
           {openBook === id && <div className="chapters">{Array.from({ length: b.chapters }, (_, i) => { const m = done?.get(i + 1); return <button key={i} className={m ? m.verses ? 'ch partial' : 'ch read' : 'ch'} aria-pressed={!!m} title={m ? `Leído ${fmtDay(m.day)}${m.verses ? ` (versículos ${m.verses})` : ''}` : 'Sin leer'} onClick={() => toggle(id, i + 1)}>{i + 1}</button> })}</div>}
         </div>
       })}</div></Card>)}
@@ -229,7 +231,7 @@ function Works({ data, commit, onMessage }: Props) {
   const [author, setAuthor] = useState('')
   const [pages, setPages] = useState(200)
   const works = data.works.filter(w => w.title !== 'La Biblia')
-  return <>
+  return <div className="lec-libros">
     <Card><span className="eyebrow">NUEVO LIBRO</span><form onSubmit={e => { e.preventDefault(); if (!title.trim()) return; const w: Work = { id: `work:${makeId()}`, title: title.trim(), ...(author.trim() ? { author: author.trim() } : {}), totalPages: pages, currentPage: 0, status: 'reading', startedOn: dateKey() }; commit(d => ({ ...d, works: [...d.works, w] })); setTitle(''); setAuthor(''); onMessage('Libro agregado. Elígelo al cerrar tu próxima lectura.') }}>
       <label className="field-label">Título<input className="text-input" value={title} maxLength={200} onChange={e => setTitle(e.target.value)} required /></label>
       <label className="field-label">Autor <span>opcional</span><input className="text-input" value={author} maxLength={120} onChange={e => setAuthor(e.target.value)} /></label>
@@ -237,7 +239,7 @@ function Works({ data, commit, onMessage }: Props) {
       <button className="primary-button wide">Agregar libro</button></form></Card>
     {works.length ? works.map(w => { const pct = w.totalPages ? Math.round((w.currentPage ?? 0) / w.totalPages * 100) : 0; const minutes = data.reading.filter(r => r.workId === w.id).reduce((s, r) => s + r.minutes, 0); return <Card key={w.id}><div className="section-heading"><div><h2>{w.title}</h2><small>{w.author ?? ''}</small></div><span className="subtle-count">{w.status === 'done' ? 'Terminado' : `${pct}%`}</span></div><div className="bar"><span style={{ width: `${pct}%` }} /></div><p className="hint">Página {w.currentPage ?? 0}{w.totalPages ? ` de ${w.totalPages}` : ''} · {minutes} min leídos</p>
       <div className="row-actions"><button className="quiet-button" onClick={() => commit(d => ({ ...d, works: d.works.map(x => x.id === w.id ? { ...x, status: x.status === 'paused' ? 'reading' : 'paused' } : x) }))}>{w.status === 'paused' ? 'Retomar' : 'Pausar'}</button><button className="quiet-button" onClick={() => commit(d => ({ ...d, works: d.works.map(x => x.id === w.id ? { ...x, status: 'done', finishedOn: dateKey() } : x) }))}>Lo terminé</button></div></Card> }) : <Empty>Agrega el libro que lees ahora.</Empty>}
-  </>
+  </div>
 }
 
 function Chronicle({ data }: { data: AppData }) {

@@ -8,6 +8,7 @@ import { haptic } from './lib/haptic'
 import { fmtDay } from './ui'
 import { newTask, removeTask, toggleTask } from './HoyLista'
 import { DuoIcon } from './DuoIcons'
+import { BroteArt } from './BroteArt'
 import { marcarSapo } from './lib/tareas'
 import { SapoArt, SapoCard } from './Sapo'
 import { TareasSemana } from './TareasSemana'
@@ -48,13 +49,13 @@ export function TareasSimple({ data, commit, onFocus }: { data: AppData; commit:
   const tag = (due?: string) => !due || due === today ? '' : due < today ? `Atrasada, ${fmtDay(due)}` : fmtDay(due)
 
   return <section className="d-page">
-    <div className="d-hero blue">
+    <div className="d-hero gold">
       <div className="d-hero-text">
         <p>Tareas</p>
         <h1>{pending.length ? `${pending.length} ${pending.length === 1 ? 'pendiente' : 'pendientes'}` : '¡Todo listo!'}</h1>
         <span>{doneToday ? `${doneToday} hecha${doneToday === 1 ? '' : 's'} hoy · +${doneToday * XP.task} XP` : `Cada una vale +${XP.task} XP`}</span>
       </div>
-      <DuoIcon name="lista" size={64} />
+      <BroteArt mood={!pending.length ? 'orgulloso' : doneToday ? 'animo' : 'feliz'} look="tareas" size={104} />
     </div>
 
     <button type="button" className="d-btn green wide focus-cta" onClick={() => { haptic(12); onFocus() }}>Bloque de enfoque</button>

@@ -13,14 +13,14 @@ import { anillosDe, cuerpoAplica, type Anillos } from './anillos'
 
 export type Ring = 'cuerpo' | 'mente' | 'alma'
 export const RINGS: Ring[] = ['cuerpo', 'mente', 'alma']
-export const RING_NAME: Record<Ring, string> = { cuerpo: 'Cuerpo', mente: 'Mente', alma: 'Alma' }
+export const RING_NAME: Record<Ring, string> = { cuerpo: 'Cuerpo', mente: 'Mente', alma: 'Hábitos' }
 export const EXTRA_PREFIX = 'Extra'
 
 /** Un extra chico y concreto por círculo. Uno se hace en minutos, nunca en otra sesión entera. */
 export const EXTRAS: Record<Ring, string[]> = {
   cuerpo: ['Una serie más', '10 minutos más caminando', '20 sentadillas'],
   mente: ['10 minutos más de lectura', 'Una tarea más', '10 minutos más de enfoque'],
-  alma: ['Un capítulo más de la Biblia', 'Un hábito más', 'Rezar por alguien'],
+  alma: ['Un hábito más', 'Rezar por alguien', 'Diez minutos sin pantalla'],
 }
 
 export function isExtra(a: Activity): boolean { return a.kind === 'other' && (a.note ?? '').startsWith(`${EXTRA_PREFIX}: `) }
