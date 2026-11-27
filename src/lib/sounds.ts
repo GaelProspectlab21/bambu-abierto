@@ -50,6 +50,25 @@ export function setSounds(on: boolean) {
 }
 
 let context: AudioContext | undefined
+/** Más tarde que esto, el sonido ya no se siente pegado al toque y mejor no suena. */
+export const STALE_MS = 1200
+
+/**
+ * La tarjeta de audio de una laptop tarda medio segundo o más en despertar (medido: 609 ms).
+ * Si se despierta hasta que marcas algo, el primer premio llega tarde o se pierde. Por eso se
+ * despierta con el PRIMER toque en cualquier parte (y otra vez si el sistema la durmió).
+ */
+export function primeSounds() {
+  if (typeof document === 'undefined') return
+  const wake = () => {
+    try {
+      if (!soundsOn()) return
+      context ??= new AudioContext()
+      if (context.state === 'suspended') void context.resume().catch(() => undefined)
+    } catch (error) { console.warn('Bambú no pudo preparar el audio:', error) }
+  }
+  for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, wake, { capture: true, passive: true })
+}
 let bus: { dry: AudioNode; wet: AudioNode } | undefined
 let last = { at: -Infinity, priority: -1 }
 let combo = { step: -1, at: -Infinity }
@@ -124,11 +143,11 @@ export function playSound(kind: SoundKind, force = false) {
     context ??= new AudioContext()
     const ctx = context
     const emit = () => {
-      if (ctx.state !== 'running' || (!force && !soundsOn()) || document.hidden || performance.now() - now > 250) return
+      if (ctx.state !== 'running' || (!force && !soundsOn()) || document.hidden || performance.now() - now > STALE_MS) return
       const t0 = ctx.currentTime + .005
       score.forEach(note => voice(ctx, note, t0))
     }
     if (ctx.state === 'suspended') void ctx.resume().then(emit).catch(() => undefined)
     else emit()
-  } catch { /* Registrar siempre funciona sin audio. */ }
+  } catch (error) { console.warn("Bambú no pudo sonar:", error) } // registrar funciona igual sin audio
 }

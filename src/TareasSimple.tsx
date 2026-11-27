@@ -3,6 +3,7 @@ import { dateKey, type AppData } from './lib/model'
 import { shiftDay } from './lib/jardin'
 import { XP } from './lib/xp'
 import { reward } from './juice'
+import { playSound } from './lib/sounds'
 import { haptic } from './lib/haptic'
 import { fmtDay } from './ui'
 import { newTask, removeTask, toggleTask } from './HoyLista'
@@ -63,7 +64,7 @@ export function TareasSimple({ data, commit, onFocus }: { data: AppData; commit:
     {done.length > 0 && <>
       <button type="button" className="d-btn white wide" onClick={() => setShowDone(!showDone)}>{showDone ? 'Ocultar hechas' : `Ver hechas (${done.length})`}</button>
       {showDone && <ul className="d-tasks">{done.map(t => <li key={t.id} className="done">
-        <button type="button" className="d-task" onClick={() => toggleTask(commit, t.id, today)}>
+        <button type="button" className="d-task" onClick={() => { playSound('undo'); toggleTask(commit, t.id, today) }}>
           <span className="d-box on"><DuoIcon name="check" size={22} /></span>
           <span className="d-task-text"><b>{t.text}</b>{t.completedOn && <small>{fmtDay(t.completedOn)}</small>}</span>
         </button>

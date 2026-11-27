@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import { primeSounds } from './lib/sounds'
 // Fraunces con el eje SOFT: serifa redondeada para títulos y números. Auto-hospedada (la CSP solo deja fuentes propias).
 import '@fontsource-variable/fraunces/soft.css'
 import './index.css'
@@ -30,6 +31,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   })
 }
 
+primeSounds()
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

@@ -159,7 +159,10 @@ ok('v9 lectura por llave: validación, formato y minimización')
 }
 
 {
-  const { soundAllowed, SCORES, SCALE, comboStep, completeScore, COMBO_WINDOW } = moduleOf('sounds')
+  const { soundAllowed, SCORES, SCALE, comboStep, completeScore, COMBO_WINDOW, STALE_MS, primeSounds } = moduleOf('sounds')
+  // v10.3.1: la tarjeta de audio de una laptop tardó 609 ms en despertar; con 250 ms el primer premio se perdía.
+  assert.ok(STALE_MS >= 1000, 'la guarda de retraso no puede tirar el primer sonido')
+  assert.equal(typeof primeSounds, 'function')
   // v10.3: encendido salvo que lo apagues; nunca con la app escondida, interrumpida o con audio sonando.
   for (const preference of [null, '1', 'garbage']) assert.equal(soundAllowed(preference, false, false, false), true)
   assert.equal(soundAllowed('0', false, false, false), false)

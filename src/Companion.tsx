@@ -8,6 +8,8 @@ import { talloSays } from './lib/tallo'
 import { BroteArt } from './Brote'
 import { toggleHabit } from './HabitsPage'
 import { haptic } from './lib/haptic'
+import { reward } from './juice'
+import { XP } from './lib/xp'
 
 const KEY = 'bambu.companion'
 export function companionOn(): boolean { try { return localStorage.getItem(KEY) !== 'off' } catch { return true } }
@@ -83,7 +85,7 @@ export function Companion({ data, section, go, commit, now, cloud, inline = fals
     if (!s.cta) return
     haptic()
     if ('go' in s.cta) go(s.cta.go)
-    else toggleHabit(commit, s.cta.habit)
+    else { reward(container.current, `+${XP.habit} XP`); toggleHabit(commit, s.cta.habit) }
     setOpen(false)
   }
   return <aside ref={container} className={`companion ${inline ? 'companion-inline' : ''} ${section === 'Noche' ? 'lifted' : ''} ${tucked && !open && !inline ? 'tucked' : ''}`} aria-label={training ? "Sugerencias de Tallo" : "Sugerencias de Brote"}>

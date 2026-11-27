@@ -148,7 +148,7 @@ function Closing({ data, commit, onMessage }: Props) {
   return <section className="d-card fb-card fb-close">
     <div className="fb-label">Cierre</div>
     <h2 className="fb-title">{real} min de {a.plannedMinutes ?? 45} · {items.filter(m => m.done).length} de {items.length} hechas</h2>
-    <ul className="fb-check">{items.map(m => <li key={m.id}><button type="button" className={m.done ? 'on' : ''} aria-pressed={m.done} onClick={() => commit(d => toggleItem(d, m.id))}><i aria-hidden="true">{m.done ? '✓' : ''}</i><span>{m.text}</span></button></li>)}</ul>
+    <ul className="fb-check">{items.map(m => <li key={m.id}><button type="button" className={m.done ? 'on' : ''} aria-pressed={m.done} onClick={e => { if (m.done) playSound('undo'); else reward(e.currentTarget); commit(d => toggleItem(d, m.id)) }}><i aria-hidden="true">{m.done ? '✓' : ''}</i><span>{m.text}</span></button></li>)}</ul>
     <div className="fb-label">¿Qué tan enfocado estuviste?</div>
     <div className="d-seg">{[1, 2, 3, 4, 5].map(n => <button key={n} type="button" className={score === n ? 'on' : ''} aria-pressed={score === n} onClick={() => setScore(n)}>{n}</button>)}</div>
     <input className="d-input" value={result} maxLength={1000} onChange={e => setResult(e.target.value)} placeholder="Qué lograste (opcional)" />
