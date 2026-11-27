@@ -159,13 +159,26 @@ ok('v9 lectura por llave: validación, formato y minimización')
 }
 
 {
-  const { soundAllowed, SOUND_NOTES } = moduleOf('sounds')
-  for (const preference of [null, '0', 'garbage']) assert.equal(soundAllowed(preference, false, false, false), false)
-  assert.equal(soundAllowed('1', false, false, false), true)
+  const { soundAllowed, SCORES, SCALE, comboStep, completeScore, COMBO_WINDOW } = moduleOf('sounds')
+  // v10.3: encendido salvo que lo apagues; nunca con la app escondida, interrumpida o con audio sonando.
+  for (const preference of [null, '1', 'garbage']) assert.equal(soundAllowed(preference, false, false, false), true)
+  assert.equal(soundAllowed('0', false, false, false), false)
   for (const flags of [[true,false,false], [false,true,false], [false,false,true]]) assert.equal(soundAllowed('1', ...flags), false)
-  assert.deepEqual(Object.keys(SOUND_NOTES), ['tap','complete','streak','level','error'])
-  assert.equal(new Set(Object.values(SOUND_NOTES).map(x => x.join(','))).size, 5)
-  ok('v8 sonido: consentimiento, interrupciones y cinco motivos')
+  // Cada momento suena distinto y toda nota cae dentro de la escala.
+  const scores = Object.values(SCORES)
+  assert.equal(new Set(scores.map(x => JSON.stringify(x))).size, scores.length)
+  for (const score of scores) for (const [, degree, at] of score) { assert.ok(degree >= 0 && degree < SCALE.length); assert.ok(at >= 0 && at < 3) }
+  // El impulso: marcas seguidas suben un grado, con tope; tras la ventana vuelve a empezar.
+  let step = -1, at = -Infinity
+  const climb = []
+  for (let i = 0; i < 12; i++) { step = comboStep(step, at, i * 1000); at = i * 1000; climb.push(step) }
+  assert.deepEqual(climb.slice(0, 4), [0, 1, 2, 3])
+  assert.equal(Math.max(...climb), SCALE.length - 4)
+  assert.equal(comboStep(5, 0, COMBO_WINDOW + 1), 0)
+  for (let s = 0; s <= SCALE.length - 4; s++) for (const [, degree] of completeScore(s)) assert.ok(degree < SCALE.length, `grado ${degree} fuera de escala`)
+  assert.equal(completeScore(0).length, 1)
+  assert.equal(completeScore(5).length, 2, 'en racha suma la campana')
+  ok('v10.3 sonido: encendido por defecto, interrupciones, partituras en escala e impulso con tope')
 }
 
 // Rachas y lectura

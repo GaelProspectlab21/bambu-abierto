@@ -8,6 +8,7 @@ import { readOn } from './lib/lectura'
 import { broteLine, xpOn, XP } from './lib/xp'
 import { haptic } from './lib/haptic'
 import { reward } from './juice'
+import { playSound } from './lib/sounds'
 import { celebrate, useNow } from './ui'
 import { readingSeconds } from './lib/readingSession'
 import { BroteArt } from './Brote'
@@ -175,6 +176,7 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
   function toggleHabit(id: string, el: HTMLElement) {
     const on = (data.habits[today] ?? []).includes(id)
     if (!on) reward(el, `+${XP.habit} XP`)
+    else playSound('undo')
     haptic(on ? 8 : [12, 30, 12])
     commit(d => { const cur = d.habits[today] ?? []; return { ...d, habits: { ...d.habits, [today]: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] } } })
   }
@@ -182,6 +184,7 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     if (it.auto) return
     if (it.kind === 'habit') { toggleHabit(it.id, el); return }
     if (!it.done) reward(el, `+${XP.task} XP`)
+    else playSound('undo')
     toggleTask(commit, it.id, today)
   }
   function removeItem(it: Item) {

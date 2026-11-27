@@ -23,7 +23,7 @@ export function OroSheet({ ring, day, commit, onClose }: { ring: Ring; day: stri
     <div className="d-chips">{EXTRAS[ring].map(x => <button key={x} type="button" className={pick === x ? 'on' : ''} aria-pressed={pick === x} onClick={() => setPick(x)}>{x}</button>)}</div>
     <HoldButton label={`Ya lo hice: ${pick.toLowerCase()}`} done="¡De oro!" onDone={() => {
       commit(d => hacerExtra(d, ring, pick, day))
-      celebrate({ kind: 'achievement', title: `¡${RING_NAME[ring]} de oro!`, text: 'Diste más de lo que pensabas que tenías. Vale 2 puntos.' })
+      celebrate({ kind: 'achievement', title: `¡${RING_NAME[ring]} de oro!`, text: 'Diste más de lo que pensabas que tenías. Vale 2 puntos.', sound: 'gold' })
       window.setTimeout(onClose, 500)
     }} />
   </Sheet>

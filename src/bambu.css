@@ -177,3 +177,24 @@
 .d-anillos-ley .oro i { background: var(--d-gold); box-shadow: 0 0 6px var(--d-gold); }
 /* Brote baja un poco para no chocar con el letrero del paso en curso (¡BUENOS DÍAS!). */
 .d-mascot { top: 30px; }
+
+/* 12. v10.3 Tinta sobre color brillante. El blanco sobre el verde bambú da 2.1:1 y en el sol no se lee;
+       la tinta verde noche da 8.8:1 (azul 6.5, oro 11.4, morado 6.6). También aleja a Bambú del blanco de Duolingo. */
+.d-btn.green, .d-btn.blue, .d-btn.gold, .d-days button.on, .ob .primary-button, .nfc-quick .primary-button, .pause-orb,
+.d-unit2.today .d-unit2-head, .d-unit-head.green, .d-unit-head.blue, .d-unit-head.purple, .d-unit-head.gold,
+.d-dial.gold-solid, .d-ed-tools button.side.on, .d-quiz-sum li.ok span, .d-room-grid button.on em, .d-tb-head b em,
+:is(.d-shell, .d-scrim) .primary-button, .d-hero.green, .d-hero.blue, .d-hero.gold, .d-unit2-head .d-anillos-ley span, .d-unit2-head .d-anillos-ley b,
+.t0.d-lvl, .d-hero.green .d-hero-text h1, .d-hero.blue .d-hero-text h1, .d-hero.gold .d-hero-text h1,
+.d-big-choice.green, .d-big-choice.red, .d-big-choice.blue, :is(.d-shell, .d-scrim) .food-big { color: var(--d-on-bright) !important; }
+.d-hero-text p, .d-hero-text span { opacity: 1; }
+.d-unit2.today .d-unit2-head span, .d-unit-head span { opacity: 1; }
+
+/* 13. v10.3 Restos del tema claro de la v8 que todavía pintaba Lectura: cajas casi blancas y bordes grises. */
+.note-alerta { background: var(--d-red-light); color: var(--d-ink); }
+.note-consejo { background: var(--d-blue-light); color: var(--d-ink); }
+.note-logro { background: var(--d-green-light); color: var(--d-green-ink); }
+.band-day { border-color: var(--d-line-2); }
+.band-day.read { border-color: var(--d-green-lip); }
+
+/* 14. v10.3 En 320 px el "120s" del descanso se salía del botón. */
+@media (max-width: 360px) { .d-seg button { padding-left: 2px; padding-right: 2px; font-size: 14px; min-width: 0; } }

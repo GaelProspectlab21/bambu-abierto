@@ -11,6 +11,7 @@ import { CandadoSetup } from './Candado'
 import { AvisosSetup, WidgetSetup } from './Widget'
 import { RemindersCard } from './RemindersCard'
 import { DuoIcon, type DuoIconName } from './DuoIcons'
+import { playSound, setSounds, soundsOn } from './lib/sounds'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Props = {
@@ -32,6 +33,7 @@ function nfcPath(action: NfcAction): string {
 
 export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImport, onSignOut, onDelete }: Props) {
   const [name, setName] = useState(data.profile.name)
+  const [sound, setSound] = useState(soundsOn)
   const [key, setKey] = useState('')
   const [confirm, setConfirm] = useState('')
   const [pass, setPass] = useState('')
@@ -115,6 +117,11 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
       <label className="d-field">Descanso entre rondas</label>
       <div className="d-seg">{[0, 30, 60, 90, 120].map(n => <button key={n} type="button" className={plan.restSeconds === n ? 'on' : ''} onClick={() => setPlan({ restSeconds: n })}>{n ? `${n}s` : 'Sin'}</button>)}</div>
     </div>}
+
+    <div className="d-card">
+      <h2>Sonido</h2>
+      <Toggle on={sound} onClick={() => { const on = !sound; setSounds(on); setSound(on); if (on) playSound('day') }} title="Sonidos de Bambú" text="Madera al marcar, campanas cuando ganas algo. Con el iPhone en silencio no suena nada." />
+    </div>
 
     <div className="d-card">
       <h2>Despertar</h2>

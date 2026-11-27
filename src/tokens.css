@@ -81,14 +81,14 @@
 :root, :root[data-theme='light'], :root[data-theme='dark'] {
   --d-page: #0e1411; --d-page-2: #131b17; --d-bg: #16201b; --d-surface: #1b2620; --d-soft: #1f2b25; --d-line: #2a3830; --d-line-2: #37483f;
   --d-head: #0e1411; --d-head-lip: #2a3830; --d-nav: #111915; --d-white-60: rgba(255, 255, 255, .08);
-  --d-ink: #eef4f0; --d-dim: #a9b9b0; --d-faint: #708279;
+  --d-ink: #eef4f0; --d-dim: #a9b9b0; --d-faint: #82958b;
   --d-green: #37cb69; --d-green-lip: #1e9348; --d-green-light: #0c2e16; --d-green-ink: #5fe786;
   --d-blue: #249ff3; --d-blue-lip: #1777b8; --d-blue-light: #12263a; --d-blue-edge: #255f8c;
   --d-gold: #f6c443; --d-gold-lip: #c3951c; --d-gold-light: #30280f; --d-gold-ink: #f6c443;
   --d-orange: #fa7c20; --d-orange-in: #f6c443; --d-red: #ef5d4c; --d-red-lip: #c2402f; --d-red-light: #3a1b17;
   --d-purple: #a785fc; --d-purple-lip: #7f61c5;
   --d-off: #243029; --d-off-ink: #4d5f55; --d-off-lip: #19221d;
-  --d-white: #ffffff; --d-shade: rgba(0, 0, 0, .65); --d-silver: #c9d1d6; --d-bronze: #d98a4e;
+  --d-white: #ffffff; --d-on-bright: var(--d-page); --d-shade: rgba(0, 0, 0, .65); --d-silver: #c9d1d6; --d-bronze: #d98a4e;
   --g-blue: #4285f4; --g-green: #34a853; --g-yellow: #fbbc05; --g-red: #ea4335; --g-ink: #1f1f1f;
   --d-soil: #7a5636; --d-soil-dark: #5c3f26; --d-leaf: #37cb69; --d-leaf-2: #7fd38f; --d-cane: #5fb84a; --d-cane-node: #2c6a2c; --d-seed: #a07a52;
   --d-sky: #0f2233; --d-star: #cfe6ff; --d-moon: #fff1b8; --d-hill-1: #163a24; --d-hill-2: #1d4a2c; --d-hill-3: #255c35; --d-spot: rgba(255, 255, 255, .12);

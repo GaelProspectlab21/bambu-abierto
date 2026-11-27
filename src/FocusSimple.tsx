@@ -7,6 +7,7 @@ import { BinauralAudio } from './BinauralAudio'
 import { chime, mmss, useNow, useWakeLock } from './ui'
 import { haptic } from './lib/haptic'
 import { reward } from './juice'
+import { playSound } from './lib/sounds'
 import type { Preset } from './FocusPage'
 
 type Commit = (update: (d: AppData) => AppData) => void
@@ -37,6 +38,7 @@ function Setup({ data, commit, preset, onPresetUsed }: Props) {
     const all = text.trim() ? [...picks, { text: text.trim() }] : picks
     if (!all.length) return
     haptic([12, 30, 12])
+    playSound('focusStart')
     commit(d => startBlock(d, all, minutes, Date.now(), { goal, level }))
   }
   const today = data.focus.filter(r => r.day === dateKey() && counts(r))

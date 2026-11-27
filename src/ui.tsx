@@ -1,5 +1,5 @@
 import { tabDestination } from './lib/navigation'
-import { playSound } from './lib/sounds'
+import { playSound, type SoundKind } from './lib/sounds'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { haptic } from './lib/haptic'
 import type { Light } from './lib/focusStats'
@@ -56,24 +56,10 @@ export function useNow(active = true, every = 1000): number {
 }
 
 /** Campana suave con Web Audio y vibración, sin archivos de sonido. */
+/** Fin del bloque: el cuenco y dos campanas. Es alarma, así que suena aunque los premios estén en silencio. */
 export function chime() {
-  try {
-    navigator.vibrate?.([120, 80, 120])
-    const ctx = new AudioContext()
-    const gain = ctx.createGain()
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.4)
-    ;[660, 880].forEach((hz, i) => {
-      const osc = ctx.createOscillator()
-      osc.frequency.value = hz
-      osc.connect(gain)
-      osc.start(ctx.currentTime + i * 0.18)
-      osc.stop(ctx.currentTime + 1.4)
-    })
-    gain.connect(ctx.destination)
-    window.setTimeout(() => void ctx.close(), 1800)
-  } catch (error) { console.warn('No se pudo sonar la campana.', error) }
+  try { navigator.vibrate?.([120, 80, 120]) } catch { /* sin vibración */ }
+  playSound('focusEnd', true)
 }
 
 /** Mantiene la pantalla encendida mientras haya una sesión abierta. */
@@ -169,21 +155,23 @@ export function MoveImage({ start, end, alt, similar, size = 'big', drawn = fals
   </figure>
 }
 
-export type Celebration = { title: string; text?: string; kind?: 'level' | 'rank' | 'achievement' | 'day' | 'record' | 'streak'; image?: string; count?: number }
+export type Celebration = { title: string; text?: string; kind?: 'level' | 'rank' | 'achievement' | 'day' | 'record' | 'streak'; image?: string; count?: number; sound?: SoundKind }
 export { soundsOn, setSounds } from './lib/sounds'
-export function rewardSound(big = false) { playSound(big ? 'level' : 'complete') }
+export function rewardSound(big = false) { playSound(big ? 'achieve' : 'complete') }
+const CELEBRATION_SOUND: Record<NonNullable<Celebration['kind']>, SoundKind> = { level: 'level', rank: 'level', achievement: 'achieve', day: 'day', record: 'record', streak: 'streak' }
 export function celebrate(detail: Celebration) {
   window.dispatchEvent(new CustomEvent<Celebration>('bambu:celebrate', { detail }))
 }
 
-const CONFETTI = ['#225b46', '#4f9470', '#a87a1c', '#e9b949', '#d1561d', '#95c2a5']
+// El confeti sale de la paleta Bambú (antes eran los verdes menta de la v8).
+const CONFETTI = ['var(--d-green)', 'var(--d-leaf-2)', 'var(--d-gold)', 'var(--d-orange)', 'var(--d-blue)', 'var(--d-green-ink)']
 export function CelebrationLayer() {
   const [queue, setQueue] = useState<(Celebration & { id: number })[]>([])
   useEffect(() => {
     const on = (event: Event) => {
       const detail = (event as CustomEvent<Celebration>).detail
       haptic([30, 40, 60])
-      playSound(detail.kind === 'streak' ? 'streak' : detail.kind === 'rank' || detail.kind === 'level' ? 'level' : 'complete')
+      playSound(detail.sound ?? CELEBRATION_SOUND[detail.kind ?? 'achievement'])
       setQueue(q => [...q.slice(-2), { ...detail, id: Date.now() + Math.random() }])
     }
     window.addEventListener('bambu:celebrate', on)
