@@ -37,4 +37,22 @@ export const PAGE_VERSES: Record<string, PageVerse[]> = {
     { ref: "Filipenses 3, 13-14", text: "Hermanos, no considero haber llegado ya a la meta, pero esto sí hago: me olvido de lo que queda atrás y me esfuerzo por alcanzar lo que está adelante, y sigo avanzando hacia la meta para ganar el premio que Dios ofrece mediante su supremo llamamiento en Cristo Jesús.", book: 50, chapter: 3, verse: 13 },
     { ref: "Lucas 16, 10", text: "El que es fiel en lo muy poco, también en lo más es fiel; y el que en lo muy poco es injusto, también en lo más es injusto.", book: 42, chapter: 16, verse: 10 },
   ],
+  "Lectura": [
+    { ref: "Salmo 119, 105", text: "Tu palabra es una lámpara a mis pies; es una luz en mi camino.", book: 19, chapter: 119, verse: 105 },
+    { ref: "2 Timoteo 3, 16-17", text: "Toda la Escritura es inspirada por Dios y es útil para enseñar, para reprender, para corregir y para instruir en la justicia, a fin de que el siervo de Dios esté completamente capacitado para toda buena obra.", book: 55, chapter: 3, verse: 16 },
+    { ref: "Josué 1, 8", text: "Nunca se apartará de tu boca este libro de la ley, sino que de día y de noche meditarás en él, para que guardes y hagas conforme a todo lo que en él está escrito; porque entonces harás prosperar tu camino, y todo te saldrá bien.", book: 6, chapter: 1, verse: 8 },
+    { ref: "Isaías 40, 8", text: "La hierba se seca y la flor se marchita, pero la palabra de nuestro Dios permanece para siempre.", book: 23, chapter: 40, verse: 8 },
+  ],
+  "Amigos": [
+    { ref: "Proverbios 27, 17", text: "El hierro se afila con hierro, y el hombre se pule en el trato con su amigo.", book: 20, chapter: 27, verse: 17 },
+    { ref: "Eclesiastés 4, 9-10", text: "Más valen dos que uno, porque rinden más en su esfuerzo. Si uno de ellos cae, el otro lo levanta. Pero ¡pobre del que está solo cuando cae!, porque no tiene a nadie que lo ayude a levantarse.", book: 21, chapter: 4, verse: 9 },
+    { ref: "Eclesiástico 6, 14", text: "Un amigo fiel es una fuerte defensa. El que lo ha encontrado, ha encontrado un tesoro.", book: 72, chapter: 6, verse: 14 },
+    { ref: "Juan 15, 13", text: "Nadie tiene mayor amor que el que da la vida por sus amigos.", book: 43, chapter: 15, verse: 13 },
+  ],
+  "Historial": [
+    { ref: "Marcos 4, 26-28", text: "Dijo: El Reino de Dios es como si un hombre echara la semilla en la tierra, y durmiera y se levantara de noche y de día, y la semilla brotara y creciera, aunque no supiera cómo. Porque la tierra da fruto por sí misma: primero la hoja, luego la espiga, después el grano completo en la espiga.", book: 41, chapter: 4, verse: 26 },
+    { ref: "1 Corintios 3, 6-7", text: "Yo planté. Apolos regó. Pero el crecimiento lo dio Dios. Así que ni el que planta es algo, ni el que riega, sino Dios que da el crecimiento.", book: 46, chapter: 3, verse: 6 },
+    { ref: "Gálatas 6, 9", text: "No nos cansemos de hacer el bien, porque a su debido tiempo cosecharemos si no nos damos por vencidos.", book: 48, chapter: 6, verse: 9 },
+    { ref: "Santiago 1, 4", text: "Dejen que la paciencia tenga su obra perfecta, para que sean perfectos y cabales, sin que les falte nada.", book: 59, chapter: 1, verse: 4 },
+  ],
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { dateKey, type AppData } from './lib/model'
-import { ROUTINES, STRETCH_EVENT, openStretch, stepsOf, stretchRow, stretchSlot, stretchStreak, stretchedOn, totalSeconds, type StretchWhen } from './lib/stretch'
+import { ROUTINES, STRETCH_EVENT, logStretch, openStretch, stepsOf, stretchRow, stretchSlot, stretchStreak, stretchedOn, totalSeconds, variedSteps, type StretchWhen } from './lib/stretch'
 import { Card, useWakeLock } from './ui'
 import { Icon } from './Icons'
 import { haptic } from './lib/haptic'
@@ -28,9 +28,11 @@ export function StretchHost({ data, commit, onMessage, boot }: { data: AppData; 
  * La pantalla no se apaga mientras estiras. Al terminar se guarda solo; si sales después de
  * dos minutos, también cuenta (lo poco hecho vale más que lo perfecto sin hacer).
  */
-function StretchPlayer({ when, commit, onMessage, streak, onClose }: { when: StretchWhen; commit: Commit; onMessage: Message; streak: number; onClose: () => void }) {
+export function StretchPlayer({ when, commit, onMessage, streak, onClose, onSaved }: { when: StretchWhen; commit?: Commit; onMessage: Message; streak: number; onClose: () => void; onSaved?: (seconds: number) => void }) {
   const [short, setShort] = useState(false)
-  const steps = useMemo(() => stepsOf(when, short), [when, short])
+  // Completa: unos 8 minutos que cambian cada día. Sin ganas: dos minutos.
+  const full = useMemo(() => variedSteps(when), [when])
+  const steps = useMemo(() => short ? stepsOf(when, true) : full, [when, short, full])
   const [started, setStarted] = useState(false)
   const [i, setI] = useState(0)
   const [left, setLeft] = useState(steps[0].seconds)
@@ -71,8 +73,9 @@ function StretchPlayer({ when, commit, onMessage, streak, onClose }: { when: Str
   function save(seconds: number) {
     if (saved.current) return
     saved.current = true
+    if (onSaved || !commit) { onSaved?.(seconds); return }
     const row = stretchRow(when, seconds)
-    commit(d => ({ ...d, activities: [...d.activities, row] }))
+    commit(d => logStretch(d, when, seconds, row.day, row))
     return row
   }
   function finish() {
@@ -80,12 +83,12 @@ function StretchPlayer({ when, commit, onMessage, streak, onClose }: { when: Str
     const row = save(totalSeconds(steps))
     haptic([20, 40, 60])
     window.setTimeout(() => reward(doneBtn.current, '+1 flexibilidad'), 80)
-    if (row) onMessage('Estiramiento guardado.', () => commit(d => ({ ...d, activities: d.activities.filter(a => a.id !== row.id) })))
+    if (row && commit) onMessage('Estiramiento guardado.', () => commit(d => ({ ...d, activities: d.activities.filter(a => a.id !== row.id) })))
   }
   function exit() {
     if (started && !done && elapsed.current >= 120) {
       const row = save(elapsed.current)
-      if (row) onMessage(`${Math.round(elapsed.current / 60)} min de estiramiento guardados. Algo es mucho más que nada.`, () => commit(d => ({ ...d, activities: d.activities.filter(a => a.id !== row.id) })))
+      if (row && commit) onMessage(`${Math.round(elapsed.current / 60)} min de estiramiento guardados. Algo es mucho más que nada.`, () => commit(d => ({ ...d, activities: d.activities.filter(a => a.id !== row.id) })))
     }
     onClose()
   }
@@ -109,10 +112,10 @@ function StretchPlayer({ when, commit, onMessage, streak, onClose }: { when: Str
       <h2>{mins} minutos para moverte mejor</h2>
       <p>{r.why}</p>
       <p className="hint">Si duele, para y avisa a un adulto. No fuerces las rodillas ni la espalda baja.</p>
-      <p className="hint">{r.rounds === 2 ? 'Dos vueltas. Suelta la postura entre cada paso.' : 'Movimientos suaves, sin sostener tensión.'}</p>
-      <ol className="st-list">{r.moves.filter(m => !short || steps.some(s => s.name === m.name)).map(m => <li key={m.name}><span>{m.name}</span><small>{m.sides ? `${m.seconds} s por lado` : `${m.seconds} s`}</small></li>)}</ol>
+      <p className="hint">{short ? 'Lo mínimo para no romper la racha.' : 'Cambia cada día. El reloj avanza solo y vibra al cambiar.'}</p>
+      <ol className="st-list">{[...new Map(steps.map(m => [m.name, m])).values()].map(m => <li key={m.name}><span>{m.name}</span><small>{m.sides ? `${m.seconds} s por lado` : `${m.seconds} s`}</small></li>)}</ol>
       <div className="st-length" role="group" aria-label="Duración">
-        <button type="button" className={!short ? 'on' : ''} aria-pressed={!short} onClick={() => { setShort(false); setLeft(stepsOf(when)[0].seconds) }}>Completa · {Math.round(totalSeconds(stepsOf(when)) / 60)} min</button>
+        <button type="button" className={!short ? 'on' : ''} aria-pressed={!short} onClick={() => { setShort(false); setLeft(full[0].seconds) }}>Completa · {Math.round(totalSeconds(full) / 60)} min</button>
         <button type="button" className={short ? 'on' : ''} aria-pressed={short} onClick={() => { setShort(true); setLeft(stepsOf(when, true)[0].seconds) }}>Sin ganas · 2 min</button>
       </div>
       <button type="button" className="primary-button st-go" onClick={() => { haptic(14); setStarted(true) }}>Empezar <span>↗</span></button>
@@ -123,7 +126,7 @@ function StretchPlayer({ when, commit, onMessage, streak, onClose }: { when: Str
       <span className="eyebrow">{i + 1} DE {steps.length}{step.side ? ` · ${step.side.toUpperCase()}` : ''}</span>
       <h2 key={i}>{step.name}</h2>
       <StretchPhoto move={step} />
-      <p className="hint">{step.muscle}. {step.why} Vuelta {step.round}.</p>
+      <p className="hint">{step.muscle}. {step.why}</p>
       <div className="st-ring" role="timer" aria-label={`${Math.ceil(left)} segundos`}>
         <svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" className="st-ring-bg" /><circle cx="60" cy="60" r="52" className="st-ring-fg" style={{ strokeDasharray: `${pct * 326.7} 326.7` }} /></svg>
         <b>{Math.max(0, Math.ceil(left))}</b>
@@ -160,7 +163,7 @@ export function StretchCard({ data, mode }: { data: AppData; mode: 'hoy' | 'entr
   if (mode === 'hoy' && (!slot || did.has(slot))) return null
   const main: StretchWhen = mode === 'noche' ? 'noche' : mode === 'hoy' && slot ? slot : slot ?? 'noche'
   const r = ROUTINES[main]
-  const mins = Math.round(totalSeconds(stepsOf(main)) / 60)
+  const mins = Math.round(totalSeconds(variedSteps(main)) / 60)
   const other: StretchWhen = main === 'noche' ? 'manana' : 'noche'
   return <Card className="stretch-card">
     <button type="button" className="stretch-main" onClick={() => openStretch(main)}>
@@ -171,7 +174,7 @@ export function StretchCard({ data, mode }: { data: AppData; mode: 'hoy' | 'entr
       {did.has(main) ? <i className="st-check"><Icon name="check" size={18} /></i> : <i className="st-play-ico" aria-hidden="true">▶</i>}
     </button>
     {mode !== 'hoy' && <button type="button" className="stretch-other" onClick={() => openStretch(other)}>
-      {did.has(other) && <Icon name="check" size={14} />} {ROUTINES[other].title} · {Math.round(totalSeconds(stepsOf(other)) / 60)} min
+      {did.has(other) && <Icon name="check" size={14} />} {ROUTINES[other].title} · {Math.round(totalSeconds(variedSteps(other)) / 60)} min
     </button>}
   </Card>
 }

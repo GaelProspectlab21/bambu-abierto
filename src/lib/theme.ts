@@ -12,7 +12,7 @@ export function applyTheme(choice: ThemeChoice = themeChoice()): void {
   const dark = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches
   const theme = resolveTheme(choice, dark)
   document.documentElement.dataset.theme = theme
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', theme === 'dark' ? '#0d1013' : '#0d1013')
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', '#0e1411')
 }
 export function setThemeChoice(choice: ThemeChoice): void {
   try { localStorage.setItem(KEY, choice) } catch { /* se aplica igual en esta sesión */ }

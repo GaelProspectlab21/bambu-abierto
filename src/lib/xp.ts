@@ -42,7 +42,8 @@ export function levelOf(xp: number): { level: number; into: number; need: number
 }
 
 export type BroteLine = { mood: Mood; text: string }
-export function broteLine(data: AppData, now = Date.now()): BroteLine {
+/** `pasos`: lo que ve la persona en el camino de Hoy. Si llega, Brote cuenta en pasos y no en unidades internas. */
+export function broteLine(data: AppData, now = Date.now(), pasos?: { done: number; total: number }): BroteLine {
   const today = dateKey(new Date(now))
   const hour = new Date(now).getHours()
   const score = dayScore(data, today)
@@ -58,5 +59,6 @@ export function broteLine(data: AppData, now = Date.now()): BroteLine {
   if (hour < 12 && bed && !habitOn(data, bed, today)) return { mood: 'animo', text: '¡Buenos días! Tiende tu cama y toca la etiqueta.' }
   if (rt && !trained && plan.lock) return { mood: 'animo', text: `Hoy toca ${rt.title.toLowerCase()}. Antes de las ${plan.deadline}.` }
   if (score.done === 0) return { mood: 'calma', text: 'Empieza por uno. El primero es el que más cuesta.' }
+  if (pasos && pasos.total) return { mood: 'feliz', text: `¡Vas ${pasos.done} de ${pasos.total}! Sigue así.` }
   return { mood: 'feliz', text: `¡Vas ${Math.floor(score.done)} de ${score.total}! Sigue así.` }
 }

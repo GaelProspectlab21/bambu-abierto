@@ -1,4 +1,5 @@
-import { makeId, type AppData, type Routine, type RoutineItem, type RoutineKind, type TrainPlan, type TrainingSet } from './model'
+import { todayPlan, weekPlan } from './coach'
+import { dateKey, makeId, type AppData, type Routine, type RoutineItem, type RoutineKind, type TrainPlan, type TrainingSet } from './model'
 
 export const WEEK_DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 export const WEEK_SHORT = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
@@ -82,8 +83,33 @@ export function planOf(data: AppData): TrainPlan {
   return data.settings.train ?? seedWeek()
 }
 export function routineFor(data: AppData, day: string): Routine | null {
+  if (usesCoach(data)) return coachRoutine(data, day)
   const rt = planOf(data).week[weekIndex(day)]
   return rt && rt.items.length ? rt : null
+}
+
+/**
+ * Sin rutina propia, el día lo decide el coach original (torso y pierna según tus días de fútbol,
+ * método de Juanma). Se traduce a una Routine para que Hoy, los anillos, la XP y el widget lo lean igual.
+ * Cada item se llama con el id del ejercicio porque así guarda las series el coach.
+ */
+export function usesCoach(data: AppData): boolean {
+  return !data.settings.train
+}
+const COACH_TITLE: Record<string, string> = { torso: 'Torso', pierna: 'Pierna' }
+/** Marca de un día futuro del coach: el plan exacto se decide ese día con tus datos. */
+export const COACH_FUTURE = 'plan del coach'
+export function coachRoutine(data: AppData, day: string, now = Date.now()): Routine | null {
+  const today = dateKey(new Date(now))
+  if (day === today) {
+    const plan = todayPlan(data, now)
+    if (plan.kind !== 'torso' && plan.kind !== 'pierna') return null
+    return { title: COACH_TITLE[plan.kind], rounds: 1, items: plan.items.map((it, i) => ({ id: `c${i}`, name: it.exercise.id, kind: it.exercise.mode, target: it.exercise.range[0], rounds: it.sets, when: 'before' as const })) }
+  }
+  // Lo pasado no se reconstruye: el coach no guarda qué plan tocaba, y armarlo con tus series regalaría el bono de rutina completa.
+  if (day < today) return null
+  const kind = weekPlan(data, now).find(w => w.day === day)?.plan
+  return kind && COACH_TITLE[kind] ? { title: COACH_TITLE[kind], rounds: 1, items: [{ id: 'f0', name: COACH_FUTURE, kind: 'reps', target: 0, rounds: 1, when: 'before' }] } : null
 }
 
 export type Step = { item: RoutineItem; round: number; of: number; phase: 'before' | 'circuit' | 'after'; slot: number; side?: 1 | 2 }

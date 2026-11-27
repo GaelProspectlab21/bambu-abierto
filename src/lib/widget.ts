@@ -26,9 +26,9 @@ export function estadoParaAvisos(data: AppData, today: string): EstadoAvisos {
 
 export function scriptWidget(url: string): string {
   return `const URL = "${url}"
-const VERDE = new Color("#58cc02"), ORO = new Color("#ffc800"), AZUL = new Color("#1cb0f6"), GRIS = new Color("#aab5ae")
+const VERDE = new Color("#37cb69"), ORO = new Color("#f6c443"), AZUL = new Color("#249ff3"), GRIS = new Color("#aab5ae")
 const w = new ListWidget()
-w.backgroundColor = new Color("#0d1013")
+w.backgroundColor = new Color("#0e1411")
 w.url = "https://tuagentedeia.com/bambu/"
 let f = {}
 try { f = (await new Request(URL).loadJSON()).fields || {} } catch (e) {}

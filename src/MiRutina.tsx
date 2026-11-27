@@ -1,7 +1,8 @@
-import { socialListo } from './lib/nube'
+import { TrainingPage } from './TrainingPage'
+import { amigosListo as socialListo } from './lib/nube'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { dateKey, type AppData, type Routine, type RoutineItem, type RoutineKind, type TrainPlan } from './lib/model'
-import { applyBump, bumps, CATALOG, clockOf, doneCount, label, lockActive, logSet, newItem, nextStep, planOf, quietBump, roundsOf, routineProgress, setsNeeded, stepsOf, undoLast, weekIndex, WEEK_DAYS, WEEK_SHORT, type Step } from './lib/rutina'
+import { applyBump, bumps, CATALOG, clockOf, doneCount, label, lockActive, logSet, newItem, nextStep, planOf, seedWeek, usesCoach, quietBump, roundsOf, routineProgress, setsNeeded, stepsOf, undoLast, weekIndex, WEEK_DAYS, WEEK_SHORT, type Step } from './lib/rutina'
 import { XP } from './lib/xp'
 import { chime, useNow, useWakeLock } from './ui'
 import { haptic } from './lib/haptic'
@@ -279,6 +280,11 @@ export function MiRutina({ data, commit, onMessage, onIr }: { data: AppData; com
   if (mode === 'duelos') return <div className="d-page">{modeBar}<DuelosPage data={data} commit={commit} onMessage={onMessage} onAmigos={onIr ? () => onIr('Amigos') : undefined} /></div>
   if (mode === 'redes') return <div className="d-page">{modeBar}<RedesPage data={data} commit={commit} onAjustes={onIr ? () => onIr('Ajustes') : undefined} /></div>
   if (mode === 'aventura') return <div className="d-page">{modeBar}<AventuraPage data={data} commit={commit} /></div>
+  // Sin rutina propia manda el coach original: distribución por tus días de fútbol, fotos de cada ejercicio y sesión guiada.
+  if (usesCoach(data)) return <div className="d-page">{modeBar}
+    <TrainingPage data={data} commit={commit} onMessage={onMessage} embedded />
+    <button type="button" className="d-link d-coach-switch" onClick={() => { savePlan(seedWeek()); onMessage('Listo, ahora armas tu propia rutina por día.') }}>Prefiero armar mi propia rutina por día</button>
+  </div>
   return <section className="d-page">
     {modeBar}
     <div className="d-days" role="tablist" aria-label="Días">{WEEK_SHORT.map((d, i) => <button key={i} type="button" role="tab" aria-selected={view === i} className={`${view === i ? 'on' : ''} ${i === todayIdx ? 'today' : ''} ${plan.week[i] ? '' : 'rest'}`} onClick={() => { setView(i); setEditing(false) }}>{d}</button>)}</div>
@@ -329,5 +335,6 @@ export function MiRutina({ data, commit, onMessage, onIr }: { data: AppData; com
       </div> : <div className="d-card"><p className="d-hint left">Día de descanso.</p><button type="button" className="d-btn blue wide" onClick={() => setEditing(true)}>Poner rutina</button></div>}
     </>}
     {run && rt && isToday && <Runner data={data} commit={commit} rt={rt} today={today} start={run.start} rest={plan.restSeconds} onClose={() => setRun(null)} />}
+    {!editing && <button type="button" className="d-link d-coach-switch" onClick={() => { commit(d => ({ ...d, settings: { ...d.settings, train: undefined } })); onMessage('Volviste al coach: él reparte torso y pierna según tus días de fútbol.') }}>Que el coach decida mi semana</button>}
   </section>
 }

@@ -38,6 +38,11 @@ export function anillosDe(data: AppData, day: string): Anillos {
   return { cuerpo: avg(cuerpo) ?? 1, mente: avg(mente), alma: avg(alma) }
 }
 
+/** Cuerpo tiene algo que medir hoy (rutina o caminata). Si no, se cierra solo por descanso. */
+export function cuerpoAplica(data: AppData, day: string): boolean {
+  return !!(modulesOf(data.settings).training && routineFor(data, day)) || !!data.settings.walkDaily
+}
+
 /** Cuántos anillos cerraste hoy (para el texto corto de la tarjeta). */
 export function cerrados(a: Anillos): number {
   return [a.cuerpo, a.mente, a.alma].filter(v => v !== null && v >= 1).length

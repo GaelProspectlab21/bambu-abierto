@@ -20,6 +20,9 @@ PAGES = {
     "Tareas": [(51, 3, 23, 23, "Colosenses"), (20, 21, 5, 5, "Proverbios"), (20, 14, 23, 23, "Proverbios"), (20, 13, 4, 4, "Proverbios")],
     "Noche": [(19, 4, 8, 8, "Salmo"), (40, 11, 28, 28, "Mateo"), (50, 4, 6, 7, "Filipenses"), (19, 127, 2, 2, "Salmo")],
     "Hábitos": [(48, 6, 9, 9, "Gálatas"), (58, 12, 11, 11, "Hebreos"), (50, 3, 13, 14, "Filipenses"), (42, 16, 10, 10, "Lucas")],
+    "Lectura": [(19, 119, 105, 105, "Salmo"), (55, 3, 16, 17, "2 Timoteo"), (6, 1, 8, 8, "Josué"), (23, 40, 8, 8, "Isaías")],
+    "Amigos": [(20, 27, 17, 17, "Proverbios"), (21, 4, 9, 10, "Eclesiastés"), (72, 6, 14, 14, "Eclesiástico"), (43, 15, 13, 13, "Juan")],
+    "Historial": [(41, 4, 26, 28, "Marcos"), (46, 3, 6, 7, "1 Corintios"), (48, 6, 9, 9, "Gálatas"), (59, 1, 4, 4, "Santiago")],
 }
 
 

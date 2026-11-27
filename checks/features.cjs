@@ -159,13 +159,29 @@ ok('v9 lectura por llave: validación, formato y minimización')
 }
 
 {
-  const { soundAllowed, SOUND_NOTES } = moduleOf('sounds')
-  for (const preference of [null, '0', 'garbage']) assert.equal(soundAllowed(preference, false, false, false), false)
-  assert.equal(soundAllowed('1', false, false, false), true)
+  const { soundAllowed, SCORES, SCALE, comboStep, completeScore, COMBO_WINDOW, STALE_MS, primeSounds } = moduleOf('sounds')
+  // v10.3.1: la tarjeta de audio de una laptop tardó 609 ms en despertar; con 250 ms el primer premio se perdía.
+  assert.ok(STALE_MS >= 1000, 'la guarda de retraso no puede tirar el primer sonido')
+  assert.equal(typeof primeSounds, 'function')
+  // v10.3: encendido salvo que lo apagues; nunca con la app escondida, interrumpida o con audio sonando.
+  for (const preference of [null, '1', 'garbage']) assert.equal(soundAllowed(preference, false, false, false), true)
+  assert.equal(soundAllowed('0', false, false, false), false)
   for (const flags of [[true,false,false], [false,true,false], [false,false,true]]) assert.equal(soundAllowed('1', ...flags), false)
-  assert.deepEqual(Object.keys(SOUND_NOTES), ['tap','complete','streak','level','error'])
-  assert.equal(new Set(Object.values(SOUND_NOTES).map(x => x.join(','))).size, 5)
-  ok('v8 sonido: consentimiento, interrupciones y cinco motivos')
+  // Cada momento suena distinto y toda nota cae dentro de la escala.
+  const scores = Object.values(SCORES)
+  assert.equal(new Set(scores.map(x => JSON.stringify(x))).size, scores.length)
+  for (const score of scores) for (const [, degree, at] of score) { assert.ok(degree >= 0 && degree < SCALE.length); assert.ok(at >= 0 && at < 3) }
+  // El impulso: marcas seguidas suben un grado, con tope; tras la ventana vuelve a empezar.
+  let step = -1, at = -Infinity
+  const climb = []
+  for (let i = 0; i < 12; i++) { step = comboStep(step, at, i * 1000); at = i * 1000; climb.push(step) }
+  assert.deepEqual(climb.slice(0, 4), [0, 1, 2, 3])
+  assert.equal(Math.max(...climb), SCALE.length - 4)
+  assert.equal(comboStep(5, 0, COMBO_WINDOW + 1), 0)
+  for (let s = 0; s <= SCALE.length - 4; s++) for (const [, degree] of completeScore(s)) assert.ok(degree < SCALE.length, `grado ${degree} fuera de escala`)
+  assert.equal(completeScore(0).length, 1)
+  assert.equal(completeScore(5).length, 2, 'en racha suma la campana')
+  ok('v10.3 sonido: encendido por defecto, interrupciones, partituras en escala e impulso con tope')
 }
 
 // Rachas y lectura
@@ -1297,7 +1313,7 @@ ok('comida: totales, nube, modo crecimiento sin calorías, fase por cintura, gas
 {
   const J = moduleOf('jardin'), Li = moduleOf('libre'), X = moduleOf('xp')
   const off = { reading: false, bible: false, training: false, focus: true, food: false }
-  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, modules: off, habits: [{ id: 'agua', label: 'Tomar agua', mark: 'A' }] } })
+  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, modules: off, habits: [{ id: 'agua', label: 'Tomar agua', mark: 'A' }], train: moduleOf('rutina').kikiWeek() } })
   const withDays = days => ({ ...base, habits: Object.fromEntries(days.map(d => [d, ['agua']])) })
   const one = withDays(['2026-11-02', '2026-11-04'])
   const s1 = J.gardenStats(one, '2026-11-05')
@@ -1954,6 +1970,26 @@ ok('anillos: Cuerpo, Mente y Alma promedian solo lo que aplica hoy; descansar ci
   assert.ok(!plan.week.flatMap(rt => rt ? rt.items : []).some(i => /Muscle up|Dominadas$|Planche|Handstand/.test(i.name)), 'nada avanzado de inicio')
   assert.equal(R.kikiWeek().week.filter(Boolean).length, 7)
 }
+{
+  const R = moduleOf('rutina'); const C = moduleOf('coach')
+  const now = new Date('2026-11-25T10:00:00').getTime(), today = '2026-11-25'
+  const d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, age: 13, footballDays: [] } })
+  assert.equal(R.usesCoach(d), true, 'sin rutina propia manda el coach')
+  const plan = C.todayPlan(d, now)
+  const rt = R.coachRoutine(d, today, now)
+  if (plan.kind === 'torso' || plan.kind === 'pierna') {
+    assert.equal(rt.title, plan.kind === 'torso' ? 'Torso' : 'Pierna')
+    assert.deepEqual(rt.items.map(i => i.name), plan.items.map(i => i.exercise.id), 'los items llevan el id con el que el coach guarda las series')
+    const first = plan.items[0]
+    const conSeries = { ...d, sets: Array.from({ length: first.sets }, (_, k) => ({ id: `s${k}`, day: today, at: now + k, exercise: first.exercise.id, reps: 8 })) }
+    assert.equal(R.routineProgress(conSeries, today, R.coachRoutine(conSeries, today, now)).done, first.sets, 'las series del coach cuentan en el avance de Hoy')
+  } else assert.equal(rt, null)
+  assert.equal(R.coachRoutine(d, '2026-11-24', now), null, 'un día pasado sin series no inventa rutina')
+  const kiki = { ...d, settings: { ...d.settings, train: R.kikiWeek() } }
+  assert.equal(R.usesCoach(kiki), false)
+  assert.equal(R.routineFor(kiki, today).title, R.kikiWeek().week[2].title, 'con rutina propia manda la rutina')
+}
+ok('coach original: sin rutina propia, Hoy y los anillos siguen al coach (torso y pierna) y sus series cuentan; con rutina propia manda la rutina')
 ok('rutina de inicio: 3 días, 2 rondas, sin candado, todo del catálogo; la de Kiki queda como plantilla')
 {
   const vite = fs.readFileSync(path.join(__dirname, '../vite.config.ts'), 'utf8')
@@ -1967,6 +2003,16 @@ ok('rutina de inicio: 3 días, 2 rondas, sin candado, todo del catálogo; la de 
   assert.match(vercel.find(h => h.key === 'Permissions-Policy').value, /camera=\(self\)/, 'la cámara que cuenta necesita permiso')
 }
 ok('csp unica: la meta y la cabecera de Vercel coinciden, con WebAssembly, Supabase, Google y cámara')
+{
+  const src = f => fs.readFileSync(path.join(__dirname, '../src', f), 'utf8')
+  const DUO = ['#58cc02', '#46a302', '#1cb0f6', '#1899d6', '#ffc800', '#ff4b4b', '#ce82ff', '#ff9600']
+  for (const f of ['tokens.css', 'duo.css', 'bambu.css', 'lib/widget.ts']) DUO.forEach(h => assert.ok(!src(f).toLowerCase().includes(h), `${f} no usa el color de Duolingo ${h}`))
+  assert.equal((src('bambu.css').replace(/\/\*[\s\S]*?\*\//g, '').match(/#[0-9a-fA-F]{3,8}/g) || []).length, 0, 'bambu.css solo usa tokens')
+  assert.match(src('main.tsx'), /import '\.\/duo\.css'\r?\nimport '\.\/bambu\.css'/, 'la capa Bambú carga al final')
+  for (const f of ['AjustesSimple.tsx', 'ShareCard.tsx', 'CamaraReps.tsx']) assert.ok(!src(f).includes('tuagentedeia'), `${f} no manda ni anuncia otro dominio`)
+  assert.ok(!src('AjustesSimple.tsx').includes('postMessage'), 'Ajustes no envía tus datos a otra ventana')
+}
+ok('identidad v10: paleta propia (sin hex de Duolingo), capa Bambú solo con tokens y ningún dato sale a otro dominio')
 
 require('./social-edge.cjs')(moduleOf).then(() => ok('v9 Edge real: 404 uniforme, lectura mínima, sin caché y errores privados')).then(() => require('./share-auth.cjs')()).then(() => audioChecks()).then(() => syncChecks()).then(() => console.log(`PASS ${passed.length} grupos:\n - ${passed.join('\n - ')}`)).catch(error => { console.error(error); process.exit(1) })
 
@@ -2150,4 +2196,155 @@ async function audioChecks() {
   assert.equal(O.isInviteRejection('Database error saving new user'), true)
   assert.equal(O.isInviteRejection('Invalid nonce'), false)
   ok('google: rechazo por invitación reconocido')
+}
+
+// v10.1: registrar Biblia desde el registro rápido (capítulos y versículos sueltos).
+{
+  const { markBible, logReading, BIBLIA } = moduleOf('lectura')
+  const day = '2026-11-26'
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  d = logReading(d, day, { minutes: 15, mode: 'manual' })
+  d = markBible(d, day, [{ book: 43, chapter: 1 }, { book: 43, chapter: 2 }])
+  assert.equal(d.reading.length, 1, 'los capítulos van en la lectura recién guardada, no en otra')
+  assert.equal(d.reading[0].title, BIBLIA)
+  assert.equal(d.bible.length, 2)
+  assert.ok(d.bible.every(m => !m.verses))
+  d = markBible(d, day, [{ book: 43, chapter: 3 }], '1 al 16')
+  assert.equal(d.reading.length, 2, 'la lectura que ya tiene capítulos no se pisa')
+  const parcial = d.bible.find(m => m.id === '43:3')
+  assert.equal(parcial.verses, '1 al 16', 'un capítulo con versículos queda parcial')
+  d = markBible(d, day, [{ book: 43, chapter: 1 }], '5')
+  assert.ok(!d.bible.find(m => m.id === '43:1').verses, 'versículos no degradan un capítulo ya completo')
+  assert.equal(markBible(d, day, []), d)
+  console.log(' - biblia en el registro rápido: capítulos, versículos y sin pisar')
+}
+
+// v10.1: etiqueta de estiramiento. ~8 min que cambian cada día, solo posturas con foto, y el servidor la guarda.
+{
+  const S = moduleOf('stretch')
+  const { nfcServerAction } = moduleOf('nfcActions')
+  const { parseNfc } = moduleOf('nfc')
+  const known = new Set([...S.ROUTINES.manana.moves, ...S.ROUTINES.noche.moves].map(m => m.name))
+  const firmas = new Set()
+  for (const when of ['manana', 'noche']) for (let d = 1; d <= 20; d++) {
+    const day = `2026-12-${String(d).padStart(2, '0')}`
+    const steps = S.variedSteps(when, day)
+    const t = S.totalSeconds(steps)
+    assert.ok(t >= 420 && t <= 520, `${when} ${day}: ${t} s no son ~8 min`)
+    assert.ok(steps.every(s => known.has(s.name)), 'solo posturas con foto y evidencia')
+    assert.deepEqual(S.variedSteps(when, day).map(s => s.name), steps.map(s => s.name), 'el mismo día da la misma rutina')
+    if (when === 'manana') assert.equal(steps[0].kind, 'dynamic', 'en la mañana arranca con movilidad')
+    firmas.add(when + steps.map(s => s.name).join('|'))
+  }
+  assert.ok(firmas.size >= 8, `la rutina casi no cambia: ${firmas.size} distintas en 40 días`)
+  assert.deepEqual(parseNfc('?nfc=estirar&k=x'), { tag: 'estirar' })
+  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  const day = '2026-12-01'
+  const r = nfcServerAction(base, { tag: 'estirar', stretch: { when: 'noche', seconds: 470 } }, Date.now(), day)
+  assert.equal(r.next.activities.length, 1)
+  assert.ok(S.isStretch(r.next.activities[0]) && S.stretchWhen(r.next.activities[0]) === 'noche')
+  assert.ok((r.next.habits[day] ?? []).includes('stretch'), 'tacha el hábito Estiramiento')
+  assert.equal(nfcServerAction(base, { tag: 'estirar', stretch: { when: 'noche', seconds: 20 } }, Date.now(), day).next, base, 'menos de un minuto no cuenta')
+  assert.equal(nfcServerAction(base, { tag: 'estirar' }, Date.now(), day).next, base)
+  const twice = S.logStretch(r.next, 'manana', 300, day)
+  assert.equal(twice.habits[day].filter(h => h === 'stretch').length, 1, 'el hábito no se duplica')
+  console.log(' - etiqueta de estiramiento: 8 min variados, solo posturas conocidas, guarda y tacha')
+}
+
+// v10.2: bloque con varias tareas. Las palomeadas quedan hechas, las no hechas vuelven a pendientes, lo suelto va a la lista.
+{
+  const B = moduleOf('bloque')
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true }, tasks: [
+    { id: 't1', text: 'Guion', status: 'pending', minutes: 25, level: 4, updatedAt: 1 },
+    { id: 't2', text: 'Grabar', status: 'pending', minutes: 25, level: 2, updatedAt: 1 },
+  ] })
+  const t0 = Date.parse('2026-12-01T16:00:00')
+  d = B.startBlock(d, [{ id: 't1', text: 'Guion' }, { id: 't2', text: 'Grabar' }, { text: 'Miniatura' }], 45, t0)
+  assert.equal(d.activeFocus.task, 'Guion y 2 más')
+  assert.equal(d.activeFocus.level, 4, 'el nivel del bloque es el de su tarea más importante')
+  assert.deepEqual(d.activeFocus.taskIds, ['t1', 't2'])
+  assert.equal(d.activeFocus.phase, 'active', 'sin ritual obligatorio')
+  assert.equal(d.tasks.find(t => t.id === 't1').status, 'in_progress')
+  d = B.toggleItem(d, 'tarea:t1')
+  d = { ...d, activeFocus: { ...d.activeFocus, endedAt: t0 + 30 * 60000 } }
+  d = B.closeBlock(d, { score: 5, leftoversToTasks: true }, t0 + 31 * 60000)
+  assert.equal(d.activeFocus, null)
+  assert.equal(d.tasks.find(t => t.id === 't1').status, 'done', 'palomeada queda hecha')
+  assert.equal(d.tasks.find(t => t.id === 't2').status, 'pending', 'no hecha vuelve a pendientes')
+  assert.ok(d.tasks.some(t => t.text === 'Miniatura' && t.status === 'pending'), 'lo suelto no hecho va a la lista')
+  const f = d.focus.at(-1)
+  assert.equal(f.minutes, 30)
+  assert.equal(f.result, 'Terminé: Guion')
+  assert.equal(B.startBlock(d, [{ text: '  ' }], 25), d, 'sin tareas no arranca')
+  console.log(' - bloque con varias tareas: palomeadas hechas, no hechas a pendientes, sueltas a la lista')
+}
+
+// El 40% y el oro: un círculo es de oro solo si está cerrado Y hiciste su extra ese día. Puntos: 1 cerrado, 2 oro.
+{
+  const O = moduleOf('oro')
+  const day = '2026-12-02'
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  d = { ...d, settings: { ...d.settings, modules: { reading: true, bible: false, training: false, focus: false, food: false } } }
+  assert.equal(O.ofrecerOro(d, day), null, 'en descanso Cuerpo se cierra solo y no se pide extra')
+  const conExtraMente = O.hacerExtra(d, 'mente', '10 minutos más de lectura', day)
+  assert.equal(O.oroDe(conExtraMente, day).mente, false, 'un extra sin cerrar el círculo no da oro')
+  d = { ...d, reading: [{ id: 'r1', day, minutes: 20, note: '', title: 'Libro' }] }
+  assert.equal(O.ofrecerOro(d, day), 'mente', 'al cerrar Mente se ofrece su 40%')
+  d = O.hacerExtra(d, 'mente', '10 minutos más de lectura', day)
+  assert.equal(O.oroDe(d, day).mente, true)
+  assert.equal(O.ofrecerOro(d, day), null)
+  assert.equal(O.hacerExtra(d, 'mente', 'otra', day), d, 'un extra por círculo al día')
+  assert.equal(O.oroDe(d, '2026-12-03').mente, false, 'el oro es del día, no se arrastra')
+  const pts = O.puntosDia(d, day)
+  assert.ok(pts >= 3, `cuerpo 1 + mente oro 2: ${pts}`)
+  assert.ok(O.isExtra(d.activities.find(a => a.note.startsWith('Extra'))))
+  assert.equal(O.extraRing({ kind: 'other', note: 'Extra: inventado: x' }), null)
+  console.log(' - el 40% y el oro: solo cerrado + extra del día, uno por círculo, puntos 1 y 2')
+}
+
+// v10.2: tabla de la semana con amigos. Semana vieja cuenta cero, empates comparten lugar, dos ganadores.
+{
+  const T = moduleOf('tablaSemana')
+  const hoy = '2026-12-03' // jueves; lunes = 2026-12-01... se calcula con mondayOf
+  const lunes = moduleOf('libre').mondayOf(hoy)
+  const pasado = moduleOf('jardin').shiftDay(lunes, -7)
+  const r = T.tabla([
+    { uid: 'yo', apodo: 'Gael', avatar: 0, racha: 5, semanaDe: lunes, puntos: 12, puntosPrev: 4, oros: 2 },
+    { uid: 'r', apodo: 'Kiki', avatar: 0, racha: 9, semanaDe: lunes, puntos: 15, puntosPrev: 14, oros: 1 },
+    { uid: 'v', apodo: 'Viejo', avatar: 0, racha: 0, semanaDe: pasado, puntos: 30, oros: 6 },
+    { uid: 'e', apodo: 'Empate', avatar: 0, racha: 1, semanaDe: lunes, puntos: 12, puntosPrev: 12, oros: 2 },
+  ], 'yo', hoy)
+  assert.deepEqual(r.filas.map(f => f.uid), ['r', 'e', 'yo', 'v'], 'orden por puntos, luego oros, luego apodo')
+  assert.equal(r.filas.find(f => f.uid === 'v').puntos, 0, 'quien no publicó esta semana arranca en cero el lunes')
+  assert.equal(r.filas.find(f => f.uid === 'yo').lugar, r.filas.find(f => f.uid === 'e').lugar, 'empate comparte lugar')
+  assert.equal(r.lider, 'r')
+  assert.equal(r.mejoro, 'yo', 'el que más mejoró contra su semana pasada (+8) también gana')
+  assert.ok(r.filas.find(f => f.uid === 'yo').yo)
+  assert.equal(T.tabla([{ uid: 'yo', apodo: 'G', avatar: 0, racha: 0, semanaDe: lunes, puntos: 9 }], 'yo', hoy).lider, null, 'solo no hay líder')
+  assert.equal(T.tabla([{ uid: 'x', apodo: 'X', avatar: 0, racha: 0, semanaDe: lunes, puntos: 999 }, { uid: 'yo', apodo: 'G', avatar: 0, racha: 0, semanaDe: lunes, puntos: 1 }], 'yo', hoy).filas[0].puntos, 42, 'nadie pasa de 42 a la semana')
+  const d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  const s = T.miSemana(d, hoy)
+  assert.equal(s.semanaDe, lunes)
+  assert.ok(s.puntos >= 0 && s.puntos <= 42)
+  console.log(' - tabla de la semana: semana vieja en cero, empates, líder y el que más mejoró, tope 42')
+}
+
+// v10.2: pie de página. Alterna versículo y cita por día; sin módulo Biblia, solo citas; las citas llevan fuente y puntuación humana.
+{
+  const P = moduleOf('pieDePagina')
+  const { PAGE_QUOTES } = moduleOf('pageQuotes')
+  const dias = Array.from({ length: 14 }, (_, i) => `2026-12-${String(i + 1).padStart(2, '0')}`)
+  for (const page of ['Hoy', 'Entrenar', 'Comida', 'Tareas', 'Noche', 'Lectura', 'Amigos', 'Historial']) {
+    const kinds = dias.map(d => P.pieDe(page, d, true).kind)
+    assert.ok(kinds.includes('verso') && kinds.includes('cita'), `${page}: mezcla versículos y citas`)
+    assert.ok(dias.every(d => P.pieDe(page, d, false).kind === 'cita'), `${page}: sin Biblia solo citas`)
+    assert.deepEqual(P.pieDe(page, dias[3], true), P.pieDe(page, dias[3], true), 'mismo pie todo el día')
+    assert.ok(new Set(dias.map(d => P.pieDe(page, d, true).text)).size >= 4, `${page}: rota`)
+  }
+  assert.equal(P.pieDe('Ajustes', dias[0], true), null)
+  for (const list of Object.values(PAGE_QUOTES)) for (const q of list) {
+    assert.ok(q.who && q.source, 'toda cita lleva autor y fuente')
+    assert.ok(!/—| - |\.\.\.|…|\w\/\w/.test(q.text + q.source), `puntuación humana: ${q.text}`)
+  }
+  console.log(' - pie de página: alterna versículo y cita, sin Biblia solo citas, todas con fuente')
 }

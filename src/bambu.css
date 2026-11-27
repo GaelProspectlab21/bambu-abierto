@@ -1,0 +1,200 @@
+/*
+ * Identidad Bambú (v10): la ÚNICA capa que decide cómo se ve la app.
+ * Se carga al final. Toma de la versión de Kiki la estructura (botones con relieve, camino, oscuro)
+ * y de la original la identidad (verde bambú, sol, brasa, fondo verde noche, Fraunces en títulos).
+ * Regla: aquí no hay colores sueltos, solo var(--d-*). Los colores viven en tokens.css.
+ */
+
+/* 1. Las páginas viejas (Entrenar, Comida, Lectura, Noche) leen sus tokens de la paleta nueva.
+      Así no hay dos diseños: cualquier componente viejo que use --accent o --surface ya se ve Bambú. */
+:root, :root[data-theme='light'], :root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: var(--d-page); --surface: var(--d-bg); --ink: var(--d-ink); --body: var(--d-dim); --muted: var(--d-faint);
+  --line: var(--d-line); --line-strong: var(--d-line-2); --scrim: var(--d-shade); --on-accent: var(--d-white);
+  --accent: var(--d-green); --accent-deep: var(--d-green-ink); --accent-wash: var(--d-green-light); --accent-edge: var(--d-line-2);
+  --accent-soft: var(--d-green-light); --accent-soft-2: var(--d-soft); --accent-bright: var(--d-green-ink); --accent-ink-soft: var(--d-ink);
+  --success: var(--d-green-ink);
+  --gold: var(--d-gold); --gold-wash: var(--d-gold-light);
+  --promise: var(--d-gold); --promise-edge: var(--d-gold-lip); --promise-ink: var(--d-page);
+  --sun-wash: var(--d-gold-light); --sun-banner: var(--d-gold-light); --sun-edge: var(--d-gold-lip); --sun-ink: var(--d-ink); --sun-strong: var(--d-gold);
+  --commit: var(--d-orange); --on-commit: var(--d-white); --commit-deep: var(--d-red-lip); --commit-soft: var(--d-red-light); --commit-soft-deep: var(--d-red-light);
+  --warn: var(--d-red); --warn-wash: var(--d-red-light);
+  --lip-primary: var(--d-green-lip); --lip-secondary: var(--d-line); --lip-sun: var(--d-gold-lip);
+  --area-read: var(--d-blue); --area-focus: var(--d-gold); --area-move: var(--d-orange); --area-rescue: var(--d-blue);
+  --area-food: var(--d-green); --area-habit: var(--d-purple); --rescue-wash: var(--d-blue-light);
+  --flame: var(--d-orange); --flame-glow: var(--d-gold);
+  --radius: var(--d-radius); --radius-l: var(--d-radius-l);
+  --title: 'Fraunces Variable', Georgia, serif;
+}
+
+/* 2. Títulos de página en Fraunces suave: la firma de Bambú. El resto, Nunito. */
+:is(.d-shell, .d-scrim) .d-title, :is(.d-shell, .d-scrim) .page-heading h1, :is(.d-shell, .d-scrim) .tb-title {
+  font-family: var(--title); font-variation-settings: 'SOFT' 100, 'WONK' 0; font-weight: 640; letter-spacing: -.015em;
+}
+
+/* 3. Botones en minúscula normal (Duolingo grita en mayúsculas; Bambú habla). */
+:is(.d-shell, .d-scrim) .d-btn, :is(.d-shell, .d-scrim) .d-link, :is(.d-shell, .d-scrim) .d-mode button, :is(.d-shell, .d-scrim) .side-item, :is(.d-shell, .d-scrim) .d-side,
+:is(.d-shell, .d-scrim) .d-auth-link, :is(.d-shell, .d-scrim) .d-pass-eye, .ob .primary-button, .nfc-quick .quiet-button, .nfc-quick .primary-button,
+.d-nav.bottom-nav > button span, .d-scrim .d-btn, .d-scrim .d-link, .d-scrim .d-mode button {
+  text-transform: none; letter-spacing: 0;
+}
+:is(.d-shell, .d-scrim) .d-btn, .d-scrim .d-btn { font-weight: 850; font-size: 18px; }
+
+/* 4. Los átomos viejos toman el relieve de la versión nueva. */
+:is(.d-shell, .d-scrim) .primary-button, :is(.d-shell, .d-scrim) .secondary-button {
+  min-height: 52px; border-radius: 16px; font-weight: 850; font-size: 17px; padding: 0 20px;
+  transition: transform 80ms ease, box-shadow 80ms ease;
+}
+:is(.d-shell, .d-scrim) .primary-button { background: var(--d-green); color: var(--d-white); border: 0; box-shadow: 0 4px 0 var(--d-green-lip); }
+:is(.d-shell, .d-scrim) .primary-button:active:not(:disabled), :is(.d-shell, .d-scrim) .secondary-button:active:not(:disabled) { transform: translateY(4px); box-shadow: none; }
+:is(.d-shell, .d-scrim) .primary-button:disabled { background: var(--d-off); color: var(--d-off-ink); box-shadow: none; opacity: 1; }
+:is(.d-shell, .d-scrim) .secondary-button { background: var(--d-surface); color: var(--d-ink); border: 2px solid var(--d-line); box-shadow: 0 4px 0 var(--d-line); }
+:is(.d-shell, .d-scrim) .quiet-button { color: var(--d-blue); font-weight: 850; }
+:is(.d-shell, .d-scrim) .text-input { min-height: 52px; border: 2px solid var(--d-line); border-radius: 14px; background: var(--d-soft); color: var(--d-ink); font-weight: 700; }
+:is(.d-shell, .d-scrim) .text-input:focus { outline: none; border-color: var(--d-blue-edge); }
+:is(.d-shell, .d-scrim) .eyebrow { color: var(--d-green-ink); font-weight: 900; }
+:is(.d-shell, .d-scrim) .hint { color: var(--d-faint); }
+:is(.d-shell, .d-scrim) .tabs { gap: 8px; padding: 0; background: none; border: 0; border-radius: 0; }
+:is(.d-shell, .d-scrim) .tabs .tab, :is(.d-shell, .d-scrim) .tabs button { min-height: 40px; padding: 0 14px; border: 2px solid var(--d-line); border-radius: 99px; background: none; box-shadow: none; font-size: 15px; font-weight: 850; color: var(--d-faint); white-space: nowrap; }
+:is(.d-shell, .d-scrim) .tabs .tab.on, :is(.d-shell, .d-scrim) .tabs [aria-selected='true'] { background: var(--d-green-light); border-color: var(--d-green); color: var(--d-green-ink); box-shadow: none; }
+
+/* 5. Botón flotante de la Noche: deja espacio para que no tape el texto. */
+:is(.d-shell, .d-scrim) .save-bar { box-shadow: 0 -12px 24px var(--d-page); }
+.d-shell main:has(.save-bar) { padding-bottom: 96px; }
+
+/* 6. Tarjetas viejas (.card) con el mismo cuerpo que .d-card: borde de 2 y labio abajo. */
+:is(.d-shell, .d-scrim) .card { background: var(--d-bg); border: 2px solid var(--d-line); box-shadow: 0 4px 0 var(--d-line); border-radius: var(--d-radius-l); }
+:is(.d-shell, .d-scrim) .card.card-quiet { background: var(--d-page-2); box-shadow: none; }
+.d-shell main { font-weight: 600; }
+:is(.d-shell, .d-scrim) .food-big { box-shadow: 0 4px 0 var(--d-green-lip); border-color: var(--d-green); }
+:is(.d-shell, .d-scrim) .hold-button.sealed { box-shadow: 0 4px 0 var(--d-green-lip); }
+
+/* 7. Mañana en el camino: una tarjeta corta, sin nodos bloqueados. */
+.d-next { display: grid; gap: 12px; margin: 8px 0 4px; padding: 16px 18px; border: 2px dashed var(--d-line-2); border-radius: var(--d-radius-l); background: var(--d-page-2); color: var(--d-dim); }
+.d-next > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.d-next b { font-size: 19px; font-weight: 900; color: var(--d-ink); }
+.d-next span { font-size: 15px; font-weight: 800; }
+.d-next ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.d-next li { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px 6px 8px; border-radius: 99px; background: var(--d-surface); font-size: 14px; font-weight: 800; }
+:is(.d-shell, .d-scrim) .d-anillos-ley { column-gap: 14px; row-gap: 4px; }
+:is(.d-shell, .d-scrim) .card h2, :is(.d-shell, .d-scrim) .section-heading h2 { font-weight: 850; }
+:is(.d-shell, .d-scrim) .d-mods { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* v10.1: avance de la Biblia en el registro rápido */
+.d-bible-progress { display: grid; gap: 6px; margin-top: 14px; }
+.d-bible-progress p { margin: 0; color: var(--d-dim); }
+.d-bible-progress b { color: var(--d-ink); font-size: 20px; }
+.d-bar { height: 12px; border-radius: var(--pill); background: var(--d-off); overflow: hidden; }
+.d-bar i { display: block; height: 100%; border-radius: inherit; background: var(--d-purple); }
+.d-more summary { cursor: pointer; color: var(--d-blue); font-weight: 800; margin-top: 6px; }
+.d-more .chapter-picker { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+/* 8. iPhone angosto (320 px con Zoom de pantalla): las etiquetas del camino en zigzag no se salen. */
+.d-step2-label { width: min(180px, 44vw); }
+.d-step2-label b, .d-step2-label small { overflow-wrap: anywhere; }
+/* Encabezado de Hoy: el texto se encoge antes que los anillos, que siempre quedan a la derecha. */
+.d-unit2.today .d-unit2-head { flex-wrap: wrap; margin-bottom: 30px; }
+.d-unit2.today .d-unit2-head > div { flex: 1 1 0; min-width: 0; }
+.d-unit2.today .d-unit2-head .d-anillos { flex: none; }
+@media (max-width: 360px) {
+  .d-unit2.today .d-unit2-head { padding: 14px; }
+  .d-unit2.today .d-unit2-head .d-anillos { width: 64px; height: 64px; }
+  .d-mascot { width: 80px; }
+  .d-mascot-say { padding: 4px 6px; font-size: 11px; }
+}
+
+/* v10.2: bloque de enfoque simple, para celular y laptop. */
+.fb { display: grid; gap: 16px; align-items: start; }
+@media (min-width: 900px) { .fb { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); } }
+.fb-card { display: grid; gap: 12px; padding: 18px; }
+.fb-title { margin: 0; font-size: 22px; font-weight: 900; color: var(--d-ink); }
+.fb-label { font-size: 14px; font-weight: 900; color: var(--d-green-ink); }
+.fb-tasks, .fb-check { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.fb-tasks button, .fb-check button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 10px 14px; border: 2px solid var(--d-line); border-radius: 14px; background: var(--d-soft); color: var(--d-ink); font: inherit; font-weight: 800; text-align: left; cursor: pointer; }
+.fb-tasks button span, .fb-check button span { min-width: 0; overflow-wrap: anywhere; }
+.fb-tasks button i, .fb-check button i { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--d-line-2); border-radius: 8px; font-style: normal; font-weight: 900; color: var(--d-page); }
+.fb-tasks button.on, .fb-check button.on { border-color: var(--d-green); background: var(--d-green-light); }
+.fb-tasks button.on i, .fb-check button.on i { background: var(--d-green); border-color: var(--d-green); }
+.fb-check button.on span { color: var(--d-dim); text-decoration: line-through; }
+.fb-loose { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--d-green-light); font-weight: 800; }
+.fb-add { display: flex; gap: 8px; }
+.fb-add .d-input { flex: 1; min-width: 0; }
+.fb-today { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.fb-today li { display: flex; justify-content: space-between; gap: 10px; color: var(--d-dim); font-weight: 700; }
+.fb-clock-card { text-align: center; justify-items: stretch; }
+.fb-clock { display: block; font-size: clamp(64px, 18vw, 120px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; color: var(--d-green-ink); }
+.fb-run.paused .fb-clock { color: var(--d-gold); }
+.fb-goal { margin: 0; color: var(--d-dim); font-weight: 700; }
+.fb-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.fb-actions > * { flex: 1 1 140px; }
+.fb-pause summary { list-style: none; width: 100%; }
+.fb-pause summary::-webkit-details-marker { display: none; }
+.fb-pause[open] .d-chips { margin-top: 10px; }
+.fb-full { justify-self: center; }
+.fb-keep { display: flex; gap: 10px; align-items: center; font-weight: 700; color: var(--d-dim); }
+/* Pantalla completa: solo el reloj y las tareas, en grande. En iPhone se agranda dentro de la página. */
+.fb-run.full { position: fixed; inset: 0; z-index: 60; overflow: auto; padding: max(24px, env(safe-area-inset-top)) 24px 24px; background: var(--d-page); align-content: center; }
+.fb-run:fullscreen { padding: 32px; background: var(--d-page); align-content: center; }
+.fb-run.full .fb-clock, .fb-run:fullscreen .fb-clock { font-size: clamp(96px, 22vw, 260px); }
+/* En laptop el bloque usa el ancho: la columna de celular (640 px) se queda para las demás páginas. */
+@media (min-width: 900px) { .d-shell .page:has(.focus-page) { max-width: 1080px; } }
+.fb-back { justify-self: start; }
+.fb .d-bar i { background: var(--d-green); }
+/* El 40% y el oro (producto/GAMIFICACION.md): el círculo de oro brilla, la invitación sale bajo los círculos. */
+.d-anillo.oro .fill { stroke: var(--d-gold); filter: drop-shadow(0 0 3px var(--d-gold)); }
+.d-oro-invite { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin: -14px 0 24px; padding: 12px 14px; border: 2px solid var(--d-gold-lip); border-radius: var(--d-radius); background: var(--d-gold-light); color: var(--d-ink); font: inherit; font-size: 15px; font-weight: 800; text-align: left; box-shadow: 0 4px 0 var(--d-gold-lip); cursor: pointer; }
+.d-oro-invite i { flex: none; padding: 6px 12px; border-radius: var(--pill); background: var(--d-gold); color: var(--d-page); font-style: normal; font-weight: 900; }
+.d-oro-invite:active { transform: translateY(4px); box-shadow: none; }
+
+/* v10.2: Amigos, la tabla de la semana. */
+.am { display: grid; gap: 16px; }
+.am-card { display: grid; gap: 12px; padding: 18px; }
+.am-rule { margin: 0; font-size: 19px; font-weight: 900; line-height: 1.3; color: var(--d-ink); }
+.am-tabla { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.am-tabla li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 10px 12px; border: 2px solid var(--d-line); border-radius: 14px; background: var(--d-soft); }
+.am-tabla li.yo { border-color: var(--d-green); background: var(--d-green-light); }
+.am-tabla li:first-child .am-lugar { background: var(--d-gold); color: var(--d-page); }
+.am-lugar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--d-off); font-weight: 900; color: var(--d-ink); }
+.am-nombre { display: grid; min-width: 0; }
+.am-nombre b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; color: var(--d-ink); }
+.am-nombre small { color: var(--d-gold); font-weight: 800; font-size: 13px; }
+.am-pts { display: grid; justify-items: end; line-height: 1; }
+.am-pts b { font-size: 24px; font-weight: 900; color: var(--d-ink); font-variant-numeric: tabular-nums; }
+.am-pts small { font-size: 12px; color: var(--d-faint); font-weight: 800; }
+.am-sol { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 14px; background: var(--d-soft); }
+.am-sol > b, .am-sol > span { flex: 1 1 120px; min-width: 0; overflow-wrap: anywhere; color: var(--d-ink); }
+.am-sol.pend { background: none; border: 2px dashed var(--d-line-2); }
+.am-code { text-transform: uppercase; letter-spacing: .12em; font-weight: 900; }
+.am-mio-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.am-codigo { font-size: 30px; font-weight: 900; letter-spacing: .12em; color: var(--d-green-ink); font-variant-numeric: tabular-nums; }
+.am-code::placeholder { text-transform: none; letter-spacing: 0; }
+
+/* v10.2: pie de página, versículo o cita. */
+.page-verse { margin: 32px auto 8px; padding: 18px 8px 0; border-top: 2px solid var(--d-line); max-width: 520px; text-align: center; }
+.page-verse blockquote { margin: 0; font-family: var(--title); font-variation-settings: 'SOFT' 100; font-size: 17px; font-style: italic; line-height: 1.5; color: var(--d-dim); }
+.page-verse figcaption { margin-top: 8px; font-size: 13px; font-weight: 800; letter-spacing: 0; text-transform: none; color: var(--d-faint); }
+.page-verse.cita figcaption b { color: var(--d-green-ink); }
+.d-anillos-ley .oro i { background: var(--d-gold); box-shadow: 0 0 6px var(--d-gold); }
+/* Brote baja un poco para no chocar con el letrero del paso en curso (¡BUENOS DÍAS!). */
+.d-mascot { top: 30px; }
+
+/* 12. v10.3 Tinta sobre color brillante. El blanco sobre el verde bambú da 2.1:1 y en el sol no se lee;
+       la tinta verde noche da 8.8:1 (azul 6.5, oro 11.4, morado 6.6). También aleja a Bambú del blanco de Duolingo. */
+.d-btn.green, .d-btn.blue, .d-btn.gold, .d-days button.on, .ob .primary-button, .nfc-quick .primary-button, .pause-orb,
+.d-unit2.today .d-unit2-head, .d-unit-head.green, .d-unit-head.blue, .d-unit-head.purple, .d-unit-head.gold,
+.d-dial.gold-solid, .d-ed-tools button.side.on, .d-quiz-sum li.ok span, .d-room-grid button.on em, .d-tb-head b em,
+:is(.d-shell, .d-scrim) .primary-button, .d-hero.green, .d-hero.blue, .d-hero.gold, .d-unit2-head .d-anillos-ley span, .d-unit2-head .d-anillos-ley b,
+.t0.d-lvl, .d-hero.green .d-hero-text h1, .d-hero.blue .d-hero-text h1, .d-hero.gold .d-hero-text h1,
+.d-big-choice.green, .d-big-choice.red, .d-big-choice.blue, :is(.d-shell, .d-scrim) .food-big { color: var(--d-on-bright) !important; }
+.d-hero-text p, .d-hero-text span { opacity: 1; }
+.d-unit2.today .d-unit2-head span, .d-unit-head span { opacity: 1; }
+
+/* 13. v10.3 Restos del tema claro de la v8 que todavía pintaba Lectura: cajas casi blancas y bordes grises. */
+.note-alerta { background: var(--d-red-light); color: var(--d-ink); }
+.note-consejo { background: var(--d-blue-light); color: var(--d-ink); }
+.note-logro { background: var(--d-green-light); color: var(--d-green-ink); }
+.band-day { border-color: var(--d-line-2); }
+.band-day.read { border-color: var(--d-green-lip); }
+
+/* 14. v10.3 En 320 px el "120s" del descanso se salía del botón. */
+@media (max-width: 360px) { .d-seg button { padding-left: 2px; padding-right: 2px; font-size: 14px; min-width: 0; } }

@@ -2,12 +2,13 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Sheet } from './Sheet'
 import { activeHabits, dateKey, makeId, modulesOf, type AppData } from './lib/model'
 import type { PersonalTask } from './lib/personal'
-import { firstDay, habitOn, shiftDay, tasksFor } from './lib/jardin'
-import { clockOf, lockActive, routineFor, routineProgress } from './lib/rutina'
+import { dayScore, firstDay, GOOD, habitOn, shiftDay, tasksFor } from './lib/jardin'
+import { clockOf, COACH_FUTURE, lockActive, routineFor, routineProgress } from './lib/rutina'
 import { readOn } from './lib/lectura'
 import { broteLine, xpOn, XP } from './lib/xp'
 import { haptic } from './lib/haptic'
 import { reward } from './juice'
+import { playSound } from './lib/sounds'
 import { celebrate, useNow } from './ui'
 import { readingSeconds } from './lib/readingSession'
 import { BroteArt } from './Brote'
@@ -20,6 +21,8 @@ import { CardioSheet } from './Cardio'
 import type { Section } from './TodayPage'
 import { anillosDe, cerrados } from './lib/anillos'
 import { AnillosDia, AnillosLeyenda } from './Anillos'
+import { ofrecerOro, oroDe, type Ring } from './lib/oro'
+import { OroInvite, OroSheet } from './Oro'
 
 type Commit = (update: (d: AppData) => AppData) => void
 
@@ -73,7 +76,7 @@ function dayNodes(data: AppData, day: string, today: string): PathNode[] {
     const p = routineProgress(data, day, rt)
     const done = p.total > 0 && p.done >= p.total
     const locked = day === today && lockActive(data, today, clockOf(Date.now()))
-    out.push({ kind: 'train', label: rt.title, sub: future ? `${rt.items.length} ejercicios` : done ? 'Completa' : `${p.done} de ${p.total} series${locked ? ' · redes bloqueadas' : ''}`, icon: locked && !done ? 'candado' : 'pesa', state: future ? 'locked' : done ? 'done' : day < today ? 'missed' : 'todo', partial: p.total ? p.done / p.total : 0, xp: XP.routine })
+    out.push({ kind: 'train', label: rt.title, sub: future ? (rt.items[0]?.name === COACH_FUTURE ? 'Lo decide tu coach' : `${rt.items.length} ejercicios`) : done ? 'Completa' : `${p.done} de ${p.total} series${locked ? ' · redes bloqueadas' : ''}`, icon: locked && !done ? 'candado' : 'pesa', state: future ? 'locked' : done ? 'done' : day < today ? 'missed' : 'todo', partial: p.total ? p.done / p.total : 0, xp: XP.routine })
   }
   if (data.settings.walkDaily) {
     const done = walkDone(data, day), got = walkLabel(data, day)
@@ -82,7 +85,7 @@ function dayNodes(data: AppData, day: string, today: string): PathNode[] {
   const items = listItems(data, day, today)
   if (items.length) {
     const d = items.filter(i => i.done).length
-    out.push({ kind: 'list', label: 'Tu lista', sub: future ? `${items.length} cosas` : `${d} de ${items.length}`, icon: 'lista', state: future ? 'locked' : d === items.length ? 'done' : day < today ? 'missed' : 'todo', partial: d / items.length, xp: XP.habit * items.length })
+    out.push({ kind: 'list', label: 'Tu lista', sub: future ? `${items.length} ${items.length === 1 ? 'cosa' : 'cosas'}` : `${d} de ${items.length}`, icon: 'lista', state: future ? 'locked' : d === items.length ? 'done' : day < today ? 'missed' : 'todo', partial: d / items.length, xp: XP.habit * items.length })
   }
   if (mods.reading) {
     const done = readOn(data, day)
@@ -120,6 +123,8 @@ function Node({ n, x, onTap, mascot }: { n: PathNode; x: number; onTap: (el: HTM
 export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commit: Commit; go: (s: Section) => void; onMessage: (t: string) => void }) {
   const today = dateKey()
   const [sheet, setSheet] = useState<'list' | 'read' | 'manana' | 'walk' | null>(null)
+  const [oro, setOro] = useState<Ring | null>(null)
+  const [bible, setBible] = useState(false)
   const [text, setText] = useState('')
   const [daily, setDaily] = useState(false)
   const [edit, setEdit] = useState(false)
@@ -127,12 +132,13 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
   const live = !!data.activeReading
   const now = useNow(live, 1000)
   const xpToday = xpOn(data, today)
-  const line = broteLine(data)
   const started = firstDay(data, today)
   const past = [shiftDay(today, -2), shiftDay(today, -1)].filter(d => d >= started && d < today)
-  const future = [1, 2, 3].map(n => shiftDay(today, n))
   const todayNodes = dayNodes(data, today, today).map(n => n.kind === 'read' && data.activeReading ? { ...n, live: true, sub: `Leyendo ${Math.floor(readingSeconds(data.activeReading, now) / 60)} min` } : n)
-  const allDone = todayNodes.length > 0 && todayNodes.every(n => n.state === 'done')
+  const line = broteLine(data, Date.now(), { done: todayNodes.filter(n => n.state === 'done').length, total: todayNodes.length })
+  // El cofre se abre con la misma regla que da los XP del día bueno y prende la racha: 80%.
+  const score = dayScore(data, today)
+  const allDone = score.total > 0 && score.pct >= GOOD
   const items = listItems(data, today, today)
   const anillos = anillosDe(data, today)
 
@@ -163,13 +169,14 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     if (n.state === 'locked') { onMessage(`Se abre el ${dayTitle(day).toLowerCase()}.`); return }
     if (day !== today) { onMessage(n.state === 'done' ? 'Ese día lo cumpliste.' : 'Ese día ya pasó. Hoy cuenta más.'); return }
     if (n.kind === 'train') go('Entrenar')
-    else if (n.kind === 'bible') go('Lectura')
+    else if (n.kind === 'bible') { setBible(true); setSheet('read') }
     else if (n.kind === 'night') go('Noche')
     else setSheet(n.kind)
   }
   function toggleHabit(id: string, el: HTMLElement) {
     const on = (data.habits[today] ?? []).includes(id)
     if (!on) reward(el, `+${XP.habit} XP`)
+    else playSound('undo')
     haptic(on ? 8 : [12, 30, 12])
     commit(d => { const cur = d.habits[today] ?? []; return { ...d, habits: { ...d.habits, [today]: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] } } })
   }
@@ -177,6 +184,7 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     if (it.auto) return
     if (it.kind === 'habit') { toggleHabit(it.id, el); return }
     if (!it.done) reward(el, `+${XP.task} XP`)
+    else playSound('undo')
     toggleTask(commit, it.id, today)
   }
   function removeItem(it: Item) {
@@ -199,14 +207,15 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
       <header className="d-unit2-head">
         <div><b>{kind === 'today' ? 'Hoy' : kind === 'future' && day === shiftDay(today, 1) ? 'Mañana' : dayTitle(day)}</b>
           <span>{kind === 'today' ? `${dayTitle(day)} · ${cerrados(anillos)} de ${[anillos.cuerpo, anillos.mente, anillos.alma].filter(v => v !== null).length} anillos` : kind === 'future' ? (rt ? rt.title : 'Día de descanso') : `${done} de ${nodes.length} hechos`}</span></div>
-        {kind === 'today' ? <AnillosDia a={anillos} />
+        {kind === 'today' ? <AnillosDia a={anillos} oro={oroDe(data, today, anillos)} />
           : <DuoIcon name={kind === 'future' ? 'candado' : kind === 'past' && done === nodes.length && nodes.length ? 'check' : 'casa'} size={36} />}
-        {kind === 'today' && <AnillosLeyenda a={anillos} />}
+        {kind === 'today' && <AnillosLeyenda a={anillos} oro={oroDe(data, today, anillos)} />}
       </header>
+      {kind === 'today' && ofrecerOro(data, today, anillos) && <OroInvite ring={ofrecerOro(data, today, anillos)!} onOpen={() => setOro(ofrecerOro(data, today, anillos))} />}
       {nodes.map((n, i) => <Node key={n.kind} n={n} x={WAVE[(offset + i) % WAVE.length]} onTap={() => tap(n, day)}
         mascot={kind === 'today' && n.state === 'now' ? <div className={`d-mascot ${WAVE[(offset + i) % WAVE.length] > 0 ? 'left' : 'right'}`}><div className="d-mascot-say">{line.text}</div><BroteArt mood={line.mood} size={70} /></div> : undefined} />)}
       {kind === 'today' && <div className="d-step2 chest">
-        <button type="button" className={`d-chest ${allDone ? 'open' : ''}`} onClick={() => allDone ? celebrate({ kind: 'day', title: '¡Día completo!', text: `Ganaste ${xpToday} XP hoy. Tu bambú está en flor.` }) : onMessage(`Te faltan ${todayNodes.filter(n => n.state !== 'done').length} para abrir el cofre.`)} aria-label="Cofre del día">
+        <button type="button" className={`d-chest ${allDone ? 'open' : ''}`} onClick={() => allDone ? celebrate({ kind: 'day', title: '¡Día completo!', text: `Ganaste ${xpToday} XP hoy. Tu bambú está en flor.` }) : onMessage(`Vas en ${Math.round(score.pct * 100)}%. Al 80% se abre el cofre.`)} aria-label="Cofre del día">
           <DuoIcon name="cofre" size={64} off={!allDone} />
         </button>
         <span className="d-step2-label"><b>{allDone ? '¡Cofre abierto!' : 'Cofre del día'}</b><small>+{XP.goodDay} XP al 80%</small></span>
@@ -219,11 +228,18 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
   const blocks: ReactNode[] = []
   for (const d of past) { const nodes = dayNodes(data, d, today); blocks.push(unit(d, 'past', nodes, offset)); offset += nodes.length }
   blocks.push(unit(today, 'today', todayNodes, offset)); offset += todayNodes.length + 1
-  for (const d of future) { const nodes = dayNodes(data, d, today); blocks.push(unit(d, 'future', nodes, offset)); offset += nodes.length }
+  // Mañana se ve como una sola tarjeta corta: qué toca y cuántos pasos. Tres días bloqueados repetidos eran ruido.
+  const manana = shiftDay(today, 1)
+  const mananaNodes = dayNodes(data, manana, today)
+  const mananaRt = routineFor(data, manana)
+  blocks.push(<section className="d-next" key={manana} aria-label="Mañana">
+    <div><b>Mañana</b><span>{mananaRt ? mananaRt.title : 'Descanso'} · {mananaNodes.length} {mananaNodes.length === 1 ? 'paso' : 'pasos'}</span></div>
+    <ul>{mananaNodes.map(n => <li key={n.kind}><DuoIcon name={n.icon} size={22} off />{n.kind === 'train' ? (mananaRt?.title ?? n.label) : n.label}</li>)}</ul>
+  </section>)
   const doneItems = items.filter(i => i.done).length
 
   return <section className="d-page d-home">
-    <div className="d-road">{blocks}<p className="d-road-end">El camino sigue mañana</p></div>
+    <div className="d-road">{blocks}</div>
 
     {sheet === 'list' && <Sheet title="Tu lista de hoy" tall onClose={() => { setSheet(null); setEdit(false) }}>
       <div className="d-goal-top"><b>{doneItems} de {items.length} hechas</b><button type="button" className="d-link" onClick={() => setEdit(!edit)}>{edit ? 'Listo' : 'Editar'}</button></div>
@@ -249,6 +265,7 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     </Sheet>}
     {sheet === 'walk' && <CardioSheet data={data} commit={commit} onClose={() => setSheet(null)} onMessage={onMessage} />}
     {sheet === 'manana' && <MorningSheet data={data} commit={commit} onClose={() => setSheet(null)} />}
-    {sheet === 'read' && <ReadSheet data={data} commit={commit} onClose={() => setSheet(null)} onMessage={onMessage} />}
+    {oro && <OroSheet ring={oro} day={today} commit={commit} onClose={() => setOro(null)} />}
+    {sheet === 'read' && <ReadSheet data={data} commit={commit} onClose={() => { setSheet(null); setBible(false) }} onMessage={onMessage} startBible={bible} />}
   </section>
 }

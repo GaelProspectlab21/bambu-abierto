@@ -122,7 +122,7 @@ export async function semanaCard(s: Semana, apodo: string, duelos?: { ganados: n
   }
   ctx.strokeStyle = C.line; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(80, H - 170); ctx.lineTo(W - 80, H - 170); ctx.stroke()
   ctx.fillStyle = C.faint; ctx.font = `800 36px ${F}`; ctx.fillText('Todo contado con la cámara, sin trampa.', 80, H - 105)
-  ctx.fillStyle = C.green; ctx.fillText('tuagentedeia.com/bambu', 80, H - 55)
+  ctx.fillStyle = C.green; ctx.fillText(window.location.host || 'bambú', 80, H - 55)
   return new Promise((ok, fail) => cv.toBlob(b => b ? ok(b) : fail(new Error('No se pudo dibujar la imagen')), 'image/png'))
 }
 

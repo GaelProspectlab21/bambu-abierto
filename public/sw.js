@@ -1,4 +1,4 @@
-const CACHE = 'bambu-shell-v10'
+const CACHE = 'bambu-shell-v11'
 // Recordatorios: el servidor manda {title, body, url, tag}. iOS exige mostrar SIEMPRE una
 // notificación por cada push; si no, revoca el permiso.
 self.addEventListener('push', (event) => {

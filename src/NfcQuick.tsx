@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { GivenBar } from './GivenBar'
 import { verdict } from './lib/measure'
+import { StretchPlayer } from './Stretch'
+import { stretchSlot, type StretchWhen } from './lib/stretch'
 
 type Result = { ok: boolean; title: string; text: string; open?: boolean }
 
@@ -106,7 +108,42 @@ function NightQuick({ search, onSignIn }: { search: string; onSignIn: () => void
   </main>
 }
 
+/**
+ * Estiramiento sin sesión: el reproductor corre aquí mismo en Safari. Al terminar (o al salir
+ * después de dos minutos) el servidor lo guarda con la llave de la etiqueta.
+ */
+function StretchQuick({ search, onSignIn }: { search: string; onSignIn: () => void }) {
+  const k = useRef(new URLSearchParams(search).get('k') ?? '')
+  const [when] = useState<StretchWhen>(() => stretchSlot() ?? (new Date().getHours() < 16 ? 'manana' : 'noche'))
+  const [open, setOpen] = useState(true)
+  const [result, setResult] = useState<Result | null>(null)
+  useEffect(() => { clearNfcFromUrl() }, [])
+  function saved(seconds: number) {
+    if (!supabase || !k.current) { setResult({ ok: false, title: 'No se guardó', text: 'Esta etiqueta no trae tu llave. Grábala de nuevo con el enlace de Ajustes.' }); return }
+    setResult({ ok: true, title: 'Guardando', text: 'Un segundo.' })
+    supabase.functions.invoke('bambu-nfc', { body: { k: k.current, search: '?nfc=estirar', stretch: { when, seconds: Math.round(seconds) } } })
+      .then(({ data, error }) => {
+        const b = data as Result | null
+        if (b?.title) { setResult(b); return }
+        // Con status de error, supabase-js no da el cuerpo en `data`: se lee de la respuesta.
+        const ctx = (error as { context?: Response } | null)?.context
+        if (ctx?.json) ctx.json().then((x: Result) => setResult(x)).catch(() => setResult({ ok: false, title: 'No se pudo guardar', text: 'Revisa tu señal.' }))
+        else setResult({ ok: false, title: 'No se pudo guardar', text: 'Revisa tu señal.' })
+      })
+      .catch(() => setResult({ ok: false, title: 'No se pudo guardar', text: 'Revisa tu señal. El estiramiento sí lo hiciste.' }))
+  }
+  return <main className="nfc-quick">
+    {open && <StretchPlayer when={when} onMessage={() => undefined} streak={0} onSaved={saved} onClose={() => setOpen(false)} />}
+    {!open && <section className={`nfc-quick-card ${result?.ok ? 'ok' : result ? 'bad' : ''}`} role="status" aria-live="polite">
+      <img src="icon.svg" width="44" height="44" alt="" />
+      {result ? <><div className="nfc-quick-mark" aria-hidden="true">{result.ok ? '✓' : '!'}</div><h1>{result.title}</h1><p>{result.text}</p></> : <><h1>Sin guardar</h1><p>Estira al menos dos minutos para que cuente.</p></>}
+      <button className="primary-button wide" onClick={() => { setResult(null); setOpen(true) }}>Estirar otra vez</button>
+    </section>}
+    {!open && <button className="auth-switch" onClick={onSignIn}>Entrar a Bambú aquí en Safari</button>}
+  </main>
+}
+
 export function NfcQuick(props: { search: string; onSignIn: () => void }) {
   const tag = parseNfc(props.search)?.tag
-  return tag === 'night' ? <NightQuick {...props} /> : <NfcQuickAction {...props} />
+  return tag === 'night' ? <NightQuick {...props} /> : tag === 'estirar' ? <StretchQuick {...props} /> : <NfcQuickAction {...props} />
 }

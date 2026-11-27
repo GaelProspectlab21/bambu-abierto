@@ -1034,8 +1034,101 @@ function proteinMealsOn(data, day) {
 }
 //#endregion
 //#region src/lib/exercises.ts
+var MUSCLES = [
+	{
+		id: "pecho",
+		label: "Pecho",
+		group: "torso",
+		recoveryHours: 48,
+		weekly: [4, 10]
+	},
+	{
+		id: "espalda",
+		label: "Espalda",
+		group: "torso",
+		recoveryHours: 48,
+		weekly: [6, 14]
+	},
+	{
+		id: "hombros",
+		label: "Hombros",
+		group: "torso",
+		recoveryHours: 48,
+		weekly: [4, 10]
+	},
+	{
+		id: "triceps",
+		label: "Tríceps",
+		group: "torso",
+		recoveryHours: 48,
+		weekly: [3, 8]
+	},
+	{
+		id: "biceps",
+		label: "Bíceps",
+		group: "torso",
+		recoveryHours: 48,
+		weekly: [3, 8]
+	},
+	{
+		id: "cuello",
+		label: "Cuello",
+		group: "extra",
+		recoveryHours: 48,
+		weekly: [4, 8]
+	},
+	{
+		id: "antebrazo",
+		label: "Antebrazo",
+		group: "extra",
+		recoveryHours: 36,
+		weekly: [4, 8]
+	},
+	{
+		id: "core",
+		label: "Abdomen y core",
+		group: "extra",
+		recoveryHours: 24,
+		weekly: [4, 10]
+	},
+	{
+		id: "cuadriceps",
+		label: "Cuádriceps",
+		group: "pierna",
+		recoveryHours: 48,
+		weekly: [4, 10]
+	},
+	{
+		id: "gluteos",
+		label: "Glúteos",
+		group: "pierna",
+		recoveryHours: 48,
+		weekly: [4, 10]
+	},
+	{
+		id: "isquios",
+		label: "Isquios",
+		group: "pierna",
+		recoveryHours: 48,
+		weekly: [3, 8]
+	},
+	{
+		id: "pantorrillas",
+		label: "Pantorrillas",
+		group: "pierna",
+		recoveryHours: 24,
+		weekly: [4, 10]
+	},
+	{
+		id: "aductores",
+		label: "Aductores (ingle)",
+		group: "extra",
+		recoveryHours: 48,
+		weekly: [1, 4]
+	}
+];
 var J004 = "J004";
-new Map([
+var EXERCISES = [
 	{
 		id: "pushup-wall",
 		name: "Lagartija en pared",
@@ -1824,11 +1917,389 @@ new Map([
 		],
 		mistakes: []
 	}
-].map((e) => [e.id, e]));
+];
+/** Las dos sesiones del método de Juanma (torso y pierna), adaptadas a casa. */
+var TEMPLATES = [{
+	id: "torso",
+	name: "Torso",
+	slots: [
+		"empuje",
+		"jalon",
+		"hombro",
+		"jalon_ancho",
+		"biceps",
+		"aduccion",
+		"cuello_flex",
+		"cuello_ext"
+	]
+}, {
+	id: "pierna",
+	name: "Pierna y core",
+	slots: [
+		"pierna",
+		"bisagra",
+		"pantorrilla",
+		"core",
+		"antebrazo_flex",
+		"agarre"
+	]
+}];
+/** Blindaje de futbolista: dos ejercicios con ensayos que bajan lesiones de ingle e isquio. Va en días de fútbol. */
+var SHIELD_SLOTS = ["aductor", "nordico"];
+var BY_ID = new Map(EXERCISES.map((e) => [e.id, e]));
+function exercise(id) {
+	return BY_ID.get(id);
+}
+function ladder(slot) {
+	return EXERCISES.filter((e) => e.slot === slot).sort((a, b) => a.level - b.level);
+}
+function nextInLadder(id) {
+	const e = exercise(id);
+	if (!e) return void 0;
+	return ladder(e.slot).find((x) => x.level > e.level && x.mode === e.mode);
+}
+//#endregion
+//#region src/lib/coach.ts
+/**
+* El coach de entrenamiento. Funciones puras: reciben tus datos y la hora, devuelven qué
+* toca. Nada aquí adivina: cada recomendación sale de lo que registraste y de una regla
+* escrita (casi todas del método de Juanma, ver juanma.ts).
+*/
+var HOUR = 36e5;
+var DAY = 24 * HOUR;
 function shift(day, n) {
 	const d = /* @__PURE__ */ new Date(`${day}T12:00:00`);
 	d.setDate(d.getDate() + n);
 	return dateKey(d);
+}
+function weekday(day) {
+	return (/* @__PURE__ */ new Date(`${day}T12:00:00`)).getDay();
+}
+function mondayOf(day) {
+	return shift(day, -((weekday(day) + 6) % 7));
+}
+/** Una serie cuenta como dura si quedaron 3 o menos repeticiones en reserva (o no se anotó). */
+function isHard(set) {
+	return set.rir === void 0 || set.rir <= 3;
+}
+function setValue(set) {
+	return set.reps ?? set.seconds ?? 0;
+}
+function footballEnd(day) {
+	return (/* @__PURE__ */ new Date(`${day}T20:00:00`)).getTime();
+}
+function muscleStates(data, now = Date.now()) {
+	const today = dateKey(new Date(now));
+	const weekStart = shift(today, -6);
+	const since = shift(today, -10);
+	const recent = data.sets.filter((s) => s.day >= since && isHard(s));
+	const sore = new Set(data.checkins.find((c) => c.day === today)?.soreness ?? []);
+	const football = data.activities.filter((a) => a.kind === "football" && a.day >= shift(today, -3) && a.day <= today);
+	return MUSCLES.map((m) => {
+		let weekSets = 0;
+		let lastAt = null;
+		const perDay = /* @__PURE__ */ new Map();
+		for (const set of recent) {
+			const weight = exercise(set.exercise)?.muscles[m.id] ?? 0;
+			if (!weight) continue;
+			if (set.day >= weekStart) weekSets += weight;
+			if (weight === 1) {
+				const entry = perDay.get(set.day) ?? {
+					sets: 0,
+					failures: 0,
+					last: 0
+				};
+				entry.sets++;
+				if (set.rir === 0) entry.failures++;
+				entry.last = Math.max(entry.last, set.at);
+				perDay.set(set.day, entry);
+				lastAt = Math.max(lastAt ?? 0, set.at);
+			}
+		}
+		let readyAt = null;
+		let reason = "Sin entrenar en los últimos días.";
+		for (const [, entry] of perDay) {
+			if (entry.sets < 2) continue;
+			const extra = entry.sets >= 6 || entry.failures >= 3 ? 24 : 0;
+			const at = entry.last + (m.recoveryHours + extra) * HOUR;
+			if (!readyAt || at > readyAt) {
+				readyAt = at;
+				reason = extra ? "Sesión fuerte: necesita un día más." : "Entrenado hace poco.";
+			}
+		}
+		if (m.group === "pierna") for (const game of football) {
+			const at = footballEnd(game.day) + 36 * HOUR;
+			if (!readyAt || at > readyAt) {
+				readyAt = at;
+				reason = "El fútbol ya cargó tus piernas.";
+			}
+		}
+		if (sore.has(m.id)) {
+			const at = (/* @__PURE__ */ new Date(`${shift(today, 1)}T08:00:00`)).getTime();
+			if (!readyAt || at > readyAt) {
+				readyAt = at;
+				reason = "Reportaste agujetas hoy.";
+			}
+		}
+		const recovering = readyAt !== null && readyAt > now;
+		const idle = !recovering && (lastAt === null || now - lastAt > 5 * DAY);
+		return {
+			id: m.id,
+			label: m.label,
+			group: m.group,
+			target: m.weekly,
+			weekSets: Math.round(weekSets * 10) / 10,
+			lastAt,
+			readyAt: recovering ? readyAt : null,
+			status: recovering ? "recuperando" : idle ? "pendiente" : "listo",
+			reason: recovering ? reason : idle ? lastAt ? "Más de 5 días sin estímulo: es prioridad." : "Aún sin registros." : "Recuperado."
+		};
+	});
+}
+function readyLabel(at, now = Date.now()) {
+	const d = new Date(at);
+	const today = dateKey(new Date(now));
+	const day = dateKey(d);
+	const part = d.getHours() < 12 ? "en la mañana" : d.getHours() < 19 ? "en la tarde" : "en la noche";
+	if (day === today) return `hoy ${part}`;
+	if (day === shift(today, 1)) return `mañana ${part}`;
+	return `el ${new Intl.DateTimeFormat("es-MX", { weekday: "long" }).format(d)} ${part}`;
+}
+/** Las sesiones de un ejercicio, de la más nueva a la más vieja. */
+function sessionsOf(data, exerciseId) {
+	const byDay = /* @__PURE__ */ new Map();
+	data.sets.filter((s) => s.exercise === exerciseId).forEach((s) => byDay.set(s.day, [...byDay.get(s.day) ?? [], s]));
+	return [...byDay.entries()].map(([day, sets]) => ({
+		day,
+		sets: sets.sort((a, b) => a.at - b.at)
+	})).sort((a, b) => b.day.localeCompare(a.day));
+}
+var DEFAULT_START = {
+	empuje: "pushup",
+	hombro: "pike",
+	jalon: "row-backpack",
+	jalon_ancho: "row-backpack-1arm",
+	aduccion: "floor-towel-pull",
+	biceps: "curl-backpack",
+	cuello_flex: "neck-curl",
+	cuello_ext: "neck-extension",
+	pierna: "squat",
+	bisagra: "glute-bridge",
+	pantorrilla: "calf-raise",
+	core: "plank",
+	antebrazo_flex: "wrist-curl",
+	antebrazo_ext: "wrist-extension",
+	agarre: "backpack-hold",
+	aductor: "copenhagen",
+	nordico: "nordic"
+};
+function available(ex, equipment) {
+	return ex.equipment.every((e) => e === "nada" || equipment.includes(e));
+}
+/** El escalón en el que estás en un patrón: el último que registraste, o el de arranque. */
+function currentForSlot(data, slot) {
+	const options = ladder(slot);
+	const ids = new Set(options.map((e) => e.id));
+	const last = [...data.sets].filter((s) => ids.has(s.exercise)).sort((a, b) => b.at - a.at)[0];
+	if (last) return exercise(last.exercise) ?? options[0];
+	const level = data.settings.trainingLevel;
+	if (level && LEVELED.includes(slot)) {
+		const usable = options.filter((e) => available(e, data.settings.equipment));
+		if (usable.length) return usable[Math.round((level - 1) / 3 * (usable.length - 1))];
+	}
+	return exercise(DEFAULT_START[slot]) ?? options[0];
+}
+/** Patrones grandes donde el nivel de arranque cambia el ejercicio. Cuello, agarre y antebrazo arrancan siempre en lo más seguro. */
+var LEVELED = [
+	"empuje",
+	"hombro",
+	"pierna",
+	"bisagra",
+	"core",
+	"jalon"
+];
+/** Doble progresión: si todas tus series tocaron el tope del rango, sube; si no, una repetición más. */
+function progression(data, ex, plannedSets = 2, today = dateKey()) {
+	const sessions = sessionsOf(data, ex.id).filter((s) => s.day < today);
+	const [lo, hi] = ex.range;
+	const unit = ex.mode === "seconds" ? "s" : "";
+	if (!sessions.length) return {
+		verdict: "nuevo",
+		last: [],
+		target: Array(plannedSets).fill(lo),
+		message: `Primera vez: busca ${lo} a ${hi}${unit} con buena técnica y anota cuántas salieron.`
+	};
+	const last = sessions[0].sets.map(setValue);
+	const prevTotal = sessions[1]?.sets.map(setValue).reduce((a, b) => a + b, 0);
+	const lastTotal = last.reduce((a, b) => a + b, 0);
+	const working = last.slice(0, plannedSets);
+	const allTop = working.length >= Math.min(plannedSets, 2) && working.every((v) => v >= hi);
+	const loaded = sessions[0].sets.some((s) => (s.loadKg ?? 0) > 0);
+	if (allTop) {
+		const next = nextInLadder(ex.id);
+		return {
+			verdict: "subir",
+			last,
+			target: Array(plannedSets).fill(lo),
+			next,
+			message: next ? `Llegaste al tope (${hi}${unit}) en todas tus series. Sube a ${next.name} y vuelve a ${lo}.` : loaded ? `Tope alcanzado con peso. Súbele 1 o 2 kg a la mochila y vuelve a ${lo}.` : `Tope alcanzado. Métele peso con la mochila o libros y vuelve a ${lo}.`
+		};
+	}
+	if (prevTotal && lastTotal < prevTotal * .8) return {
+		verdict: "fatiga",
+		last,
+		target: last.slice(0, plannedSets),
+		message: "La última vez saliste 20% abajo de la anterior. Repite esa meta; revisa sueño y comida."
+	};
+	const target = Array.from({ length: plannedSets }, (_, i) => Math.min(hi, (working[i] ?? working[working.length - 1] ?? lo) + (ex.mode === "seconds" ? 5 : 1)));
+	return {
+		verdict: "progresando",
+		last,
+		target,
+		message: `Última vez ${last.join(" · ")}${unit}. Hoy busca ${target.join(" · ")}${unit}.`
+	};
+}
+function dayLoad(data, day) {
+	return data.sets.filter((s) => s.day === day && isHard(s)).length >= 4 || data.activities.some((a) => a.day === day && a.kind === "football");
+}
+function sessionKind(sets) {
+	const counts = {
+		torso: 0,
+		pierna: 0
+	};
+	sets.forEach((s) => {
+		const slot = exercise(s.exercise)?.slot;
+		if (!slot) return;
+		if (TEMPLATES[0].slots.includes(slot)) counts.torso++;
+		if (TEMPLATES[1].slots.includes(slot)) counts.pierna++;
+	});
+	if (!counts.torso && !counts.pierna) return null;
+	return counts.torso >= counts.pierna ? "torso" : "pierna";
+}
+function weekSessions(data, today = dateKey()) {
+	const start = mondayOf(today);
+	const days = Array.from({ length: 7 }, (_, i) => shift(start, i));
+	let torso = 0, pierna = 0;
+	days.forEach((day) => {
+		const kind = sessionKind(data.sets.filter((s) => s.day === day));
+		if (kind === "torso") torso++;
+		if (kind === "pierna") pierna++;
+	});
+	const football = new Set(data.activities.filter((a) => a.kind === "football" && days.includes(a.day)).map((a) => a.day)).size;
+	return {
+		torso,
+		pierna,
+		football,
+		days
+	};
+}
+function itemsFor(data, template, today) {
+	const slots = template === "blindaje" ? SHIELD_SLOTS : TEMPLATES.find((t) => t.id === template).slots;
+	const sets = template === "blindaje" ? 1 : 2;
+	return slots.map((slot) => {
+		let ex = currentForSlot(data, slot);
+		if (!available(ex, data.settings.equipment)) ex = ladder(slot).filter((e) => available(e, data.settings.equipment)).pop() ?? ex;
+		const n = template === "blindaje" ? sets : ex.sets ?? sets;
+		return {
+			slot,
+			exercise: ex,
+			sets: n,
+			progression: progression(data, ex, n),
+			doneToday: data.sets.filter((s) => s.day === today && s.exercise === ex.id).length
+		};
+	});
+}
+function todayPlan(data, now = Date.now()) {
+	const today = dateKey(new Date(now));
+	const checkin = data.checkins.find((c) => c.day === today) ?? (data.checkins.find((c) => c.day === shift(today, -1))?.pain === "pecho" ? data.checkins.find((c) => c.day === shift(today, -1)) : void 0);
+	if (checkin?.pain === "pecho") return {
+		kind: "dolor",
+		urgent: true,
+		title: "Hoy no entrenes.",
+		items: [],
+		summary: "Reportaste dolor en el pecho. Avísale hoy a tu mamá, papá o un adulto. Si te falta el aire, te mareas o el dolor es fuerte, es urgencia: pide ayuda ya.",
+		reasons: [{ text: "El dolor de pecho no es agujeta. Un adulto y un médico deciden cuándo vuelves." }]
+	};
+	const states = muscleStates(data, now);
+	const ready = (group) => states.filter((s) => s.group === group).every((s) => s.status !== "recuperando");
+	const week = weekSessions(data, today);
+	const footballToday = data.settings.footballDays.includes(weekday(today)) || data.activities.some((a) => a.day === today && a.kind === "football");
+	const legTarget = data.settings.footballDays.length >= 3 ? 1 : 2;
+	const reasons = [];
+	const trainedToday = sessionKind(data.sets.filter((s) => s.day === today));
+	if (checkin?.pain) reasons.push({ text: `Reportaste dolor en ${checkin.pain}: salta cualquier ejercicio que lo provoque.` });
+	if (trainedToday) return {
+		kind: trainedToday,
+		title: trainedToday === "torso" ? "Hoy ya entrenaste torso." : "Hoy ya entrenaste pierna.",
+		summary: "Termina tus series pendientes o descansa. La recuperación también construye.",
+		reasons,
+		items: itemsFor(data, trainedToday, today)
+	};
+	if (footballToday) return {
+		kind: "futbol",
+		title: "Hoy toca fútbol.",
+		items: itemsFor(data, "blindaje", today),
+		summary: "El partido es tu sesión de pierna. En tu calentamiento, 5 minutos de blindaje: una serie de Copenhagen por lado y una de nórdico.",
+		reasons: [
+			...reasons,
+			{ text: `Tus piernas ya trabajan en el fútbol. Tu plan incluye ${legTarget === 1 ? "una sesión" : "dos sesiones"} de pierna a la semana.` },
+			{
+				text: "El Copenhagen bajó 41% los problemas de ingle en futbolistas y el nórdico baja a la mitad las lesiones de isquio.",
+				source: "HAROY"
+			}
+		]
+	};
+	if ([
+		1,
+		2,
+		3,
+		4,
+		5
+	].every((n) => dayLoad(data, shift(today, -n)))) return {
+		kind: "descanso",
+		title: "Hoy descansa.",
+		items: [],
+		summary: `Llevas cinco días seguidos con carga. Camina, estírate y cuida tu meta de ${data.settings.sleepTarget} horas de sueño: el músculo crece cuando descansas.`,
+		reasons: [...reasons, {
+			text: "Juanma se recupera bien porque hace pocas series y duerme 9 horas.",
+			source: "J009"
+		}]
+	};
+	const torsoBehind = 3 - week.torso;
+	const legBehind = legTarget - week.pierna;
+	const nextFootball = [1, 2].some((n) => data.settings.footballDays.includes(weekday(shift(today, n))));
+	const canLegs = ready("pierna") && legBehind > 0 && !data.settings.footballDays.includes(weekday(shift(today, 1)));
+	const canTorso = ready("torso") && torsoBehind > 0;
+	let kind = null;
+	if (canLegs && (!canTorso || legBehind >= torsoBehind)) kind = "pierna";
+	else if (canTorso) kind = "torso";
+	else if (ready("torso") && torsoBehind <= 0 && legBehind <= 0) kind = null;
+	if (!kind) {
+		const pending = states.filter((s) => s.status === "recuperando");
+		return {
+			kind: "descanso",
+			title: "Hoy descanso activo.",
+			items: [],
+			summary: torsoBehind <= 0 && legBehind <= 0 ? "Ya cumpliste las sesiones de la semana. Camina y estírate." : `Tus músculos siguen recuperando${pending[0]?.readyAt ? `: ${pending[0].label.toLowerCase()} listo ${readyLabel(pending[0].readyAt, now)}` : ""}.`,
+			reasons: [...reasons, { text: "Entrenar un músculo que no se ha recuperado no lo hace crecer más rápido." }]
+		};
+	}
+	reasons.push({
+		text: kind === "torso" ? `Llevas ${week.torso} de 3 sesiones de torso esta semana.` : `Llevas ${week.pierna} de ${legTarget} de pierna esta semana.`,
+		source: "J009"
+	});
+	if (kind === "pierna" && nextFootball) reasons.push({ text: "Hay fútbol pronto: haz las series limpias, sin llegar al fallo en pierna." });
+	if (kind === "torso") reasons.push({
+		text: "El cuello va con torso: dos series de 10 a 20 en flexión y extensión.",
+		source: "J004"
+	});
+	return {
+		kind,
+		title: kind === "torso" ? "Hoy toca torso." : "Hoy toca pierna y core.",
+		items: itemsFor(data, kind, today),
+		reasons,
+		summary: "Dos series por ejercicio. La primera a 1 o 2 del fallo; la última hasta que la técnica se rompa."
+	};
 }
 function avg(values) {
 	return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
@@ -1879,6 +2350,82 @@ function massPlan(data, today = dateKey()) {
 		lastPhotos
 	};
 }
+/**
+* La semana de lunes a domingo. Lo pasado dice lo que de verdad pasó; hoy, lo que dice el
+* coach; lo que viene es una proyección con las mismas reglas que todayPlan: fútbol en sus
+* días, 2 días entre sesiones del mismo grupo y nada de pierna la víspera del partido.
+* La proyección cambia en cuanto registras algo: es un mapa, no un contrato.
+*/
+function weekPlan(data, now = Date.now()) {
+	const today = dateKey(new Date(now));
+	const start = mondayOf(today);
+	const football = (day) => data.settings.footballDays.includes(weekday(day)) || data.activities.some((a) => a.day === day && a.kind === "football");
+	const doneOn = (day) => {
+		const out = [];
+		const kind = sessionKind(data.sets.filter((s) => s.day === day));
+		if (kind) out.push(kind);
+		if (data.activities.some((a) => a.day === day && a.kind === "football")) out.push("futbol");
+		if (!out.length && data.activities.some((a) => a.day === day && a.kind === "rest")) out.push("descanso");
+		return out;
+	};
+	const week = weekSessions(data, today);
+	const legTarget = data.settings.footballDays.length >= 3 ? 1 : 2;
+	let torsoLeft = 3 - week.torso, legLeft = legTarget - week.pierna;
+	let lastTorso = "", lastLeg = "";
+	for (let n = 1; n <= 3; n++) {
+		const d = shift(today, -n), done = doneOn(d);
+		if (!lastTorso && done.includes("torso")) lastTorso = d;
+		if (!lastLeg && (done.includes("pierna") || done.includes("futbol"))) lastLeg = d;
+	}
+	const gap = (from, to) => from ? Math.round(((/* @__PURE__ */ new Date(`${to}T12:00:00`)).getTime() - (/* @__PURE__ */ new Date(`${from}T12:00:00`)).getTime()) / DAY) : 99;
+	return Array.from({ length: 7 }, (_, i) => {
+		const day = shift(start, i);
+		const done = day <= today ? doneOn(day) : [];
+		if (day < today) return {
+			day,
+			past: true,
+			isToday: false,
+			plan: null,
+			done
+		};
+		let plan;
+		if (day === today) {
+			plan = todayPlan(data, now).kind;
+			if (done.includes("torso")) lastTorso = day;
+			else if (plan === "torso") {
+				torsoLeft--;
+				lastTorso = day;
+			}
+			if (done.includes("pierna") || plan === "futbol") lastLeg = day;
+			else if (plan === "pierna") {
+				legLeft--;
+				lastLeg = day;
+			}
+		} else if (football(day)) {
+			plan = "futbol";
+			lastLeg = day;
+		} else {
+			const legOk = legLeft > 0 && gap(lastLeg, day) >= 2 && !football(shift(day, 1));
+			const torsoOk = torsoLeft > 0 && gap(lastTorso, day) >= 2;
+			if (legOk && (!torsoOk || legLeft >= torsoLeft)) {
+				plan = "pierna";
+				legLeft--;
+				lastLeg = day;
+			} else if (torsoOk) {
+				plan = "torso";
+				torsoLeft--;
+				lastTorso = day;
+			} else plan = "descanso";
+		}
+		return {
+			day,
+			past: false,
+			isToday: day === today,
+			plan,
+			done
+		};
+	});
+}
 //#endregion
 //#region src/lib/rutina.ts
 var r = (n, t) => [
@@ -1890,30 +2437,6 @@ var s = (n, t) => [
 	n,
 	"seconds",
 	t
-];
-var pistol = [
-	"Pistol squat asistida",
-	"reps",
-	5,
-	{ sides: true }
-];
-var calfOne = [
-	"Elevaciones de talón a una pierna",
-	"reps",
-	15,
-	{ sides: true }
-];
-var bridgeOne = [
-	"Puente de glúteo a una pierna",
-	"reps",
-	12,
-	{ sides: true }
-];
-var sidePlank = [
-	"Plancha lateral",
-	"seconds",
-	30,
-	{ sides: true }
 ];
 function routine(day, title, seeds) {
 	return {
@@ -1928,119 +2451,39 @@ function routine(day, title, seeds) {
 		}))
 	};
 }
-var PUSH_A = [
-	s("Handstand contra pared", 30),
-	r("Handstand toque de hombros", 0),
-	s("Planche lean", 10),
-	r("Pike push ups", 5),
-	r("Fondos", 10),
-	r("Lagartijas", 15),
-	r("Lagartijas up", 15),
-	r("Lagartijas lentas", 10),
-	r("Lagartijas diamante", 10)
+/** Rutina de inicio (v9): 3 días no seguidos, cuerpo completo, 2 rondas, sin candado. Así entra alguien que nunca ha entrenado. */
+var START_A = [
+	r("Lagartijas inclinadas", 10),
+	r("Sentadillas", 12),
+	r("Dominadas australianas", 8),
+	r("Puente de glúteo", 12),
+	s("Plancha", 30)
 ];
-var LEGS_A = [
-	r("Sentadillas", 15),
-	r("Desplantes", 15),
-	pistol,
-	s("Wall sit", 60),
-	r("Subidas de talones en wall sit", 15),
+var START_B = [
+	r("Lagartijas en rodillas", 12),
+	r("Desplantes", 10),
+	r("Dominadas australianas", 8),
 	r("Elevaciones de talones", 15),
-	calfOne,
-	bridgeOne,
-	s("Hollow hold", 45),
-	r("Abs con piernas arriba", 25),
-	r("Abs crackers", 15),
-	r("Russian twist", 55),
-	s("Plancha", 60),
-	s("Aguante isométrico de abs", 30)
-];
-var PULL = [
-	[
-		"Muscle up",
-		"reps",
-		2,
-		{ when: "before" }
-	],
-	[
-		"Dominadas",
-		"reps",
-		7,
-		{ rounds: 5 }
-	],
-	r("Curl de toalla superior", 15),
-	r("Curl de toalla inferior", 20),
-	r("Remo con toalla en barra", 10),
-	[
-		"Chin ups",
-		"reps",
-		7,
-		{ rounds: 5 }
-	],
-	s("Colgarse de la barra", 30)
-];
-var PUSH_B = [
-	s("Handstand contra pared", 30),
-	r("Handstand toque de hombros", 0),
-	r("Handstand push up con pared", 5),
-	s("Tuck planche", 15),
-	s("Planche lean", 10),
-	s("Parado de cabeza", 20),
-	r("Pike push ups", 5),
-	r("Fondos", 10),
-	r("Lagartijas down", 15),
-	r("Lagartijas con toque de hombro", 10),
-	r("Lagartijas lentas", 10),
-	r("Lagartijas diamante", 10)
-];
-var LEGS_B = [
-	r("Sentadillas", 15),
-	r("Desplantes", 15),
-	pistol,
-	s("Wall sit", 60),
-	r("Subidas de talones en wall sit", 15),
-	r("Elevaciones de talones", 15),
-	calfOne,
-	bridgeOne,
-	s("L sit", 10),
-	r("Crunches", 25),
-	sidePlank,
-	s("Hollow hold", 45),
-	r("Abs con piernas arriba", 25),
-	s("Aguante isométrico de abs", 30),
-	r("Salto de cuerda", 20)
-];
-var CORE = [
-	s("Hollow hold", 45),
-	r("Abs con piernas arriba", 25),
-	r("Abs crackers", 15),
-	r("Russian twist", 55),
-	r("Crunches", 25),
-	sidePlank,
-	s("Plancha", 60),
-	s("Aguante isométrico de abs", 30),
-	r("Burpees suaves sin lagartija", 20),
-	r("Salto de cuerda", 20),
-	[
-		"Correr 5 km o bici",
-		"free",
-		0,
-		{ when: "after" }
-	]
+	s("Plancha lateral", 20),
+	r("Jumping jacks", 30)
 ];
 function seedWeek() {
+	const start = (day, title, seeds) => ({
+		...routine(day, title, seeds),
+		rounds: 2
+	});
 	return {
 		deadline: "19:00",
-		lock: true,
+		lock: false,
 		restSeconds: 60,
 		week: [
-			routine(0, "Hombros, pecho y tríceps", PUSH_A),
-			routine(1, "Piernas y abdomen", LEGS_A),
-			routine(2, "Espalda, bíceps y antebrazo", PULL),
-			routine(3, "Hombros, pecho y tríceps", PUSH_B),
-			routine(4, "Piernas y abdomen", LEGS_B),
-			routine(5, "Espalda, bíceps y antebrazo", PULL),
-			routine(6, "Abdomen y cardio", CORE)
+			start(0, "Cuerpo completo A", START_A),
+			null,
+			start(2, "Cuerpo completo B", START_B),
+			null,
+			start(4, "Cuerpo completo A", START_A),
+			null,
+			null
 		]
 	};
 }
@@ -2051,8 +2494,56 @@ function planOf(data) {
 	return data.settings.train ?? seedWeek();
 }
 function routineFor(data, day) {
+	if (usesCoach(data)) return coachRoutine(data, day);
 	const rt = planOf(data).week[weekIndex(day)];
 	return rt && rt.items.length ? rt : null;
+}
+/**
+* Sin rutina propia, el día lo decide el coach original (torso y pierna según tus días de fútbol,
+* método de Juanma). Se traduce a una Routine para que Hoy, los anillos, la XP y el widget lo lean igual.
+* Cada item se llama con el id del ejercicio porque así guarda las series el coach.
+*/
+function usesCoach(data) {
+	return !data.settings.train;
+}
+var COACH_TITLE = {
+	torso: "Torso",
+	pierna: "Pierna"
+};
+/** Marca de un día futuro del coach: el plan exacto se decide ese día con tus datos. */
+var COACH_FUTURE = "plan del coach";
+function coachRoutine(data, day, now = Date.now()) {
+	const today = dateKey(new Date(now));
+	if (day === today) {
+		const plan = todayPlan(data, now);
+		if (plan.kind !== "torso" && plan.kind !== "pierna") return null;
+		return {
+			title: COACH_TITLE[plan.kind],
+			rounds: 1,
+			items: plan.items.map((it, i) => ({
+				id: `c${i}`,
+				name: it.exercise.id,
+				kind: it.exercise.mode,
+				target: it.exercise.range[0],
+				rounds: it.sets,
+				when: "before"
+			}))
+		};
+	}
+	if (day < today) return null;
+	const kind = weekPlan(data, now).find((w) => w.day === day)?.plan;
+	return kind && COACH_TITLE[kind] ? {
+		title: COACH_TITLE[kind],
+		rounds: 1,
+		items: [{
+			id: "f0",
+			name: COACH_FUTURE,
+			kind: "reps",
+			target: 0,
+			rounds: 1,
+			when: "before"
+		}]
+	} : null;
 }
 function trainedOn(data, day) {
 	return data.sets.some((x) => x.day === day);
@@ -2341,7 +2832,8 @@ function parseNfc(search) {
 		"checkin",
 		"weigh",
 		"night",
-		"cama"
+		"cama",
+		"estirar"
 	].includes(tag) ? { tag } : null;
 }
 function gave(capacity, given) {
@@ -2364,6 +2856,43 @@ function verdict(capacity, given) {
 //#endregion
 //#region src/lib/jardin.ts
 var WAKE_PREFIX = "Despertar:";
+//#endregion
+//#region src/lib/stretch.ts
+/**
+* Estiramiento diario: al despertar (movilidad suave, unos 5 min) y antes de dormir (posturas
+* sostenidas). Dosis conservadora adaptada de ACSM: 20 s, dos vueltas, sin dolor.
+* La movilidad previa no sustituye el calentamiento completo del equipo.
+*
+* Se guarda como actividad 'other' con la nota "Estiramiento: noche" (igual que el rescate), así
+* que no cambia la forma de ningún registro y los teléfonos viejos y el servidor lo conservan.
+*/
+var STRETCH_PREFIX = "Estiramiento";
+var WHEN_NOTE = {
+	manana: "mañana",
+	noche: "noche"
+};
+function stretchRow(when, seconds, day = dateKey()) {
+	return {
+		id: makeId(),
+		day,
+		kind: "other",
+		minutes: Math.max(1, Math.round(seconds / 60)),
+		note: `${STRETCH_PREFIX}: ${WHEN_NOTE[when]}`
+	};
+}
+/** Guarda un estiramiento y tacha el hábito Estiramiento si lo tienes. Lo usan la app y la etiqueta. */
+function logStretch(data, when, seconds, day = dateKey(), row = stretchRow(when, seconds, day)) {
+	const habit = activeHabits(data.settings).find((h) => h.id === "stretch");
+	const marked = (data.habits[day] ?? []).includes("stretch");
+	return {
+		...data,
+		activities: [...data.activities, row],
+		habits: habit && !marked ? {
+			...data.habits,
+			[day]: [...data.habits[day] ?? [], "stretch"]
+		} : data.habits
+	};
+}
 //#endregion
 //#region src/lib/nfcActions.ts
 /**
@@ -2469,6 +2998,20 @@ function trainingAction(data, now, day) {
 var SAME_TOUCH = 8e3;
 function nfcServerAction(data, action, now, day, clock = clockOf(now)) {
 	if (action.tag === "cama") return bedAction(data, day, clock);
+	if (action.tag === "estirar") {
+		const s = action.stretch;
+		if (!s || !(s.seconds >= 60)) return {
+			next: data,
+			title: "Estiramiento sin guardar",
+			text: "Para que cuente, estira al menos un minuto."
+		};
+		const min = Math.round(Math.min(s.seconds, 1800) / 60);
+		return {
+			next: logStretch(data, s.when, Math.min(s.seconds, 1800), day),
+			title: "Estiramiento guardado",
+			text: `${min} min. Tu cuerpo te lo agradece.`
+		};
+	}
 	if (action.tag === "reading") {
 		const s = data.activeReading;
 		if (s && s.endedAt) return {

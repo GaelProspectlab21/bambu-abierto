@@ -1206,6 +1206,10 @@ button.d-card { box-shadow: 0 4px 0 var(--d-line); }
 .d-anillos { flex: none; transform: rotate(-90deg); padding: 4px; border-radius: 50%; background: var(--d-ring-disc); box-shadow: 0 4px 0 var(--d-green-lip); }
 .d-anillo circle { fill: none; stroke-width: 9; stroke-linecap: round; }
 .d-anillo .track { stroke: var(--d-ring-track); }
+.d-anillo.cuerpo .track { stroke: color-mix(in srgb, var(--d-ring-body) var(--d-ring-tint), transparent); }
+.d-anillo.mente .track { stroke: color-mix(in srgb, var(--d-ring-mind) var(--d-ring-tint), transparent); }
+.d-anillo.alma .track { stroke: color-mix(in srgb, var(--d-ring-soul) var(--d-ring-tint), transparent); }
+.d-anillo .fill.cero { opacity: 0; }
 .d-anillo .fill { transition: stroke-dashoffset .6s ease; }
 .d-anillo.cuerpo .fill { stroke: var(--d-ring-body); }
 .d-anillo.mente .fill { stroke: var(--d-ring-mind); }
@@ -1224,3 +1228,4 @@ button.d-card { box-shadow: 0 4px 0 var(--d-line); }
 .d-unit2.today .d-unit2-head { flex-wrap: wrap; }
 .d-anillos-ley span { opacity: 1; }
 .d-unit2-head > .d-anillos-ley { display: flex; }
+.d-coach-switch { display: block; margin: 18px auto 8px; }

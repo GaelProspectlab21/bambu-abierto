@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabase'
-import { correoVerificado, cuenta, errorDeCuenta, mandarVerificacion, revisarVerificacion, setLocalOnly } from './lib/nube'
+import { correoVerificado, cuenta, errorDeCuenta, mandarVerificacion, revisarVerificacion, setLocalOnly, socialListo } from './lib/nube'
 import { readScope } from './lib/storage'
 import { faltantes, fusionar, resumenLocal } from './lib/fusion'
 import { activeHabits, modulesOf, type AppData, type Modules } from './lib/model'
@@ -11,6 +11,7 @@ import { CandadoSetup } from './Candado'
 import { AvisosSetup, WidgetSetup } from './Widget'
 import { RemindersCard } from './RemindersCard'
 import { DuoIcon, type DuoIconName } from './DuoIcons'
+import { playSound, setSounds, soundsOn } from './lib/sounds'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Props = {
@@ -18,7 +19,7 @@ type Props = {
   onExport: () => void; onImport: (file?: File) => void; onSignOut: () => void; onDelete: (password?: string) => Promise<void>
 }
 
-const MODS: [keyof Modules, string, DuoIconName][] = [['training', 'Entreno', 'pesa'], ['focus', 'Tareas', 'lista'], ['reading', 'Lectura', 'libro'], ['food', 'Comida', 'plato']]
+const MODS: [keyof Modules, string, DuoIconName][] = [['training', 'Entreno', 'pesa'], ['focus', 'Tareas', 'lista'], ['reading', 'Lectura', 'libro'], ['bible', 'Biblia', 'estrella'], ['food', 'Comida', 'plato']]
 
 function Toggle({ on, onClick, title, text }: { on: boolean; onClick: () => void; title: string; text?: string }) {
   return <button type="button" className={`d-toggle ${on ? 'on' : ''}`} aria-pressed={on} onClick={onClick}>
@@ -32,6 +33,7 @@ function nfcPath(action: NfcAction): string {
 
 export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImport, onSignOut, onDelete }: Props) {
   const [name, setName] = useState(data.profile.name)
+  const [sound, setSound] = useState(soundsOn)
   const [key, setKey] = useState('')
   const [confirm, setConfirm] = useState('')
   const [pass, setPass] = useState('')
@@ -73,18 +75,6 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     if (!navigator.clipboard) { onMessage(url); return }
     navigator.clipboard.writeText(url).then(() => onMessage('Enlace copiado. Grábalo en la etiqueta con NFC Tools como URL.')).catch(() => onMessage(url))
   }
-  function sendData() {
-    const target = 'https://tuagentedeia.com'
-    const win = window.open(`${target}/bambu/?recibir=1`, '_blank')
-    if (!win) { onMessage('Tu navegador bloqueó la ventana nueva. Intenta otra vez.'); return }
-    const onMsg = (e: MessageEvent) => {
-      if (e.origin !== target || e.source !== win) return
-      if (e.data?.type === 'bambu-listo') win.postMessage({ type: 'bambu-datos', data: JSON.parse(JSON.stringify(data)) }, target)
-      if (e.data?.type === 'bambu-recibido') { onMessage('Listo: tus datos ya están en la versión nueva.'); window.removeEventListener('message', onMsg) }
-    }
-    window.addEventListener('message', onMsg)
-    window.setTimeout(() => window.removeEventListener('message', onMsg), 10 * 60000)
-  }
   function saveName() {
     const clean = name.trim().slice(0, 40)
     if (!clean || clean === data.profile.name) { setName(data.profile.name); return }
@@ -102,16 +92,15 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     { title: 'Cama', where: 'En la cabecera. Al tenderla tachas tu cama y queda tu hora de despertar.', icon: 'cama', action: { tag: 'cama' } },
     ...(mods.training ? [{ title: 'Piso de entreno', where: 'Donde entrenas. Un toque abre tu rutina, otro la cierra. Solo cuenta con series.', icon: 'pesa' as DuoIconName, action: { tag: 'training' } as NfcAction }] : []),
     ...(mods.reading ? [{ title: 'Lectura', where: 'En tu libro. Un toque empieza, otro termina.', icon: 'libro' as DuoIconName, action: { tag: 'reading' } as NfcAction }] : []),
+    { title: 'Estiramiento', where: 'Junto al tapete o la cama. 8 minutos guiados que cambian cada día; de mañana movilidad, de noche estiramiento.', icon: 'caminar', action: { tag: 'estirar' } },
+    ...(mods.focus ? [{ title: 'Bloque de enfoque', where: 'En tu escritorio. Abre tu bloque; si ya hay uno, te lleva a él.', icon: 'reloj' as DuoIconName, action: { tag: 'focus' } as NfcAction }] : []),
+    { title: 'Buenos días', where: 'En tu buró. Abre tus preguntas de la mañana.', icon: 'sol', action: { tag: 'checkin' } },
+    { title: 'Noche', where: 'Junto a la cama. ¿Diste lo que traías? Funciona aunque Safari no tenga sesión.', icon: 'luna', action: { tag: 'night' } },
   ]
 
   return <section className="d-page">
     <h1 className="d-title">Ajustes</h1>
 
-    {window.location.protocol === 'http:' && <div className="d-card d-move">
-      <h2>Pasar mis datos a la versión nueva</h2>
-      <p className="d-hint left">Abre tuagentedeia.com/bambu y le pasa todo lo de aquí: tu perfil, tu rutina, tus series de hoy y tus lecturas. Allá te pide confirmar.</p>
-      <button type="button" className="d-btn green wide" onClick={sendData}>Pasar mis datos</button>
-    </div>}
 
     <div className="d-card">
       <h2>Perfil</h2>
@@ -128,6 +117,11 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
       <label className="d-field">Descanso entre rondas</label>
       <div className="d-seg">{[0, 30, 60, 90, 120].map(n => <button key={n} type="button" className={plan.restSeconds === n ? 'on' : ''} onClick={() => setPlan({ restSeconds: n })}>{n ? `${n}s` : 'Sin'}</button>)}</div>
     </div>}
+
+    <div className="d-card">
+      <h2>Sonido</h2>
+      <Toggle on={sound} onClick={() => { const on = !sound; setSounds(on); setSound(on); if (on) playSound('day') }} title="Sonidos de Bambú" text="Madera al marcar, campanas cuando ganas algo. Con el iPhone en silencio no suena nada." />
+    </div>
 
     <div className="d-card">
       <h2>Despertar</h2>
@@ -161,8 +155,9 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     </div>
 
     {mods.training && <CandadoSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
-    <AvisosSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />
-    <WidgetSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />
+    {/* Avisos y widget de Kiki esperan su servidor en Supabase. Además su avisos-sw.js reemplazaría a sw.js (modo sin señal y avisos de bambu-remind). */}
+    {socialListo && <AvisosSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
+    {socialListo && <WidgetSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
     {server && <PauseSetup keyValue={key} onCopy={url => { navigator.clipboard?.writeText(url).then(() => onMessage('Enlace copiado.')).catch(() => onMessage(url)) }} />}
     {server && <RemindersCard data={data} commit={commit} onMessage={onMessage} />}
 
