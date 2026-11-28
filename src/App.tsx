@@ -31,6 +31,8 @@ import { SyncEngine, type SyncStatus } from './lib/sync'
 import { logAuth, setAuthLogOwner } from './lib/authLog'
 import { usePublicarPerfil } from './Tablas'
 import { usePublicarEstado } from './Widget'
+import { HitosLectura } from './RachaLectura'
+import { MetaComida } from './MetaComida'
 import { useFelicitar } from './Felicitar'
 import { OCULTAS_EN_COMPETIR, esCompetir, inicioDe } from './lib/modo'
 import { Consentimiento, aceptar, legalAceptado, mostrarLegal } from './Legal'
@@ -671,6 +673,8 @@ export default function App() {
     <AudioMiniPlayer />
     <StretchHost data={data} commit={commit} onMessage={message} boot={BOOT_STRETCH} />
     <CelebrationLayer />
+    <HitosLectura data={data} />
+    <MetaComida data={data} />
     {toast && <div key={toast.id} className={`toast ${toast.tone === 'error' ? 'toast-error' : ''}`} role={toast.tone === 'error' ? 'alert' : 'status'}>{toast.tone === 'error' && <i aria-hidden="true">!</i>}<span>{toast.text}</span>{toast.undo && <button onClick={() => { toast.undo?.(); setToast(null) }}>{toast.action ?? 'Deshacer'}</button>}</div>}
   </div>
 }

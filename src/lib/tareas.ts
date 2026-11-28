@@ -75,3 +75,12 @@ export function moverTarea(data: AppData, id: string, day: string | undefined, n
     }),
   }
 }
+
+const DIA_CORTO = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+/** v12: la tira de días para programar una tarea: hoy y los siguientes, con su nombre corto y su número. */
+export function proximosDias(today: string, n = 14): { day: string; nombre: string; num: number }[] {
+  return Array.from({ length: n }, (_, i) => {
+    const day = shiftDay(today, i), d = new Date(`${day}T12:00:00`)
+    return { day, nombre: i === 0 ? 'hoy' : i === 1 ? 'mañ' : DIA_CORTO[d.getDay()], num: d.getDate() }
+  })
+}

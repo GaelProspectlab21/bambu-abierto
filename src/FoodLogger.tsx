@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { dateKey, makeId, type AppData, type Meal, type MealItem, type MealSlot } from './lib/model'
-import { FOODS, HAND, itemOf, searchFoods, type Food } from './lib/foods'
+import { FOODS, HAND, foodById, itemOf, searchFoods, type Food } from './lib/foods'
+import { cargarEmpaquetados } from './lib/alimentosMx'
 import { frequentMeals, mealTotals, SLOT_LABEL } from './lib/nutrition'
 import { Icon } from './Icons'
 import { reward } from './juice'
@@ -48,7 +49,10 @@ export function FoodLogger({ data, commit, slot: initial, growth, onClose, onMes
     return () => window.removeEventListener('keydown', esc)
   }, [onClose])
 
-  const results = query.trim() ? searchFoods(query, 20) : QUICK_IDS.map(id => FOODS.find(f => f.id === id)!).filter(Boolean)
+  // v12: los empaquetados de México (Open Food Facts) se bajan al abrir el registro, sin hacer pesada la app.
+  const [empaquetados, setEmpaquetados] = useState(0)
+  useEffect(() => { void cargarEmpaquetados().then(setEmpaquetados) }, [])
+  const results = useMemo(() => query.trim() ? searchFoods(query, 30) : QUICK_IDS.map(id => FOODS.find(f => f.id === id)!).filter(Boolean), [query, empaquetados])
   const add = (food: Food, e?: MouseEvent) => {
     setCart(c => {
       const at = c.findIndex(i => i.foodId === food.id)
@@ -60,7 +64,7 @@ export function FoodLogger({ data, commit, slot: initial, growth, onClose, onMes
   }
   const setQty = (k: number, qty: number) => setCart(c => qty <= 0 ? c.filter((_, j) => j !== k) : c.map((i, j) => {
     if (j !== k) return i
-    const food = [...FOODS, ...HAND].find(f => f.id === i.foodId)
+    const food = [...FOODS, ...HAND].find(f => f.id === i.foodId) ?? (i.foodId ? foodById(i.foodId) : undefined)
     return food ? itemOf(food, qty) : { ...i, qty, kcal: Math.round(i.kcal / i.qty * qty), protein: Math.round(i.protein / i.qty * qty * 10) / 10 }
   }))
   const handCount = (id: string) => cart.find(i => i.foodId === id)?.qty ?? 0
@@ -104,7 +108,7 @@ export function FoodLogger({ data, commit, slot: initial, growth, onClose, onMes
         <input className="text-input food-search" type="search" inputMode="search" placeholder="Huevo, tacos, plátano" value={query} onChange={e => setQuery(e.target.value)} aria-label="Buscar alimento" />
         {!query.trim() && <p className="food-hint">Lo más común</p>}
         <div className="food-results">{results.map(f => <button key={f.id} type="button" onClick={e => add(f, e)}>
-          <span><strong>{f.name}</strong><small>{f.unit}{f.estimated ? ' · Estimado' : f.source ? ' · Etiqueta del fabricante' : ''}{growth ? '' : ` · ${f.kcal} kcal`}</small></span><i aria-hidden="true">+</i></button>)}
+          <span><strong>{f.name}</strong><small>{f.unit}{f.estimated ? ' · Estimado' : f.source ? ' · Etiqueta' : ''}{f.sugar !== undefined ? ` · ${f.sugar} g azúcar` : ''}{growth ? '' : ` · ${f.kcal} kcal`}</small></span><i aria-hidden="true">+</i></button>)}
           {query.trim() && !results.length && <p className="food-empty">No está en la lista. Usa A ojo o Etiqueta.</p>}
         </div>
       </>}

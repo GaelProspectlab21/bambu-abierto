@@ -111,14 +111,16 @@ function dayNodes(data: AppData, day: string, today: string): PathNode[] {
   return out
 }
 
-function Node({ n, x, onTap, mascot }: { n: PathNode; x: number; onTap: (el: HTMLElement) => void; mascot?: ReactNode }) {
-  return <div className={`d-step2 ${n.state}`} style={{ '--x': `${x * 62}px` } as CSSProperties}>
-    {n.state === 'now' && <span className="d-start">{n.kind === 'train' ? '¡A entrenar!' : n.kind === 'read' || n.kind === 'bible' ? '¡A leer!' : n.kind === 'manana' ? '¡Buenos días!' : n.kind === 'walk' ? '¡A caminar!' : n.kind === 'night' ? '¡A cerrar!' : 'Empezar'}</span>}
+function Node({ n, x, onTap, mascot, tip }: { n: PathNode; x: number; onTap: (el: HTMLElement) => void; mascot?: ReactNode; tip?: string }) {
+  // v12: tu día es una caña que crece. Cada pendiente es un segmento; el avance lo llena desde abajo.
+  const p = n.partial !== undefined && n.state !== 'done' && n.state !== 'locked' ? Math.max(0, Math.min(1, n.partial)) : 0
+  return <div className={`d-step2 ${n.state}`} style={{ '--x': `${x * 62}px`, '--p': p } as CSSProperties}>
+    {n.state === 'now' && <span className="d-start">Te toca</span>}
     <button type="button" className={`d-node2 ${n.state} ${n.live ? 'live' : ''}`} onClick={e => onTap(e.currentTarget)} aria-label={`${n.label}${n.sub ? `, ${n.sub}` : ''}`}>
-      {n.partial !== undefined && n.partial > 0 && n.state !== 'done' && n.state !== 'locked' && <svg className="d-node-ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - n.partial * 100} /></svg>}
+      {p > 0 && <i className="d-node-llena" aria-hidden="true" />}
       <DuoIcon name={n.state === 'done' ? 'check' : n.state === 'locked' ? 'candado' : n.icon} size={44} />
     </button>
-    <span className="d-step2-label"><b>{n.label}</b>{n.sub && <small>{n.sub}</small>}</span>
+    <span className="d-step2-label"><b>{n.label}</b>{n.sub && <small>{n.sub}</small>}{tip && <em className="d-step2-tip">{tip}</em>}</span>
     {mascot}
   </div>
 }
@@ -218,7 +220,8 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
       </header>
       {kind === 'today' && ofrecerOro(data, today, anillos) && <OroInvite ring={ofrecerOro(data, today, anillos)!} onOpen={() => setOro(ofrecerOro(data, today, anillos))} />}
       {nodes.map((n, i) => <Node key={n.kind} n={n} x={WAVE[(offset + i) % WAVE.length]} onTap={() => tap(n, day)}
-        mascot={kind === 'today' && n.state === 'now' ? <div className={`d-mascot ${WAVE[(offset + i) % WAVE.length] > 0 ? 'left' : 'right'}`}><div className="d-mascot-say">{line.text}</div><BroteArt mood={line.mood} size={96} /></div> : undefined} />)}
+        tip={kind === 'today' && n.state === 'now' ? line.text : undefined}
+        mascot={kind === 'today' && n.state === 'now' ? <div className="d-mascot right"><BroteArt mood={line.mood} size={96} /></div> : undefined} />)}
       {kind === 'today' && <div className="d-step2 chest">
         <button type="button" className={`d-chest ${allDone ? 'open' : ''}`} onClick={() => allDone ? celebrate({ kind: 'day', title: '¡Día completo!', text: `Ganaste ${xpToday} XP hoy. Tu bambú está en flor.` }) : onMessage(`Vas en ${Math.round(score.pct * 100)}%. Al 80% se abre el cofre.`)} aria-label="Cofre del día">
           <DuoIcon name="cofre" size={64} off={!allDone} />

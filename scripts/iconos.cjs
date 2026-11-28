@@ -11,7 +11,8 @@ const svg = fs.readFileSync(path.join(PUB, 'icon.svg'), 'utf8')
 // Cuadrado completo: iOS y Android recortan las esquinas por su cuenta.
 const lleno = svg.replace('rx="112"', 'rx="0"')
 // Maskable: Android puede recortar en círculo; el dibujo cabe en el 80 % del centro.
-const seguro = lleno.replace(/(<rect width="512" height="512" rx="0" fill="#0e1411"\/>)([\s\S]*)(<\/svg>)/, '$1<g transform="translate(256 256) scale(.8) translate(-256 -256)">$2</g>$3')
+const fin = lleno.indexOf('>', lleno.indexOf('<rect')) + 1, cierre = lleno.slice(fin).startsWith('</rect>') ? fin + 7 : fin
+const seguro = lleno.slice(0, cierre) + '<g transform="translate(256 256) scale(.8) translate(-256 -256)">' + lleno.slice(cierre, lleno.lastIndexOf('</svg>')) + '</g></svg>'
 
 const SALIDAS = [
   ['apple-touch-icon.png', lleno, 180, false],

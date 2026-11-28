@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { dateKey, type AppData } from './lib/model'
-import { bodyAdvice, muscleStats, PERIODS, type Muscle, type MuscleStat, type Period } from './lib/musculos'
+import { balance, bodyAdvice, muscleStats, PERIODS, type Muscle, type MuscleStat, type Period } from './lib/musculos'
 import { fmtDay } from './ui'
 import { Sheet } from './Sheet'
 
@@ -57,6 +57,9 @@ export function BodyCard({ data, onTrain }: { data: AppData; onTrain?: (m: Muscl
   const today = dateKey()
   const [period, setPeriod] = useState<Period>('mes')
   const stats = useMemo(() => muscleStats(data, today, period), [data, today, period])
+  const bal = useMemo(() => balance(stats, period, today), [stats, period, today])
+  // v12: el mapa usa el mismo criterio que la lista (series por semana contra el rango sano), no "comparado con tu músculo más entrenado".
+  const mapa = useMemo(() => period === 'siempre' ? stats : Object.fromEntries(bal.filas.map(f => [f.muscle, { ...stats[f.muscle], level: stats[f.muscle].sets === 0 ? 0 : f.estado === 'falta' ? 1 : f.estado === 'bien' ? 2 : 3 }])) as typeof stats, [stats, bal, period])
   const [sel, setSel] = useState<Muscle | null>(null)
   const s = sel ? stats[sel] : null
   const pname = PERIODS.find(p => p.id === period)!.name
@@ -64,8 +67,22 @@ export function BodyCard({ data, onTrain }: { data: AppData; onTrain?: (m: Muscl
     <div className="d-card-head"><h2>Tu cuerpo</h2></div>
     <div className="d-mode three" role="tablist" aria-label="Periodo">{PERIODS.map(p => <button key={p.id} type="button" role="tab" aria-selected={period === p.id} className={period === p.id ? 'on' : ''} onClick={() => setPeriod(p.id)}>{p.name}</button>)}</div>
     <p className="d-hint left">{bodyAdvice(stats)} Toca un músculo para ver tus números.</p>
-    <Body stats={stats} sel={sel} onPick={setSel} />
-    <div className="d-legend"><span className="l3">Mucho</span><span className="l2">Medio</span><span className="l1">Poco</span><span className="l0">Nada</span></div>
+    <Body stats={mapa} sel={sel} onPick={setSel} />
+    {period === 'siempre'
+      ? <div className="d-legend"><span className="l3">Mucho</span><span className="l2">Medio</span><span className="l1">Poco</span><span className="l0">Nada</span></div>
+      : <div className="d-legend"><span className="l3">Arriba</span><span className="l2">En rango</span><span className="l1">Falta</span><span className="l0">Nada</span></div>}
+    {period !== 'siempre' && <>
+      {bal.teToca && <div className="mu-toca"><span>Te toca</span><b>{bal.teToca}</b><small>Es lo que más lejos está de su rango y ya descansó.</small>{onTrain && <button type="button" className="d-btn green small" onClick={() => onTrain(bal.teToca!)}>Ver ejercicios</button>}</div>}
+      <ul className="mu-balance" aria-label="Series por semana de cada músculo">{bal.filas.map(f => {
+        const tope = f.rango[1] * 1.4, pos = (v: number) => `${Math.min(100, v / tope * 100)}%`
+        return <li key={f.muscle} className={f.estado}><button type="button" onClick={() => setSel(f.muscle)}>
+          <span className="mu-n">{f.muscle}{f.recuperando && <i title="Entrenaste ayer o hoy">recuperando</i>}</span>
+          <span className="mu-pista" aria-hidden="true"><em style={{ left: pos(f.rango[0]), width: `calc(${pos(f.rango[1])} - ${pos(f.rango[0])})` }} /><u style={{ width: pos(f.porSemana) }} /></span>
+          <b>{f.porSemana}<small>/sem</small></b>
+        </button></li>
+      })}</ul>
+      <p className="d-hint left">La franja clara es el rango sano de series por semana. Debajo te falta; arriba, cuida descansar.</p>
+    </>}
     {s && <Sheet title={s.muscle} onClose={() => setSel(null)}>
       <p className="d-hint left">{pname === 'Siempre' ? 'Desde que empezaste' : `Últimos ${pname}`}</p>
       <div className="d-tiles">

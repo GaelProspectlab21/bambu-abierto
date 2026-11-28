@@ -7,7 +7,7 @@
  */
 export type SoundKind = 'complete' | 'undo' | 'achieve' | 'record' | 'streak' | 'level' | 'day' | 'gold' | 'focusStart' | 'focusEnd'
   | 'miss' | 'tick' | 'go' | 'bible' | 'night' | 'meal' | 'awake'
-  | 'stretchIn' | 'pose' | 'sideL' | 'sideR' | 'count' | 'breathe' | 'stretchDone' | 'pause' | 'resume' | 'pick' | 'pop' | 'ribbit'
+  | 'stretchIn' | 'pose' | 'sideL' | 'sideR' | 'count' | 'breathe' | 'stretchDone' | 'pause' | 'resume' | 'pick' | 'pop' | 'ribbit' | 'feast' | 'tacto'
 export const SOUND_KEY = 'bambu.sonidos'
 
 /** Re pentatónica, de Re4 a Re6. */
@@ -51,9 +51,14 @@ export const SCORES: Record<Exclude<SoundKind, 'complete'>, readonly Note[]> = {
   pick: [['wood', 6, 0, .4]],
   pop: [['wood', 9, 0, .45], ['wood', 7, .05, .3]],
   ribbit: [['wood', 0, 0, .7], ['wood', 0, .055, .6], ['wood', 2, .15, .7]],
+  // v12: llegaste a tu energía del día. El plato se llena nota por nota (toda la escala) y cierra en acorde.
+  feast: [...Array.from({ length: 10 }, (_, i) => ['wood', i, i * .07, .45 + i * .04] as const),
+    ['bell', 10, .78, .6], ['bell', 8, .78, .45], ['bell', 7, .78, .35], ['bowl', 0, .78, .6], ['bell', 10, 1.2, .3]],
+  // v12: el toque más bajito de la casa. Solo pestañas, interruptores y chips (ver tacto.ts).
+  tacto: [['wood', 7, 0, .12]],
 }
 /** Más alto gana: una celebración nunca la tapa el clic que la provocó. */
-const PRIORITY: Record<SoundKind, number> = { undo: 0, miss: 0, pause: 0, resume: 0, pick: 0, pop: 0, tick: 1, count: 1, breathe: 1, complete: 1, meal: 1, achieve: 2, record: 2, focusStart: 2, go: 2, bible: 2, stretchIn: 2, pose: 2, sideL: 2, sideR: 2, ribbit: 2, gold: 3, streak: 3, night: 3, level: 4, day: 4, focusEnd: 4, awake: 4, stretchDone: 4 }
+const PRIORITY: Record<SoundKind, number> = { undo: 0, miss: 0, pause: 0, resume: 0, pick: 0, pop: 0, tacto: 0, tick: 1, count: 1, breathe: 1, complete: 1, meal: 1, achieve: 2, record: 2, focusStart: 2, go: 2, bible: 2, stretchIn: 2, pose: 2, sideL: 2, sideR: 2, ribbit: 2, gold: 3, streak: 3, night: 3, level: 4, day: 4, focusEnd: 4, awake: 4, stretchDone: 4, feast: 4 }
 
 /** Encendido salvo que lo apagues. El iPhone respeta el modo silencio porque Web Audio es ambiente. */
 export function soundAllowed(preference: string | null, hidden: boolean, interrupted: boolean, mediaPlaying: boolean): boolean {

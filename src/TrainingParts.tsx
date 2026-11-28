@@ -5,6 +5,8 @@ import { imageOf, ladder, SLOT_LABEL, type Exercise } from './lib/exercises'
 import { available, personalBest, sessionsOf, setValue, type PlanItem } from './lib/coach'
 import { checkValue, footballToAsk, restFor } from './lib/session'
 import { haptic } from './lib/haptic'
+import { guardarUnaMano, juntarManos, leerUnaMano } from './lib/unaMano'
+import { playSound } from './lib/sounds'
 import { Card, Chips, MoveImage, Stepper, celebrate, countTick, goSignal, mmss } from './ui'
 
 export type Commit = (update: (d: AppData) => AppData) => void
@@ -26,21 +28,36 @@ export function SetLogger({ ex, data, target, commit, onMessage, express = false
   const [rir, setRir] = useState<number>(1)
   const [withLoad, setWithLoad] = useState(!!last?.loadKg)
   const [load, setLoad] = useState(last?.loadKg ?? 2)
-  const [doubt, setDoubt] = useState<{ value: number; text: string } | null>(null)
+  const [doubt, setDoubt] = useState<{ value: number; text: string; note?: string } | null>(null)
   useEffect(() => { setValue(target) }, [target])
   useEffect(() => { setDoubt(null) }, [stepperValue])
   const timer = data.activeWorkout?.timer
   const ownTimer = timer?.exercise === ex.id ? timer : undefined
   const unit = ex.mode === 'seconds' ? ' s' : ''
+  // v12: una mano a la vez. `primera` guarda la primera mano hasta que llega la segunda.
+  const [unaMano, setUnaMano] = useState(() => leerUnaMano(ex))
+  const [primera, setPrimera] = useState<number | null>(null)
+  useEffect(() => { setUnaMano(leerUnaMano(ex)); setPrimera(null) }, [ex.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  /** Primero junta las manos (si toca) y luego guarda la serie completa. */
+  function registrar(value = stepperValue) {
+    if (value < 1) { save(value); return }
+    if (unaMano && primera === null) {
+      setPrimera(value); haptic([20, 40, 20]); playSound('sideR')
+      onMessage(`Primera mano: ${value}${unit}. Ahora la otra.`)
+      return
+    }
+    if (unaMano && primera !== null) { const j = juntarManos(primera, value, ex.mode === 'seconds' ? 's' : 'reps'); setPrimera(null); save(j.value, false, j.note); return }
+    save(value)
+  }
   /** `value` viene del cronómetro al pararlo, o del stepper si se anota a mano. */
-  function save(value = stepperValue, confirmed = false) {
+  function save(value = stepperValue, confirmed = false, note?: string) {
     if (value < 1) { haptic([40, 30, 40]); onMessage(ex.mode === 'seconds' ? 'Anota al menos un segundo.' : 'Anota al menos una repetición.'); return }
     const warning = confirmed ? null : checkValue(ex, value)
-    if (warning) { haptic([40, 30, 40]); setDoubt({ value, text: warning }); return }
+    if (warning) { haptic([40, 30, 40]); setDoubt({ value, text: warning, note }); return }
     setDoubt(null)
     const now = Date.now()
     const rest = restFor(ex, data.settings, express)
-    const row: TrainingSet = { id: makeId(), day: dateKey(), at: now, exercise: ex.id, ...(ex.mode === 'seconds' ? { seconds: value } : { reps: value }), rir: ownTimer?.rir ?? rir, ...(ownTimer?.loadKg !== undefined ? { loadKg: ownTimer.loadKg } : withLoad && load > 0 ? { loadKg: load } : {}) }
+    const row: TrainingSet = { id: makeId(), day: dateKey(), at: now, exercise: ex.id, ...(ex.mode === 'seconds' ? { seconds: value } : { reps: value }), ...(note ? { note } : {}), rir: ownTimer?.rir ?? rir, ...(ownTimer?.loadKg !== undefined ? { loadKg: ownTimer.loadKg } : withLoad && load > 0 ? { loadKg: load } : {}) }
     commit(d => ({ ...d, sets: [...d.sets, row], activeWorkout: { ...(d.activeWorkout && !d.activeWorkout.endedAt ? d.activeWorkout : { startedAt: now }), timer: undefined, restUntil: now + rest * 1000 } }))
     const best = personalBest(data, ex.id)
     const record = !!best && value > (best.reps ?? best.seconds ?? 0) && (row.loadKg ?? 0) >= (best.loadKg ?? 0)
@@ -51,16 +68,18 @@ export function SetLogger({ ex, data, target, commit, onMessage, express = false
   return <div className="set-logger">
     {ex.mode === 'seconds' && <ExerciseTimer startedAt={ownTimer?.startedAt} minimum={ex.range[0]} target={Math.min(ex.range[1], Math.max(ex.range[0], target))}
       onStart={() => { if (timer) { onMessage('Ya hay una serie cronometrada. Termínala primero.'); return } const now = Date.now(); commit(d => ({ ...d, activeWorkout: { ...(d.activeWorkout && !d.activeWorkout.endedAt ? d.activeWorkout : { startedAt: now }), timer: { exercise: ex.id, startedAt: now + 3000, rir, ...(withLoad ? { loadKg: load } : {}) } } })) }}
-      onStop={seconds => { setValue(seconds); save(seconds) }} onCancel={() => commit(d => ({ ...d, activeWorkout: d.activeWorkout ? { ...d.activeWorkout, timer: undefined } : null }))} />}
+      onStop={seconds => { setValue(seconds); registrar(seconds) }} onCancel={() => commit(d => ({ ...d, activeWorkout: d.activeWorkout ? { ...d.activeWorkout, timer: undefined } : null }))} />}
     <Stepper label={ex.mode === 'seconds' ? 'segundos' : 'repeticiones'} unit={ex.mode === 'seconds' ? 's' : 'reps'} value={stepperValue} onChange={setValue} min={0} max={ex.mode === 'seconds' ? 600 : 200} step={ex.mode === 'seconds' ? 5 : 1} />
     <Chips label="Esfuerzo" value={rir} onChange={setRir} options={[[3, 'Fácil, sobraban 3+'], [1, 'Justo, 1 o 2 más'], [0, 'Al fallo técnico']]} />
     <label className="checkbox-label"><input type="checkbox" checked={withLoad} onChange={e => setWithLoad(e.target.checked)} />Con peso (mochila o libros)</label>
     {withLoad && <Stepper label="kilos" unit="kg" value={load} onChange={setLoad} min={0} max={60} step={0.5} />}
     {doubt && <div className="doubt" role="alert">
       <p>{doubt.text}</p>
-      <div className="row-actions"><button type="button" className="secondary-button" onClick={() => save(doubt.value, true)}>Sí, guardar {doubt.value}{unit}</button><button type="button" className="quiet-button" onClick={() => setDoubt(null)}>Corregir</button></div>
+      <div className="row-actions"><button type="button" className="secondary-button" onClick={() => save(doubt.value, true, doubt.note)}>Sí, guardar {doubt.value}{unit}</button><button type="button" className="quiet-button" onClick={() => setDoubt(null)}>Corregir</button></div>
     </div>}
-    <button className="primary-button wide" disabled={!!timer} onClick={() => save()}>Guardar serie <span>{stepperValue}{unit}</span></button>
+    <label className="checkbox-label una-mano"><input type="checkbox" checked={unaMano} onChange={e => { setUnaMano(e.target.checked); guardarUnaMano(ex.id, e.target.checked); setPrimera(null) }} />Una mano a la vez (una sola pesa)</label>
+    {unaMano && <p className="una-mano-paso" aria-live="polite">{primera === null ? 'Primero una mano. Al parar, te toca la otra.' : <>Primera mano: <b>{primera}{unit}</b>. Ahora la otra mano.</>}</p>}
+    <button className="primary-button wide" disabled={!!timer} onClick={() => registrar()}>{unaMano ? (primera === null ? 'Guardar primera mano' : 'Guardar la otra mano') : 'Guardar serie'} <span>{stepperValue}{unit}</span></button>
   </div>
 }
 

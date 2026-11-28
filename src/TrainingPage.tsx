@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { BodyCard } from './Musculos'
 import { StretchCard } from './Stretch'
 import { dateKey, makeId, type Activity, type AppData, type BodyLog, type Checkin } from './lib/model'
 import { EXERCISES, HOME_GEAR, MUSCLES, SLOT_LABEL, TEMPLATES, exercise, ladder, muscleLabel, type Exercise, type Slot } from './lib/exercises'
@@ -25,7 +26,7 @@ export function TrainingPage({ data, commit, onMessage, embedded = false }: Prop
     <Tabs label="Secciones de entrenamiento" value={tab} onChange={setTab} options={[['hoy', 'Hoy'], ['recuperacion', 'Cuerpo'], ['progreso', 'Progreso'], ['coach', 'Método']]} />
     {/* v11: Hoy es solo tu sesión. Fútbol, check-in y estiramiento viven en Cuerpo (antes todo iba en Hoy y era kilométrico). */}
     {tab === 'hoy' && <TodayTab data={data} commit={commit} onMessage={onMessage} />}
-    {tab === 'recuperacion' && <><QuickActivities data={data} commit={commit} onMessage={onMessage} /><StretchCard data={data} mode="entrenar" /><RecoveryTab data={data} /><CheckinCard data={data} commit={commit} onMessage={onMessage} /></>}
+    {tab === 'recuperacion' && <><BodyCard data={data} /><QuickActivities data={data} commit={commit} onMessage={onMessage} /><StretchCard data={data} mode="entrenar" /><RecoveryTab data={data} /><CheckinCard data={data} commit={commit} onMessage={onMessage} /></>}
     {tab === 'progreso' && <ProgressTab data={data} commit={commit} onMessage={onMessage} />}
     {tab === 'coach' && <><CoachTab data={data} /><LibraryTab data={data} commit={commit} /></>}
   </>

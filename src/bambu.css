@@ -447,10 +447,158 @@
 
 /* v11.5 · Invitar a un amigo (solo la cuenta dueña). */
 .admin-accounts { display: grid; gap: 12px; }
-.admin-code { justify-self: center; padding: 10px 22px; border: 2px dashed var(--d-gold); border-radius: var(--d-radius); background: var(--d-gold-light); color: var(--d-gold); font-family: var(--display); font-size: 30px; font-weight: 700; letter-spacing: .14em; font-variant-numeric: tabular-nums; cursor: pointer; }
+.admin-code { justify-self: center; padding: 10px 22px; border: 2px dashed var(--d-gold); border-radius: var(--d-radius); background: var(--d-gold-light); color: var(--d-gold); font-family: var(--title); font-size: 30px; font-weight: 700; letter-spacing: .14em; font-variant-numeric: tabular-nums; cursor: pointer; }
 .admin-list li { border: 2px solid var(--d-line); border-radius: var(--d-radius); background: var(--d-bg); }
 .admin-list small { color: var(--d-dim); }
 
 /* v11.5 · La entrada (lo primero que ve un amigo invitado) habla como Bambú: sin mayúsculas ni azul. */
 .d-auth .d-btn, .d-auth .d-mode button, .d-auth .d-pass-eye, .d-auth .d-auth-link { text-transform: none; letter-spacing: 0; }
 .d-auth .d-pass-eye, .d-auth .d-auth-link { color: var(--d-gold); }
+
+/* v12 · Una mano a la vez */
+.una-mano-paso { margin: 0; padding: 10px 14px; border: 2px solid var(--d-line); border-radius: var(--d-radius); background: var(--d-bg); color: var(--d-dim); font-weight: 800; }
+.una-mano-paso b { color: var(--d-gold); font-variant-numeric: tabular-nums; }
+
+/* v12 · Elegir el día de una tarea: tira de 14 días con scroll lateral y el calendario para lo lejano. */
+.dia-picker { display: grid; gap: 8px; min-width: 0; }
+.dia-tira { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scroll-snap-type: x proximity; scrollbar-width: none; }
+.dia-tira::-webkit-scrollbar { display: none; }
+.dia-tira button { flex: none; display: grid; place-items: center; gap: 0; width: 50px; min-height: 58px; padding: 6px 0; border: 2px solid var(--d-line); border-radius: 14px; background: var(--d-bg); color: var(--d-dim); box-shadow: 0 3px 0 var(--d-line); scroll-snap-align: start; cursor: pointer; }
+.dia-tira button small { font-size: 12px; font-weight: 800; }
+.dia-tira button b { font-family: var(--title); font-size: 20px; color: var(--d-ink); font-variant-numeric: tabular-nums; }
+.dia-tira button.on { border-color: var(--d-green); background: var(--d-green-light); box-shadow: 0 3px 0 var(--d-green-lip); color: var(--d-green-ink); }
+.dia-tira button:active { transform: translateY(3px); box-shadow: none; }
+.dia-extra { display: flex; gap: 8px; flex-wrap: wrap; }
+.dia-extra .d-btn { min-height: 44px; flex: 1 1 auto; }
+.dia-extra .d-btn.on { border-color: var(--d-green); color: var(--d-green-ink); }
+.dia-cal { position: relative; overflow: hidden; }
+.dia-cal input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.d-tasks li:has(.dia-mover-panel) { flex-wrap: wrap; }
+.dia-mover-panel { flex: 1 0 100%; padding: 6px 2px 2px; min-width: 0; }
+.dia-mover.on { color: var(--d-green-ink); }
+
+/* v12 · Racha de lectura: la brasa es la racha, el dorado los escudos que ganaste. */
+.racha-lect { display: grid; gap: 14px; margin: 4px 0 16px; padding: 18px; border: 2px solid var(--d-line); border-radius: var(--d-radius-l); background: var(--d-surface); box-shadow: 0 4px 0 var(--d-line); }
+.racha-lect.hecho { border-color: var(--d-orange); box-shadow: 0 4px 0 var(--d-orange); }
+.rl-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rl-num { display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 8px; }
+.rl-num b { font-family: var(--title); font-size: 56px; line-height: 1; color: var(--d-orange); font-variant-numeric: tabular-nums; }
+.racha-lect:not(.hecho) .rl-num b { color: var(--d-ink); }
+.rl-num span { grid-column: 1 / -1; color: var(--d-dim); font-weight: 800; font-size: 14px; }
+.rl-escudos { display: grid; grid-template-columns: repeat(2, auto); justify-items: center; gap: 2px 6px; text-align: center; }
+.rl-escudos small { grid-column: 1 / -1; color: var(--d-dim); font-size: 12px; font-weight: 800; }
+.rl-escudos span.on .duo-icon { filter: drop-shadow(0 0 6px var(--d-gold)); }
+.rl-semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.rl-semana li { display: grid; justify-items: center; gap: 4px; }
+.rl-semana small { color: var(--d-faint); font-size: 12px; font-weight: 900; }
+.rl-semana i { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--d-line); background: var(--d-bg); }
+.rl-semana .leido i { border-color: var(--d-orange); background: var(--d-orange); }
+.rl-semana .protegido i { border: 2px dashed var(--d-gold); background: var(--d-gold-light); }
+.rl-semana .hoy i { border: 2px dashed var(--d-orange); animation: rl-late 1.6s ease-in-out infinite; }
+.rl-semana .hoy small { color: var(--d-ink); }
+.rl-semana .antes i { opacity: .35; }
+@keyframes rl-late { 50% { transform: scale(1.08); } }
+.rl-hito { display: grid; gap: 6px; }
+.rl-hito span { color: var(--d-dim); font-weight: 800; font-size: 14px; }
+.rl-hito b { color: var(--d-ink); }
+.rl-barra { height: 10px; border-radius: 6px; background: var(--d-off); overflow: hidden; }
+.rl-barra i { display: block; height: 100%; border-radius: 6px; background: var(--d-orange); transition: width 420ms cubic-bezier(.2, .9, .3, 1.2); }
+.rl-frase { margin: 0; font-weight: 800; color: var(--d-ink); }
+.racha-lect.riesgo .rl-frase { color: var(--d-orange); }
+.rl-mejor { margin: 0; color: var(--d-faint); font-size: 13px; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .rl-semana .hoy i { animation: none; } }
+
+/* v12 · El plato que se llena: el festejo de llegar a tu energía del día. */
+.meta-moment { position: fixed; inset: 0; z-index: 56; display: grid; align-content: center; justify-items: center; gap: 12px; padding: 24px; text-align: center; background: var(--d-page); color: var(--d-ink); overflow: hidden; cursor: pointer; animation: ql-fade 200ms ease; }
+.mm-plato { position: relative; display: grid; place-items: center; }
+.mm-plato svg { transform: rotate(-90deg); }
+.mm-plato img { position: absolute; animation: mm-brote 520ms 780ms cubic-bezier(.2, .9, .3, 1.5) backwards; }
+.mm-pista { fill: none; stroke: var(--d-off); stroke-width: 12; }
+.mm-llena { fill: none; stroke: var(--d-green); stroke-width: 12; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; animation: mm-llenar 760ms cubic-bezier(.5, 0, .3, 1) forwards, mm-brillo 900ms 780ms ease-out; }
+.mm-title { font-family: var(--title); font-size: 30px; line-height: 1.1; max-width: 340px; animation: mm-sube 400ms 760ms cubic-bezier(.2, .9, .3, 1.3) backwards; }
+.mm-text { color: var(--d-dim); font-weight: 800; max-width: 320px; animation: mm-sube 400ms 860ms ease backwards; }
+.mm-extra { color: var(--d-gold); font-size: 18px; animation: mm-sube 400ms 960ms ease backwards; }
+.meta-moment .confetti i { animation-delay: var(--d); }
+@keyframes mm-llenar { to { stroke-dashoffset: 0; } }
+@keyframes mm-brillo { 0% { filter: drop-shadow(0 0 0 var(--d-green)); } 40% { filter: drop-shadow(0 0 22px var(--d-green)); } 100% { filter: drop-shadow(0 0 0 var(--d-green)); } }
+@keyframes mm-brote { from { transform: scale(.2) translateY(30px); opacity: 0; } }
+@keyframes mm-sube { from { transform: translateY(16px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .mm-llena { animation: none; stroke-dashoffset: 0; } .mm-plato img, .mm-title, .mm-text, .mm-extra { animation: none; } }
+
+/* v12 · Nutrientes del día: la fibra llena en verde (meta), azúcar y sodio en sol (referencia), sin rojo. */
+.nutr-lista { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.nutr-lista li { display: grid; gap: 5px; }
+.nutr-fila { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-weight: 800; }
+.nutr-fila span { color: var(--d-ink); }
+.nutr-fila b { font-variant-numeric: tabular-nums; color: var(--d-ink); }
+.nutr-fila small { color: var(--d-faint); font-weight: 700; }
+.nutr-barra { display: block; height: 10px; border-radius: 6px; background: var(--d-off); overflow: hidden; }
+.nutr-barra u { display: block; height: 100%; border-radius: 6px; background: var(--d-dim); transition: width 420ms cubic-bezier(.2, .9, .3, 1.2); }
+.nutr-lista .meta .nutr-barra u { background: var(--d-green); }
+.nutr-lista .tope .nutr-barra u { background: var(--d-gold); }
+.nutr-lista .meta.llena .nutr-fila b { color: var(--d-green-ink); }
+.nutr-nota { color: var(--d-dim); font-size: 13px; font-weight: 700; }
+
+/* v12 · Tu cuerpo: series por semana contra el rango sano y lo que te toca. */
+.mu-toca { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 12px 14px; border: 2px solid var(--d-green); border-radius: var(--d-radius); background: var(--d-green-light); box-shadow: 0 4px 0 var(--d-green-lip); }
+.mu-toca span { color: var(--d-green-ink); font-weight: 900; font-size: 13px; }
+.mu-toca b { grid-column: 1; font-family: var(--title); font-size: 26px; color: var(--d-ink); }
+.mu-toca small { grid-column: 1; color: var(--d-dim); font-weight: 700; }
+.mu-toca .d-btn { grid-column: 2; grid-row: 1 / span 3; }
+.mu-balance { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.mu-balance button { display: grid; grid-template-columns: 92px 1fr 62px; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 4px 6px; border: 0; border-radius: 12px; background: none; color: var(--d-ink); text-align: left; cursor: pointer; }
+.mu-balance button:active { background: var(--d-bg); }
+.mu-n { display: grid; font-weight: 800; }
+.mu-n i { font-style: normal; font-size: 11px; color: var(--d-gold); font-weight: 800; }
+.mu-pista { position: relative; height: 12px; border-radius: 7px; background: var(--d-off); overflow: hidden; }
+.mu-pista em { position: absolute; top: 0; bottom: 0; background: var(--d-line-2); }
+.mu-pista u { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 5px; background: var(--d-dim); }
+.mu-balance .bien .mu-pista u { background: var(--d-green); }
+.mu-balance .mucho .mu-pista u { background: var(--d-gold); }
+.mu-balance b { text-align: right; font-variant-numeric: tabular-nums; }
+.mu-balance b small { color: var(--d-faint); font-weight: 700; font-size: 11px; }
+
+/* v12 · Hoy es una caña que crece. Antes: círculos en zigzag (el camino de Duolingo) y 176 px por paso.
+   Ahora: segmentos de bambú en una caña recta, con su nudo, etiqueta al lado y 108 px por paso.
+   La caña pasa por el centro del segmento en --cana (50% - 92px). */
+.d-unit2 { --cana: calc(50% - 92px); }
+.d-unit2 .d-step2 { height: 108px; }
+.d-unit2.past .d-step2 { height: 80px; }
+.d-unit2 .d-step2::before { content: ""; position: absolute; top: 0; bottom: 0; left: calc(var(--cana) - 6px); width: 12px; background: var(--d-off); }
+.d-unit2 .d-step2:first-of-type::before { top: 40px; }
+.d-unit2 .d-step2.done::before { background: var(--d-gold-lip); }
+.d-unit2 .d-step2.chest::before { bottom: 50%; }
+.d-unit2 .d-node2 { top: 14px; left: var(--cana); width: 84px; height: 74px; margin-left: -42px; transform: none; border-radius: 22px; overflow: hidden; isolation: isolate; }
+.d-unit2.past .d-node2 { top: 10px; width: 62px; height: 54px; margin-left: -31px; border-radius: 17px; }
+.d-unit2 .d-node2:active:not(.locked) { transform: translateY(8px); }
+/* El nudo de bambú: la franja clara de arriba de cada segmento. */
+.d-unit2 .d-node2::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 11px; background: var(--d-white-60); z-index: 0; border-radius: 22px 22px 0 0; }
+.d-unit2.past .d-node2::before { border-radius: 17px 17px 0 0; height: 8px; }
+.d-unit2 .d-node2.now::before, .d-unit2 .d-node2.done::before { background: rgba(255, 255, 255, .22); }
+.d-unit2 .d-node2 .duo-icon { position: relative; z-index: 2; }
+.d-unit2 .d-node2.now { overflow: visible; }
+.d-unit2 .d-node2.now::after { inset: -10px; border-radius: 30px; border-width: 6px; }
+/* Lo que llevas llena el segmento desde abajo, como agua. */
+.d-node-llena { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--p) * 100%); background: var(--d-green-lip); z-index: 1; border-radius: 0 0 22px 22px; transition: height 420ms cubic-bezier(.2, .9, .3, 1.2); }
+.d-node2.now .d-node-llena { background: var(--d-green-ink); opacity: .55; }
+.d-unit2 .d-step2-label { top: 18px; left: calc(var(--cana) + 56px); right: 8px; width: auto; transform: none; justify-items: start; text-align: left; }
+.d-unit2.past .d-step2-label { top: 14px; left: calc(var(--cana) + 44px); }
+.d-unit2 .d-step2.now .d-step2-label { top: 40px; }
+.d-unit2 .d-step2 .d-start { top: 8px; left: calc(var(--cana) + 56px); transform: none; padding: 4px 10px; font-size: 14px; animation: none; }
+.d-unit2 .d-step2 .d-start::after { display: none; }
+.d-unit2 .d-step2.chest { height: 120px; }
+.d-unit2 .d-step2.chest .d-chest { top: 14px; left: var(--cana); width: 84px; height: 78px; margin-left: -42px; }
+.d-unit2 .d-step2.chest .d-step2-label { top: 30px; transform: none; }
+.d-unit2 .d-mascot { top: 6px; right: 0; width: 108px; }
+.d-unit2 .d-step2.now .d-step2-label { right: 110px; }
+@media (max-width: 360px) { .d-unit2 { --cana: calc(50% - 100px); } .d-unit2 .d-mascot { width: 84px; } .d-unit2 .d-mascot .brote-art { width: 80px; height: 80px; } .d-unit2 .d-step2.now .d-step2-label { right: 88px; } }
+
+.d-unit2 .d-step2.now { height: 150px; }
+.d-step2-tip { margin-top: 4px; font-style: normal; font-size: 13px; font-weight: 700; color: var(--d-dim); line-height: 1.3; }
+@media (max-width: 360px) { .d-unit2 .d-mascot { display: none; } .d-unit2 .d-step2.now .d-step2-label { right: 8px; } .d-unit2 .d-step2.now { height: 158px; } }
+
+/* v12 · Sistema: todo lo que se toca se hunde en el mismo tiempo. */
+.d-btn, .d-node2, .dia-tira button, .d-chips button, .d-seg button { transition-duration: var(--d-t-toque); }
+/* v12 · "No" en la hoja de la mañana: neutro, no rojo. Decir que no hoy no es un error (el rojo es solo para borrar). */
+.d-big-choice.neutro { background: var(--d-surface); border: 2px solid var(--d-line-2); color: var(--d-ink); box-shadow: 0 6px 0 var(--d-line); }
+.d-big-choice.neutro .d-no { color: var(--d-dim); }

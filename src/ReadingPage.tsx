@@ -4,11 +4,12 @@ import { dateKey, makeId, modulesOf, type AppData, type BibleMark, type Reading,
 import { firstDay } from './lib/jardin'
 import { finishReading, pauseReading, readingSeconds, type ActiveReading } from './lib/readingSession'
 import { CANON, ETAPAS, TOTAL_CHAPTERS, addChapterMarks, book, bibleProgress, describeRanges, nextChapters, toRanges } from './lib/bible'
-import { backfillDays, streak, realReading } from './lib/progress'
+import { backfillDays, realReading } from './lib/progress'
 import { BinauralAudio } from './BinauralAudio'
-import { Card, Chips, Empty, Heading, Stepper, Tabs, fmtDay, mmss, useNow, useWakeLock } from './ui'
+import { Card, Chips, Empty, Stepper, Tabs, fmtDay, mmss, useNow, useWakeLock } from './ui'
 import { freshReading } from './lib/sesionLectura'
 import { plural } from './lib/text'
+import { RachaLecturaCard } from './RachaLectura'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Props = { data: AppData; commit: Commit; onMessage: (text: string, undo?: () => void) => void }
@@ -22,9 +23,8 @@ function takeOpenBible(): boolean { try { const v = sessionStorage.getItem(OPEN_
 export function ReadingPage(props: Props) {
   const [direct] = useState(takeOpenBible)
   const [tab, setTab] = useState<Tab>(direct && modulesOf(props.data.settings).bible ? 'biblia' : 'sesion')
-  const s = useMemo(() => streak(props.data.reading.filter(realReading).map(r => r.day)), [props.data.reading])
   return <>
-    <Heading eyebrow="LECTURA" title="Tu rincón de lectura." text="Cinco minutos cuentan. El tiempo real va aparte." aside={<div className="completion"><strong>{s.current}</strong><span>días seguidos · mejor {s.best}</span></div>} />
+    <RachaLecturaCard data={props.data} onLeer={tab !== 'sesion' && !props.data.activeReading ? () => setTab('sesion') : undefined} />
     <Tabs label="Lectura" value={tab} onChange={setTab} options={[['sesion', props.data.activeReading ? 'Leyendo' : 'Leer'], ...(modulesOf(props.data.settings).bible ? [['biblia', 'Biblia'] as [Tab, string]] : []), ['libros', 'Libros'], ['cronica', 'Crónica']]} />
     {tab === 'sesion' && <Session {...props} />}
     {tab === 'biblia' && <BibleView {...props} direct={direct} />}

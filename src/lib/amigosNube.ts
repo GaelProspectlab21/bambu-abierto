@@ -6,9 +6,9 @@ import { supabase } from './supabase'
 import type { AppData } from './model'
 import { gardenStats } from './jardin'
 import { miSemana, type Publicado } from './tablaSemana'
-import { aceptarAmistad, buscarPorCodigo, cancelarSolicitud, directorio, pedirAmistad, solicitudes } from './nubeSocial'
+import { aceptarAmistad, buscarPorApodo, buscarPorCodigo, cancelarSolicitud, directorio, pedirAmistad, solicitudes } from './nubeSocial'
 
-export { aceptarAmistad, buscarPorCodigo, cancelarSolicitud, pedirAmistad }
+export { aceptarAmistad, buscarPorApodo, buscarPorCodigo, cancelarSolicitud, pedirAmistad }
 
 function db() { if (!supabase) throw new Error('Entra a tu cuenta para usar amigos.'); return supabase }
 

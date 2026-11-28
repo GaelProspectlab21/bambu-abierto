@@ -53,7 +53,7 @@ export function MorningSheet({ data, commit, onClose }: { data: AppData; commit:
       <h2 className="d-quiz-q">{morningQuestion(h)}</h2>
       <div className="d-quiz-answers">
         <button type="button" className="d-big-choice green" onClick={e => answer(true, e.currentTarget)}><DuoIcon name="check" size={40} /><b>Sí</b><small>+{XP.habit} XP</small></button>
-        <button type="button" className="d-big-choice red" onClick={e => answer(false, e.currentTarget)}><b className="d-no">×</b><b>No</b><small>Mañana se puede</small></button>
+        <button type="button" className="d-big-choice neutro" onClick={e => answer(false, e.currentTarget)}><b className="d-no">×</b><b>No</b><small>Mañana se puede</small></button>
       </div>
       {step > 0 && <button type="button" className="d-link" onClick={() => setStep(step - 1)}>Atrás</button>}
     </div> : <div className="d-quiz">

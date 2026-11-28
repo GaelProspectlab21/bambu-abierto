@@ -113,6 +113,12 @@
   --d-mo-dark: #1b1f24; --d-mo-tooth: #ffffff; --d-mo-belly: rgba(255, 255, 255, .22); --d-mo-horn: #f2e6c9;
   --d-ring-body: var(--d-orange); --d-ring-mind: var(--d-blue); --d-ring-soul: var(--d-purple); --d-ring-track: rgba(255, 255, 255, .13); --d-ring-tint: 26%; --d-ring-disc: var(--d-page);
   --d-radius: 16px; --d-radius-l: 22px;
+  /* v12 · Sistema de marca (docs/SISTEMA.md). Movimiento: cuatro tiempos y una curva que crece con rebote. */
+  --d-t-toque: 120ms; --d-t-cambio: 240ms; --d-t-premio: 420ms; --d-t-festejo: 760ms;
+  --d-ease-brote: cubic-bezier(.2, .9, .3, 1.3); --d-ease-asiento: cubic-bezier(.2, .8, .2, 1);
+  /* Escala de letra (razón 1.33): 13, 15, 17, 22, 30, 40, 56. */
+  --d-fs-1: 13px; --d-fs-2: 15px; --d-fs-3: 17px; --d-fs-4: 22px; --d-fs-5: 30px; --d-fs-6: 40px; --d-fs-7: 56px;
+  --d-labio: 4px; --d-labio-l: 8px;
   --display: 'Nunito Variable', 'Avenir Next', system-ui, sans-serif;
   --text: 'Nunito Variable', 'Avenir Next', system-ui, sans-serif;
 }

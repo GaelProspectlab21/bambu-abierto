@@ -15,6 +15,7 @@ import { DESP_REPS, despertadorDe } from './lib/despertador'
 import { RemindersCard } from './RemindersCard'
 import { DuoIcon, type DuoIconName } from './DuoIcons'
 import { playSound, setSounds, soundsOn } from './lib/sounds'
+import { setTacto, tactoOn } from './lib/tacto'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Props = {
@@ -37,6 +38,7 @@ function nfcPath(action: NfcAction): string {
 export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImport, onSignOut, onDelete }: Props) {
   const [name, setName] = useState(data.profile.name)
   const [sound, setSound] = useState(soundsOn)
+  const [tacto, setTactoState] = useState(tactoOn)
   const [key, setKey] = useState('')
   const [confirm, setConfirm] = useState('')
   const [pass, setPass] = useState('')
@@ -131,6 +133,7 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     <div className="d-card">
       <h2>Sonido</h2>
       <Toggle on={sound} onClick={() => { const on = !sound; setSounds(on); setSound(on); if (on) playSound('day') }} title="Sonidos de Bambú" text="Madera al marcar, campanas cuando ganas algo. Con el iPhone en silencio no suena nada." />
+      {sound && <Toggle on={tacto} onClick={() => { const on = !tacto; setTacto(on); setTactoState(on); if (on) playSound('pick') }} title="Tacto al navegar" text="Un toque de madera bajito en pestañas, chips e interruptores. Los botones de acción no suenan: así el sonido de un premio sigue significando algo." />}
     </div>
 
     <div className="d-card">

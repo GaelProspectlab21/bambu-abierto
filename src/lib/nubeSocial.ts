@@ -73,6 +73,14 @@ export async function buscarPorCodigo(codigo: string): Promise<{ apodo: string; 
   revisar(error)
   return data?.[0] ?? null
 }
+/** v12: por apodo EXACTO (sin listar desconocidos: lo encuentras si sabes cómo se llama). */
+export async function buscarPorApodo(apodo: string): Promise<{ apodo: string; avatar: number; codigo: string }[]> {
+  const q = apodo.trim()
+  if (q.length < 2) return []
+  const { data, error } = await db().rpc('bambu_buscar_por_apodo', { p_apodo: q.slice(0, 24) })
+  revisar(error)
+  return (data ?? []) as { apodo: string; avatar: number; codigo: string }[]
+}
 export async function miCodigoAmigo(): Promise<string | null> {
   const { data, error } = await db().from('bambu_perfiles').select('codigo_amigo').eq('user_id', await yo()).maybeSingle()
   revisar(error)

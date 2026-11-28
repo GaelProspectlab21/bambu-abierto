@@ -1,6 +1,7 @@
 import { makeId, type AppData, type BibleMark, type Reading, type Work } from './model'
 import { addChapterMarks, describeRanges, toRanges } from './bible'
-import { realReading, streak } from './progress'
+import { realReading } from './progress'
+import { rachaLectura } from './rachaLectura'
 import { finishReading, readingSeconds } from './readingSession'
 
 export const TIMER_PREFIX = 'timer:'
@@ -91,13 +92,13 @@ export function readingStats(data: AppData, today: string): ReadingStats {
   const mon = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`
   const real = data.reading.filter(realReading)
   const title = (id?: string) => data.works.find(w => w.id === id)?.title ?? 'Sin libro'
-  const st = streak(real.map(r => r.day), today)
+  const st = rachaLectura(real.map(r => r.day), today)
   const per = new Map<string, number>()
   real.forEach(r => per.set(title(r.workId), (per.get(title(r.workId)) ?? 0) + r.minutes))
   return {
     weekMinutes: real.filter(r => r.day >= mon && r.day <= today).reduce((a, r) => a + r.minutes, 0),
     todayMinutes: real.filter(r => r.day === today).reduce((a, r) => a + r.minutes, 0),
-    streak: st.current, best: st.best,
+    streak: st.actual, best: st.mejor,
     recent: [...real].sort((a, b) => b.day.localeCompare(a.day)).slice(0, 6).map(r => ({ day: r.day, minutes: r.minutes, book: title(r.workId) })),
     perBook: [...per.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([t, minutes]) => ({ title: t, minutes, page: data.works.find(w => w.title === t)?.currentPage })),
   }

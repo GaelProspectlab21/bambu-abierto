@@ -1,9 +1,8 @@
 import type { Mood } from './lib/brote'
 import type { Look } from './lib/companion'
+import { CanaCuerpo, MARCA } from './Cana'
 
-const INK = '#0e1411'
-const RAYO = '#f6c443'
-const CANA = '#37cb69', LABIO = '#1e9348', NUDO = '#5fe786', HUECO = '#0c2e16', HOJA = '#7fd38f', BANDA = '#fa7c20', BANDA_2 = '#c25a12'
+const INK = MARCA.noche, RAYO = MARCA.sol, LABIO = MARCA.labio, HOJA = MARCA.hoja
 
 /**
  * Brote (v11.5): la misma caña cortada a machete con banda y cejas, ahora en el idioma de toda la app:
@@ -31,21 +30,8 @@ export function BroteArt({ mood, size = 120, look = 'base' }: { mood: Mood; size
     <g className="brote-arms">{up
       ? <><path d="M56 102c-14-4-22-15-22-29 10 4 18 13 22 24Z" fill={LABIO} stroke={INK} strokeWidth="5" strokeLinejoin="round" /><path d="M56 98c-14-4-22-15-22-29 10 4 18 13 22 24Z" fill={HOJA} /><path d="M104 102c15-2 24-12 27-25-11 3-20 11-24 21Z" fill={LABIO} stroke={INK} strokeWidth="5" strokeLinejoin="round" /><path d="M104 98c15-2 24-12 27-25-11 3-20 11-24 21Z" fill={HOJA} /></>
       : <><path d="M56 102c-13 2-20 11-22 22 11-1 19-8 22-17Z" fill={LABIO} stroke={INK} strokeWidth="5" strokeLinejoin="round" /><path d="M56 99c-13 2-20 11-22 22 11-1 19-8 22-17Z" fill={HOJA} /><path d="M104 102c13 2 20 11 22 22-11-1-19-8-22-17Z" fill={LABIO} stroke={INK} strokeWidth="5" strokeLinejoin="round" /><path d="M104 99c13 2 20 11 22 22-11-1-19-8-22-17Z" fill={HOJA} /></>}</g>
-    {/* La caña: cuerpo con labio, corte a machete y nudo */}
-    <path d="M54 50L106 36V126q0 12-12 12H66q-12 0-12-12Z" fill={LABIO} stroke={INK} strokeWidth="5" strokeLinejoin="round" />
-    <path d="M54 50L106 36V118q0 12-12 12H66q-12 0-12-12Z" fill={CANA} />
-    <rect x="50" y="108" width="60" height="12" rx="6" fill={LABIO} stroke={INK} strokeWidth="5" strokeLinejoin="round" /><rect x="50" y="107" width="60" height="9" rx="4.5" fill={NUDO} />
-    <path d="M54 50L106 36q-3 9-26 14T54 50Z" fill={HUECO} />
-    {/* El brote que le da nombre: sale del hueco y se mece */}
-    <g className="brote-leaves">{sleepy
-      ? <><path d="M88 44q2-8 0-14" stroke={LABIO} strokeWidth="3.4" strokeLinecap="round" /><path d="M88 31c8 1 13 6 13 13-7-1-12-6-13-13Z" fill={HOJA} /></>
-      : <><path d="M86 45q1-12 6-20" stroke={INK} strokeWidth="8" strokeLinecap="round" /><path d="M86 45q1-12 6-20" stroke={LABIO} strokeWidth="3.4" strokeLinecap="round" /><path d="M92 26c2-10 9-15 19-15-2 10-9 15-19 15Z" fill={LABIO} stroke={INK} strokeWidth="5" strokeLinejoin="round" /><path d="M92 24c2-10 9-15 19-15-2 10-9 15-19 15Z" fill={HOJA} /><path d="M89 33c-6-6-14-7-20-3 5 6 13 7 20 3Z" fill={CANA} stroke={INK} strokeWidth="5" strokeLinejoin="round" /></>}</g>
-    {/* Banda anudada */}
-    <path d="M54 59q26-8 52-15v11q-26 7-52 14Z" fill={BANDA} />
-    <path d="M54 66q26-7 52-14v3q-26 7-52 14Z" fill={BANDA_2} />
-    <path d="M55 61c-12 0-19 6-23 15 9 0 15-5 20-10Z" fill={BANDA} stroke={INK} strokeWidth="5" strokeLinejoin="round" /><path d="M54 66c-8 7-11 15-10 23 6-5 9-12 11-19Z" fill={BANDA_2} stroke={INK} strokeWidth="5" strokeLinejoin="round" />
-    <circle cx="54" cy="64" r="4.5" fill={BANDA_2} />
-    <path d="M62 74q-2 16 0 30" stroke="#fff" strokeOpacity=".32" strokeWidth="4.5" strokeLinecap="round" />
+    {/* La caña del sistema de marca (Cana.tsx): la misma del logo. */}
+    <CanaCuerpo dormido={sleepy} />
     <path d={cejas} stroke={INK} strokeWidth="3.8" strokeLinecap="round" fill="none" />
     {sleepy || calm || proud ? ojosCerrados : ojosAbiertos}
     {boca}

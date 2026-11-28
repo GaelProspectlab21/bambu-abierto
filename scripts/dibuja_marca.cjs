@@ -27,6 +27,7 @@ function load(file) {
 
 const { BroteArt } = load(path.join(SRC, 'Brote.tsx'))
 const { RangoArt } = load(path.join(SRC, 'RangoArt.tsx'))
+const { LogoArt } = load(path.join(SRC, 'Cana.tsx'))
 const { RANKS } = load(path.join(SRC, 'lib/rangos.ts'))
 const out = (rel, el) => {
   let svg = renderToStaticMarkup(el).replace(/ role="img"[^>]*?(?= [a-z]|>)/, '')
@@ -42,3 +43,6 @@ out('img/brote-coach.svg', React.createElement(BroteArt, { mood: 'orgulloso', lo
 RANKS.forEach((r, i) => out(r.img, React.createElement(RangoArt, { tier: i, size: 200 })))
 // v11.5: las caras del widget de Scriptable. Scriptable no lee SVG: scripts/iconos.cjs las pasa a PNG y borra el SVG.
 for (const mood of ['feliz', 'animo', 'orgulloso', 'sueno']) out(`widget/brote-${mood}.svg`, React.createElement(BroteArt, { mood, size: 300 }))
+// v12: el logo sale de la misma caña que Brote (src/Cana.tsx). Después corre scripts/iconos.cjs para los PNG.
+fs.writeFileSync(path.join(__dirname, '../public/icon.svg'), renderToStaticMarkup(React.createElement(LogoArt, { size: 512 })).replace(/ role="img"[^>]*?(?= [a-z]|>)/, '').replace('<svg', '<svg').replace(/ width="512" height="512"(?= viewBox| xmlns)/, ''))
+console.log('escrito icon.svg')

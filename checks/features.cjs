@@ -218,6 +218,103 @@ ok('v9 lectura por llave: validación, formato y minimización')
   ok('v11.5 invitar: enlace limpio con el código puesto')
 }
 
+{
+  // v12: una mano a la vez. La serie espera las dos manos y cuenta la más débil.
+  const { juntarManos, unaManoPorDefecto } = moduleOf('unaMano')
+  assert.deepEqual(juntarManos(40, 35, 's'), { value: 35, note: 'Por mano: primera 40 s, segunda 35 s' })
+  assert.equal(juntarManos(12, 15, 'reps').value, 12)
+  assert.equal(unaManoPorDefecto({ id: 'backpack-hold', slot: 'agarre' }), true)
+  assert.equal(unaManoPorDefecto({ id: 'row-backpack-1arm', slot: 'jalon' }), true)
+  assert.equal(unaManoPorDefecto({ id: 'pushup', slot: 'empuje' }), false)
+  ok('v12 una mano a la vez: espera las dos y guarda la más débil')
+}
+
+{
+  // v12: tareas para cualquier día. La tira arranca hoy, cruza meses sin saltarse días.
+  const { proximosDias, moverTarea } = moduleOf('tareas')
+  const t = proximosDias('2026-11-27', 14)
+  assert.equal(t.length, 14)
+  assert.deepEqual(t.slice(0, 3).map(d => d.nombre), ['hoy', 'mañ', 'dom'])
+  assert.equal(t[4].day, '2026-12-01'); assert.equal(t[4].num, 1)
+  const d0 = { ...EMPTY_DATA, tasks: [{ id: 'a', text: 'x', status: 'pending', updatedAt: 1 }] }
+  assert.equal(moverTarea(d0, 'a', '2026-12-10').tasks[0].dueDate, '2026-12-10')
+  ok('v12 tareas: tira de 14 días y mover a cualquier fecha')
+}
+
+{
+  // v12: racha de lectura con escudos ganados.
+  const { rachaLectura, hitoAlcanzado } = moduleOf('rachaLectura')
+  const { shiftDay } = moduleOf('progress')
+  const seguidos = (desde, n) => Array.from({ length: n }, (_, i) => shiftDay(desde, i))
+  // 7 días seguidos ganan un escudo; un día fallado lo gasta y la racha sigue.
+  let r = rachaLectura([...seguidos('2026-11-01', 7), ...seguidos('2026-11-09', 3)], '2026-11-11')
+  assert.equal(r.actual, 10); assert.equal(r.escudos, 0); assert.deepEqual(r.protegidos, ['2026-11-08'])
+  // Sin escudo, el día fallado sí rompe.
+  r = rachaLectura([...seguidos('2026-11-01', 6), ...seguidos('2026-11-08', 2)], '2026-11-09')
+  assert.equal(r.actual, 2); assert.equal(r.mejor, 6)
+  // Hoy sin leer no rompe: la racha sigue viva y avisa si ya no hay escudo.
+  r = rachaLectura(seguidos('2026-11-01', 5), '2026-11-06')
+  assert.equal(r.actual, 5); assert.equal(r.hoyHecho, false); assert.equal(r.enRiesgo, true)
+  assert.equal(r.semana.at(-1).estado, 'hoy')
+  // Tope de 2 escudos y dos días seguidos cubiertos.
+  r = rachaLectura([...seguidos('2026-11-01', 21), ...seguidos('2026-11-24', 1)], '2026-11-24')
+  assert.deepEqual(r.protegidos, ['2026-11-22', '2026-11-23']); assert.equal(r.actual, 22)
+  assert.equal(rachaLectura(seguidos('2026-11-01', 21), '2026-11-21').escudos, 2)
+  assert.equal(r.hito, 30); assert.equal(r.faltan, 8)
+  assert.equal(hitoAlcanzado(16), 14); assert.equal(hitoAlcanzado(2), 0)
+  ok('v12 racha de lectura: escudos ganados cada 7 días, tope 2, hoy no rompe e hitos')
+}
+
+{
+  // v12: nutrientes sin cambiar la forma de la comida: salen del foodId por cantidad.
+  const { nutrientesDia, llegoAMeta, nutrDe } = moduleOf('nutrientes')
+  const { filaAFood } = moduleOf('alimentosMx')
+  const { registrarAlimentos } = moduleOf('foods')
+  const lata = filaAFood(['7501055300075', 'Refresco de cola', 'Marca', 'lata 355 ml', 355, 42, 0, 10.6, 10.6, 0, 0, 4])
+  assert.equal(lata.id, 'off-7501055300075'); assert.equal(lata.kcal, 149); assert.equal(lata.sugar, 37.6); assert.equal(lata.group, 'bebida')
+  assert.equal(filaAFood(['1', 'Galletas de avena', '', '', 0, 450, 6, 70, 30, 16, 3, 300]).unit, '100 g')
+  registrarAlimentos([lata])
+  assert.equal(nutrDe(lata.id).sugar, 37.6)
+  const d = { ...EMPTY_DATA, meals: [{ id: 'm', day: '2026-11-27', at: 1, slot: 'comida', items: [
+    { name: 'Refresco', qty: 2, unit: 'lata', kcal: 280, protein: 0, group: 'bebida', foodId: 'refresco' },
+    { name: 'Frijoles', qty: 1, unit: '1/2 taza', kcal: 115, protein: 7.5, group: 'leguminosa', foodId: 'frijoles' },
+    { name: 'Algo a ojo', qty: 1, unit: 'porción', kcal: 200, protein: 5, group: 'platillo' }] }] }
+  const n = nutrientesDia(d, '2026-11-27')
+  assert.equal(n.sugar, 78.3); assert.equal(n.fiber, 7.5); assert.equal(n.conDatos, 2); assert.equal(n.total, 3)
+  // El festejo es el momento de cruzar la meta, no cada vez que abres la app con la meta ya hecha.
+  assert.equal(llegoAMeta(1800, 2100, 2000), true)
+  assert.equal(llegoAMeta(2100, 2300, 2000), false)
+  assert.equal(llegoAMeta(0, 500, undefined), false)
+  ok('v12 comida: nutrientes por foodId, etiquetas de Open Food Facts y festejo al cruzar la meta')
+}
+
+{
+  // v12: Tu cuerpo dice qué te toca: lo más lejos de su rango semanal que ya descansó.
+  const { balance, MUSCLES } = moduleOf('musculos')
+  const st = Object.fromEntries(MUSCLES.map(m => [m, { muscle: m, sets: 0, lastDay: null }]))
+  st.Pecho = { muscle: 'Pecho', sets: 10, lastDay: '2026-11-27' }
+  st.Espalda = { muscle: 'Espalda', sets: 2, lastDay: '2026-11-20' }
+  st.Piernas = { muscle: 'Piernas', sets: 30, lastDay: '2026-11-25' }
+  const b = balance(st, 'semana', '2026-11-27')
+  const fila = m => b.filas.find(f => f.muscle === m)
+  assert.equal(fila('Pecho').estado, 'bien'); assert.equal(fila('Pecho').recuperando, true)
+  assert.equal(fila('Piernas').estado, 'mucho'); assert.equal(fila('Espalda').estado, 'falta')
+  assert.ok(['Hombros', 'Brazos', 'Abdomen'].includes(b.teToca), 'lo que tiene cero va antes que espalda con 2')
+  assert.equal(balance(st, 'siempre', '2026-11-27').teToca, null)
+  ok('v12 tu cuerpo: series por semana contra rango sano y lo que te toca')
+}
+
+{
+  // v12: jerarquía de volumen del sistema: el tacto es lo más bajito de la casa y el festejo de comida sube nota por nota.
+  const { SCORES } = moduleOf('sounds')
+  const vol = n => n[3] ?? 1
+  const tacto = Math.max(...SCORES.tacto.map(vol))
+  for (const [k, sc] of Object.entries(SCORES)) if (k !== 'tacto') assert.ok(Math.max(...sc.map(vol)) > tacto, `${k} debe sonar más que el tacto`)
+  const subida = SCORES.feast.filter(n => n[0] === 'wood').map(n => n[1])
+  assert.deepEqual(subida, [...subida].sort((a, b) => a - b)); assert.equal(subida.length, 10)
+  ok('v12 sonido: el tacto es lo más bajito y el festejo de comida sube la escala')
+}
+
 // Rachas y lectura
 const today = '2026-11-04'
 assert.equal(streak(['2026-11-01', '2026-11-02', '2026-11-03'], today).current, 3)

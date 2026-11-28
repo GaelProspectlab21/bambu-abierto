@@ -3,6 +3,7 @@ import { dateKey, type AppData, type BodyLog, type Meal, type MealSlot, type Nut
 import { currentWeight, dayTotals, frequentMeals, mealTotals, PHASE_LABEL, planFor, shiftDay, SLOT_LABEL, slotFor, type AdultPlan, type GrowthPlan } from './lib/nutrition'
 import { FoodLogger, saveMeal } from './FoodLogger'
 import { FoodCheckin } from './FoodCheckin'
+import { NutrientesCard } from './NutrientesCard'
 import { DuoIcon } from './DuoIcons'
 import { reward } from './juice'
 import { haptic } from './lib/haptic'
@@ -186,6 +187,7 @@ export function FoodPage({ data, commit, onMessage }: Props) {
       <input ref={archivo} className="visually-hidden" type="file" accept="image/*" capture="environment" aria-label="Tomar foto de tu comida" onChange={e => { void conFoto(e.target.files?.[0]); e.target.value = '' }} />
     </div>
 
+    <NutrientesCard data={data} day={today} kcal={t.kcal} />
     {growth && <FoodCheckin />}
 
     {meals.length > 0 && <div className="d-card">
