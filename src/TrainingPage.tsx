@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { BodyCard } from './Musculos'
 import { StretchCard } from './Stretch'
 import { dateKey, makeId, type Activity, type AppData, type BodyLog, type Checkin } from './lib/model'
 import { EXERCISES, HOME_GEAR, MUSCLES, SLOT_LABEL, TEMPLATES, exercise, ladder, muscleLabel, type Exercise, type Slot } from './lib/exercises'
@@ -13,6 +14,7 @@ import { PhotoLab } from './PhotoLab'
 import { ADAPTATIONS, PRINCIPLES, SOURCES } from './lib/juanma'
 import { Card, Chips, Empty, Heading, Sparkline, Stepper, Tabs, mmss, useNow, useWakeLock } from './ui'
 import { plural } from './lib/text'
+import { DiagnosticoCard, DiagnosticoSheet } from './Diagnostico'
 
 type Props = { data: AppData; commit: Commit; onMessage: (text: string, undo?: () => void) => void; embedded?: boolean }
 type Tab = 'hoy' | 'recuperacion' | 'progreso' | 'coach' | 'ejercicios'
@@ -21,12 +23,12 @@ export function TrainingPage({ data, commit, onMessage, embedded = false }: Prop
   const [tab, setTab] = useState<Tab>('hoy')
   return <>
     {!embedded && <Heading eyebrow="ENTRENAMIENTO" title="Construye tu físico." text="Registra cada serie. El coach decide qué toca con tus datos y el método de Juanma." />}
-    <Tabs label="Secciones de entrenamiento" value={tab} onChange={setTab} options={[['hoy', 'Hoy'], ['recuperacion', 'Recuperación'], ['progreso', 'Progreso'], ['coach', 'Coach'], ['ejercicios', 'Ejercicios']]} />
-    {tab === 'hoy' && <><TodayTab data={data} commit={commit} onMessage={onMessage} /><StretchCard data={data} mode="entrenar" /></>}
-    {tab === 'recuperacion' && <RecoveryTab data={data} />}
+    <Tabs label="Secciones de entrenamiento" value={tab} onChange={setTab} options={[['hoy', 'Hoy'], ['recuperacion', 'Cuerpo'], ['progreso', 'Progreso'], ['coach', 'Método']]} />
+    {/* v11: Hoy es solo tu sesión. Fútbol, check-in y estiramiento viven en Cuerpo (antes todo iba en Hoy y era kilométrico). */}
+    {tab === 'hoy' && <TodayTab data={data} commit={commit} onMessage={onMessage} />}
+    {tab === 'recuperacion' && <><BodyCard data={data} /><QuickActivities data={data} commit={commit} onMessage={onMessage} /><StretchCard data={data} mode="entrenar" /><RecoveryTab data={data} /><CheckinCard data={data} commit={commit} onMessage={onMessage} /></>}
     {tab === 'progreso' && <ProgressTab data={data} commit={commit} onMessage={onMessage} />}
-    {tab === 'coach' && <CoachTab data={data} />}
-    {tab === 'ejercicios' && <LibraryTab data={data} commit={commit} />}
+    {tab === 'coach' && <><CoachTab data={data} /><LibraryTab data={data} commit={commit} /></>}
   </>
 }
 
@@ -67,8 +69,11 @@ function TodayTab({ data, commit, onMessage }: Props) {
     onMessage(sets ? `Sesión cerrada: ${plural(sets, 'serie', 'series')}. Ahora come proteína y duerme tus horas.` : 'Sesión cerrada sin series.')
   }
   const guided = !!workout && !list && fitted.items.length > 0
+  const [diag, setDiag] = useState(false)
   return <>
     <FootballAsk data={data} commit={commit} onMessage={onMessage} />
+    {!workout && !data.settings.diagnostico && <DiagnosticoCard data={data} onOpen={() => setDiag(true)} />}
+    {diag && <DiagnosticoSheet data={data} commit={commit} onClose={() => setDiag(false)} onMessage={t => onMessage(t)} />}
     {guided ? <SessionRunner data={data} commit={commit} onMessage={onMessage} grouped={fitted.grouped} express={fitted.express} now={now} onList={() => setList(true)} onEnd={endWorkout} onSwap={swap} />
       : <Card tone={plan.urgent ? 'warn' : 'accent'} className="coach-card">
         <span className="eyebrow">TU PLAN DE HOY</span>
@@ -86,6 +91,7 @@ function TodayTab({ data, commit, onMessage }: Props) {
         {plan.items.length > 0 && !workout && <p className="hint">Calienta con una serie ligera del primer ejercicio, a la mitad de repeticiones. Sin estiramientos largos.</p>}
       </Card>}
     {!guided && <TalloCard data={data} now={now} compact />}
+    {!guided && !workout && data.settings.diagnostico && <DiagnosticoCard data={data} onOpen={() => setDiag(true)} />}
     {!guided && <WeekStrip data={data} now={now} />}
     {!guided && <RestTimer data={data} commit={commit} now={now} />}
     {!guided && fitted.items.length > 0 && <Card>
@@ -109,8 +115,6 @@ function TodayTab({ data, commit, onMessage }: Props) {
         return <PlanRow key={id} item={item} data={data} open={open === id} onToggle={() => setOpen(open === id ? null : id)} commit={commit} onMessage={onMessage} />
       })}
     </Card>}
-    {!guided && <QuickActivities data={data} commit={commit} onMessage={onMessage} />}
-    {!guided && <CheckinCard data={data} commit={commit} onMessage={onMessage} />}
   </>
 }
 
@@ -233,7 +237,7 @@ function ProgressTab({ data, commit, onMessage }: Props) {
   const mass = massPlan(data)
   const used = [...new Set(data.sets.map(s => s.exercise))].map(id => exercise(id)).filter((e): e is Exercise => !!e)
   return <>
-    <BodyCard data={data} commit={commit} onMessage={onMessage} />
+    <PesoCard data={data} commit={commit} onMessage={onMessage} />
     <PhotoLab data={data} commit={commit} onMessage={onMessage} />
     <Card>
       <span className="eyebrow">TU ESCALERA</span>
@@ -260,7 +264,7 @@ function ProgressTab({ data, commit, onMessage }: Props) {
   </>
 }
 
-function BodyCard({ data, commit, onMessage }: Props) {
+export function PesoCard({ data, commit, onMessage }: Props) {
   const today = dateKey()
   const current = data.body.find(b => b.day === today)
   const last = [...data.body].filter(b => b.weightKg).sort((a, b) => b.day.localeCompare(a.day))[0]

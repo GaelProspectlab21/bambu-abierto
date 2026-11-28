@@ -198,3 +198,407 @@
 
 /* 14. v10.3 En 320 px el "120s" del descanso se salía del botón. */
 @media (max-width: 360px) { .d-seg button { padding-left: 2px; padding-right: 2px; font-size: 14px; min-width: 0; } }
+
+/* v11: despertador de lagartijas. Pantalla completa, grande y legible medio dormido. */
+.desp { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px); background: var(--d-page); color: var(--d-ink); text-align: center; overflow-y: auto; }
+.desp-inicio, .desp-falta { animation: desp-pulso 1.6s ease-in-out infinite; }
+.desp-hora { margin: 0; font-size: clamp(56px, 18vw, 96px); font-weight: 900; letter-spacing: -.03em; line-height: 1; color: var(--d-ink); font-variant-numeric: tabular-nums; }
+.desp h1 { margin: 4px 0 0; font-size: clamp(26px, 7vw, 36px); font-weight: 900; line-height: 1.1; }
+.desp p { margin: 0; max-width: 34ch; font-size: 17px; font-weight: 700; line-height: 1.45; color: var(--d-dim); }
+.desp-brote { display: block; transition: transform .5s cubic-bezier(.2, 1.4, .4, 1); }
+.desp-brote.arriba { transform: translateY(-8px) scale(1.08); }
+.desp-cta { max-width: 360px; min-height: 60px; font-size: 19px; }
+.desp-tap { width: min(62vw, 240px); aspect-ratio: 1; border-radius: 50%; border: 0; background: var(--d-green); color: var(--d-on-bright); font: inherit; font-size: 72px; font-weight: 900; box-shadow: 0 8px 0 var(--d-green-lip); cursor: pointer; touch-action: manipulation; }
+.desp-tap:active { transform: translateY(6px); box-shadow: 0 2px 0 var(--d-green-lip); }
+.desp-salir { margin-top: auto; max-width: 340px; min-height: 48px; padding: 10px 16px; border: 2px solid var(--d-line); border-radius: 14px; background: transparent; color: var(--d-faint); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+.desp-salir.on { border-color: var(--d-red); color: var(--d-red); background: var(--d-red-light); }
+@keyframes desp-pulso { 0%, 100% { background: var(--d-page); } 50% { background: var(--d-page-2); } }
+@media (prefers-reduced-motion: reduce) { .desp-inicio, .desp-falta { animation: none; } }
+
+/* v11: bienvenida personalizada (reporte, compromiso y hora). */
+.ob-reporte { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.ob-big { margin: 4px 0; font-size: 22px; font-weight: 900; color: var(--d-ink); }
+.ob-big b { display: block; font-family: var(--display); font-size: clamp(64px, 20vw, 96px); line-height: 1; color: var(--d-gold); letter-spacing: -.03em; }
+.ob-good { margin: 14px 0 0; padding: 14px 16px; border: 2px solid var(--d-green-lip); border-radius: 16px; background: var(--d-green-light); color: var(--d-ink); font-size: 17px; font-weight: 700; line-height: 1.45; }
+.ob-good b { color: var(--d-green-ink); }
+.ob-compromiso { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.ob-compromiso blockquote { margin: 4px 0; padding: 0 8px; font-family: var(--display); font-size: clamp(22px, 6vw, 28px); font-weight: 800; line-height: 1.3; color: var(--d-ink); }
+.ob-firma { position: relative; overflow: hidden; width: 100%; max-width: 380px; min-height: 64px; margin-top: 10px; border: 2px solid var(--d-green-lip); border-radius: 18px; background: var(--d-surface); color: var(--d-ink); font: inherit; font-size: 17px; font-weight: 900; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+.ob-firma::before { content: ''; position: absolute; inset: 0; width: var(--firme, 0%); background: var(--d-green); transition: width .09s linear; }
+.ob-firma span { position: relative; }
+.ob-firma.listo { color: var(--d-on-bright); }
+.ob-hora { max-width: 220px; margin: 8px auto; font-size: 32px; font-weight: 900; text-align: center; }
+
+/* v11: las pestañas tipo píldora caben siempre (antes la 4a se cortaba a 320 px y había que adivinar que había scroll). */
+:is(.d-shell, .d-scrim) .tabs:not(:has(> :nth-child(5))) { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); overflow: visible; }
+:is(.d-shell, .d-scrim) .tabs:not(:has(> :nth-child(5))) .tab { min-width: 0; padding-inline: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 360px) { :is(.d-shell, .d-scrim) .tabs .tab { font-size: 14px; } }
+@media (max-width: 360px) {
+  :is(.d-shell, .d-scrim) .tabs:not(:has(> :nth-child(5))) .tab { font-size: 13px; padding-inline: 2px; }
+  .d-unit2.today .d-unit2-head > div:first-child b { font-size: 20px; line-height: 1.15; text-wrap: balance; }
+  .d-unit2.today .d-unit2-head > div:first-child span { font-size: 13px; }
+  .d-unit2.today .d-anillos { width: 74px; height: 74px; }
+  .d-unit2.today .d-anillos-ley span, .d-unit2.today .d-anillos-ley b { font-size: 13px; }
+}
+
+/* v11.1: el nombre va en la serif de la app (Fraunces), no en una imagen redonda tipo Duolingo. */
+.d-auth-nombre { font-family: var(--title); font-weight: 700; font-size: 30px; letter-spacing: -.01em; color: var(--d-ink); line-height: 1; }
+.d-auth-brand img { border-radius: 11px; }
+.tallo-art { display: block; width: 150px; height: 150px; }
+
+/* v11.1: fuera el azul de Duolingo en botones secundarios, chips elegidos y enlaces. Lo elegido es verde, como el resto. */
+.d-btn.white { color: var(--d-ink); }
+:is(.d-shell, .d-scrim) .quiet-button, .nfc-quick .quiet-button { color: var(--d-green-ink); }
+.quiet-button.wide { width: 100%; }
+.d-chips button.on { background: var(--d-green-light); border-color: var(--d-green); color: var(--d-green-ink); box-shadow: none; }
+.d-more summary { color: var(--d-green-ink); }
+.d-btn.d-btn:disabled { color: var(--d-faint); background: var(--d-soft); }
+.d-mode button.on { box-shadow: inset 0 0 0 2px var(--d-green); }
+.d-days button.on { background: var(--d-green); border-color: var(--d-green); color: var(--d-on-bright); box-shadow: 0 3px 0 var(--d-green-lip); }
+:is(.d-room-grid, .d-priv) button.on, .d-tb-row.me { border-color: var(--d-green); background: var(--d-green-light); }
+.d-priv button.on { box-shadow: 0 4px 0 var(--d-green-lip); }
+.d-filter-chip { border-color: var(--d-green); background: var(--d-green-light); color: var(--d-green-ink); }
+
+/* v11.2: el sapo del día */
+.sapo-card { display: flex; gap: 14px; align-items: flex-start; }
+.sapo-card > svg { flex: none; }
+.sapo-text { min-width: 0; flex: 1; display: grid; gap: 6px; }
+.sapo-text h2 { margin: 0; font-size: 19px; line-height: 1.25; overflow-wrap: anywhere; }
+.sapo-text p { margin: 0; color: var(--d-dim); font-size: 15px; line-height: 1.45; }
+.sapo-eyebrow { color: var(--d-gold) !important; font-size: 12px !important; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.sapo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.sapo-actions .d-btn { min-height: 44px; padding-inline: 16px; }
+.sapo-why { padding: 10px 12px; border-left: 3px solid var(--d-gold); background: var(--d-soft); border-radius: 0 10px 10px 0; }
+.sapo-card.on { border-color: var(--d-gold-lip); background: var(--d-gold-light); }
+.sapo-card.comido { border-color: var(--d-green-lip); background: var(--d-green-light); }
+.sapo-card.eligiendo { border-color: var(--d-gold); }
+.d-tasks.eligiendo .d-task { outline: 2px dashed var(--d-gold-lip); outline-offset: -2px; border-radius: 14px; }
+.d-tasks li.sapo .d-task-text b { color: var(--d-gold); }
+.d-box.sapo-box, .d-box.sapo-pick { display: grid; place-items: center; border-color: var(--d-gold-lip); }
+.fb-tasks button span { display: grid; gap: 2px; }
+.fb-tasks button small { color: var(--d-faint); font-size: 12px; font-weight: 800; }
+.fb-tasks button.sapo { border-color: var(--d-gold-lip); }
+.fb-tasks button.sapo small { color: var(--d-gold); }
+.fb-tasks.later { margin-top: 8px; }
+
+/* v11.2: tablero de la semana. En el iPhone, días uno debajo de otro; en la laptop, cuadrícula. */
+.sem { display: grid; gap: 12px; }
+.sem-nav { display: flex; align-items: center; gap: 10px; }
+.sem-nav > div { flex: 1; display: grid; text-align: center; }
+.sem-nav b { font-size: 18px; } .sem-nav small { color: var(--d-dim); font-weight: 700; }
+.sem-nav .d-btn { min-width: 48px; min-height: 44px; font-size: 22px; }
+.sem-hint { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--d-gold-light); color: var(--d-ink); font-size: 15px; }
+.sem-grid { display: grid; gap: 10px; }
+.sem-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.sem-day header small, .sem-day header b { white-space: nowrap; }
+.sem-day { display: grid; align-content: start; gap: 8px; padding: 12px; border: 2px solid var(--d-line); border-radius: 16px; background: var(--d-bg); min-height: 96px; }
+.sem-day.today { border-color: var(--d-green); }
+.sem-day.past { opacity: .72; }
+.sem-day.target { border-style: dashed; border-color: var(--d-gold-lip); }
+.sem-day header { display: flex; align-items: baseline; gap: 8px; min-height: 36px; }
+.sem-day header b { font-size: 16px; } .sem-day header small { color: var(--d-faint); font-weight: 700; }
+.sem-plus { margin-left: auto; width: 36px; height: 36px; border: 2px solid var(--d-line); border-radius: 10px; background: var(--d-soft); color: var(--d-green-ink); font: inherit; font-size: 20px; font-weight: 900; line-height: 1; cursor: pointer; }
+.sem-drop { width: 100%; min-height: 40px; border: 2px dashed var(--d-gold); border-radius: 10px; background: var(--d-gold-light); color: var(--d-ink); font: inherit; font-weight: 900; cursor: pointer; }
+.sem-day ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sem-task { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 2px solid var(--d-line); border-radius: 12px; background: var(--d-surface); }
+.sem-task.moving { border-color: var(--d-gold); background: var(--d-gold-light); }
+.sem-task.sapo { border-color: var(--d-gold-lip); }
+.sem-task.done .sem-text { color: var(--d-faint); text-decoration: line-through; }
+.sem-check { flex: none; width: 30px; height: 30px; border: 2px solid var(--d-line-2); border-radius: 8px; background: none; color: var(--d-page); font: inherit; font-weight: 900; cursor: pointer; }
+.sem-task.done .sem-check { background: var(--d-green); border-color: var(--d-green); }
+.sem-text { flex: 1; min-width: 0; min-height: 34px; display: flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--d-ink); font: inherit; font-size: 15px; font-weight: 800; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.sem-text:disabled { cursor: default; }
+.sem-text svg { flex: none; }
+.sem-empty { color: var(--d-faint); font-size: 14px; font-weight: 700; padding: 2px 4px; }
+.sem-add .d-input { min-height: 44px; }
+.d-seg button.on { background: var(--d-green-light); border-color: var(--d-green-lip); color: var(--d-green-ink); box-shadow: 0 3px 0 var(--d-green-lip); }
+.d-link { color: var(--d-green-ink); }
+@media (max-width: 899px) { .sem-day { min-height: 0; padding: 8px 12px; gap: 4px; } .sem-day:not(.target) .sem-empty { display: none; } .sem-day ul:empty { display: none; } }
+
+/* v11.3: en laptop, Lectura y Tareas usan el ancho (la columna de 640 px las apretaba). Hoy sigue angosto: es un camino. */
+@media (min-width: 900px) {
+  .d-shell .page:is([data-seccion="Lectura"], [data-seccion="Tareas"]) { max-width: 1080px; }
+}
+@media (min-width: 900px) { [data-seccion="Tareas"] .sem-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.lec-top, .lec-libros { display: contents; }
+@media (min-width: 900px) {
+  .lec-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; align-items: stretch; }
+  .lec-top > * { margin: 0; }
+  .lec-libros { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .lec-libros > :first-child { grid-row: span 20; }
+}
+
+/* v11.3: la leyenda de los anillos dice qué cuenta cada uno */
+.d-anillos-ley.detalle { display: grid; gap: 4px; }
+.d-anillos-ley.detalle span { display: grid; grid-template-columns: 10px auto 1fr; align-items: center; column-gap: 8px; white-space: normal; }
+.d-anillos-ley.detalle small { font-size: 13px; font-weight: 700; opacity: .85; }
+.d-anillos-ley.detalle .cerrado small { opacity: 1; font-weight: 900; }
+.d-unit2.today .d-unit2-head > .d-anillos-ley.detalle { flex: 1 0 100%; margin-top: 10px; padding-top: 10px; border-top: 2px solid rgba(0, 0, 0, .12); }
+.d-anillos-ley.detalle span { grid-template-columns: 10px 72px 1fr; }
+
+/* v11.3: Brote con más protagonismo: en los encabezados de Tareas y Entrenar, y más grande en Hoy. */
+.d-hero > .brote-art { flex: none; margin: -18px -8px -22px 0; filter: drop-shadow(0 4px 0 rgba(0, 0, 0, .18)); }
+.d-mascot { width: 128px; }
+.d-mascot .brote-art { width: 112px; height: 112px; }
+@media (max-width: 420px) { .d-mascot { width: 112px; } .d-mascot .brote-art { width: 100px; height: 100px; } .d-hero > .brote-art { width: 88px; height: 88px; } }
+
+/* v11.3: la marca en todos lados igual: ícono crema + nombre en Fraunces. */
+.d-shell .side .brand { font-family: var(--title); font-weight: 700; font-size: 28px; color: var(--d-ink); letter-spacing: -.01em; gap: 10px; }
+.d-shell .side .brand img { border-radius: 10px; flex: none; }
+/* v11.3: a 320 px los dos botones de Privacidad empujaban la tarjeta fuera de la pantalla. */
+.d-row2 { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.d-row2 > .d-btn { min-width: 0; white-space: normal; }
+.top-gear.on .duo-icon { --ia: var(--d-green-ink); }
+.d-row2 { flex-wrap: wrap; }
+/* v11.3: a 320 px el séptimo círculo (hoy) se salía de la tarjeta. Ahora se encogen si no caben. */
+.d-comida-semana { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.d-comida-semana i { width: 100%; max-width: 38px; height: auto; aspect-ratio: 1; }
+.d-comida-semana .some i { border-color: var(--d-green-lip); color: var(--d-green-ink); }
+.d-card > .d-hint { min-width: 0; overflow-wrap: anywhere; }
+/* v11.3: el azul no es de la marca. La acción secundaria va en sol (el dorado de Bambú). */
+.d-btn.blue { background: var(--d-gold); color: var(--d-page); box-shadow: 0 4px 0 var(--d-gold-lip); }
+.d-btn.blue .duo-icon { --ia: var(--d-page); }
+/* Ninguna tarjeta puede ser más ancha que la pantalla por un hijo largo (pasaba con Etiquetas NFC a 320 px). */
+.d-card { grid-template-columns: minmax(0, 1fr); }
+
+/* v11.4: diagnóstico de fuerza y escalera de progresión */
+.diag-card { display: flex; gap: 14px; align-items: center; border-color: var(--d-green-lip); }
+.diag-card > svg { flex: none; }
+.diag-card h2 { margin: 0 0 4px; font-size: 19px; }
+.diag-card p { margin: 0 0 10px; color: var(--d-dim); font-size: 15px; line-height: 1.45; }
+.diag-repetir { justify-self: center; text-transform: none; letter-spacing: 0; }
+.diag { display: grid; gap: 14px; }
+.diag-progreso { display: flex; gap: 6px; }
+.diag-progreso i { flex: 1; height: 6px; border-radius: 9px; background: var(--d-off); }
+.diag-progreso i.on { background: var(--d-green); } .diag-progreso i.now { background: var(--d-gold); }
+.diag-head { display: flex; align-items: center; gap: 12px; }
+.diag-eyebrow { margin: 0; color: var(--d-gold); font-size: 13px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.diag h2 { margin: 0; font-size: 24px; line-height: 1.2; }
+.diag-como { margin: 0; color: var(--d-dim); font-size: 15px; line-height: 1.5; }
+.diag-opciones { display: grid; gap: 10px; }
+.diag-opciones .d-btn { justify-content: flex-start; text-align: left; padding-inline: 18px; }
+.diag-opciones .d-btn.on { border-color: var(--d-green); color: var(--d-green-ink); }
+.diag-resultado { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.diag-resultado li { display: grid; gap: 2px; padding: 12px 14px; border: 2px solid var(--d-line); border-radius: 14px; background: var(--d-soft); }
+.diag-resultado span { color: var(--d-faint); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.diag-resultado b { font-size: 17px; } .diag-resultado small { color: var(--d-green-ink); font-weight: 800; }
+.escalera { display: grid; gap: 6px; margin: -2px 0 6px; }
+.escalera-pasos { display: flex; gap: 4px; }
+.escalera-pasos i { flex: 1; max-width: 36px; height: 6px; border-radius: 9px; background: var(--d-off); }
+.escalera-pasos i.hecho { background: var(--d-green-lip); } .escalera-pasos i.aqui { background: var(--d-green); }
+.escalera small { color: var(--d-dim); font-weight: 700; }
+.verdict-bajar { border-left-color: var(--d-gold) !important; }
+
+/* v11.4: panel de sonido */
+.snd { display: grid; gap: 14px; margin-top: 10px; }
+.snd-modos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.snd-modo { position: relative; display: grid; gap: 2px; align-content: start; min-height: 84px; padding: 12px; border: 2px solid var(--d-line); border-radius: 16px; background: var(--d-soft); color: var(--d-ink); font: inherit; text-align: left; cursor: pointer; }
+.snd-modo b { font-size: 17px; font-weight: 900; } .snd-modo small { color: var(--d-dim); font-size: 13px; font-weight: 700; line-height: 1.3; }
+.snd-modo i { margin-top: auto; padding-top: 6px; color: var(--d-faint); font-size: 12px; font-style: normal; font-weight: 800; }
+.snd-modo.on { border-color: var(--d-green); background: var(--d-green-light); }
+.snd-modo.on b, .snd-modo.on i { color: var(--d-green-ink); }
+.snd-modo.sonando::after { content: ''; position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--d-green); box-shadow: 0 0 0 0 var(--d-green); animation: snd-pulso 1.6s ease-out infinite; }
+@keyframes snd-pulso { 0% { box-shadow: 0 0 0 0 rgba(55, 203, 105, .6); } 100% { box-shadow: 0 0 0 10px rgba(55, 203, 105, 0); } }
+.snd-play { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 16px; border: 2px solid var(--d-line); border-radius: 18px; background: var(--d-bg); color: var(--d-ink); font: inherit; text-align: left; cursor: pointer; box-shadow: 0 4px 0 var(--d-line); }
+.snd-play:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--d-line); }
+.snd-play > span:last-child { display: grid; gap: 2px; } .snd-play b { font-size: 17px; } .snd-play small { color: var(--d-dim); font-weight: 700; }
+.snd-icono { flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--d-green); }
+.snd-icono svg { width: 24px; height: 24px; fill: var(--d-page); }
+.snd-play.on { border-color: var(--d-green-lip); }
+.snd-play.on .snd-icono { background: var(--d-gold); }
+.snd-fila { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 10px; }
+.snd-et { color: var(--d-dim); font-size: 14px; font-weight: 800; }
+.snd-seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.snd-seg button { min-height: 40px; padding: 0 12px; border: 2px solid var(--d-line); border-radius: 12px; background: var(--d-soft); color: var(--d-ink); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.snd-seg button.on { border-color: var(--d-green-lip); background: var(--d-green-light); color: var(--d-green-ink); }
+.snd-vol { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 99px; background: linear-gradient(to right, var(--d-green) var(--v, 50%), var(--d-off) var(--v, 50%)); cursor: pointer; }
+.snd-vol::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--d-ink); border: 4px solid var(--d-green); }
+.snd-vol::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--d-ink); border: 4px solid var(--d-green); }
+.snd-nota { margin: 0; color: var(--d-faint); font-size: 13px; line-height: 1.45; }
+.snd-error { margin: 0; color: var(--d-red); font-weight: 800; }
+@media (max-width: 380px) { .snd-modos { grid-template-columns: 1fr; } .snd-modo { min-height: 0; } }
+
+/* v11.4: bloque en pantalla completa en laptop: el reloj se mide por su tarjeta, no por la ventana, y nada se corta arriba. */
+.fb-run.full, .fb-run:fullscreen { align-content: safe center; }
+.fb-run:fullscreen { overflow: auto; }
+@media (min-width: 900px) {
+  .fb-run.full, .fb-run:fullscreen { grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr); max-width: 1600px; margin-inline: auto; gap: 24px; }
+  .fb-run.full .fb-clock, .fb-run:fullscreen .fb-clock { font-size: min(11.5vw, 230px); }
+  .fb-run.full .fb-clock-card, .fb-run:fullscreen .fb-clock-card { padding: 32px; align-content: center; min-height: min(70vh, 640px); }
+  .fb-run.full .fb-actions, .fb-run:fullscreen .fb-actions { max-width: 640px; margin-inline: auto; width: 100%; }
+}
+.fb-clock-card { container-type: inline-size; }
+@supports (font-size: 1cqi) { .fb-run.full .fb-clock, .fb-run:fullscreen .fb-clock { font-size: min(30cqi, 230px); } .fb-clock { font-size: min(30cqi, 120px); } }
+
+/* v11.5 · Hoy: la cabecera del día es una línea. El detalle de anillos se abre al tocarla. */
+.d-unit2.today .d-unit2-head { margin-bottom: 18px; padding: 10px 12px 10px 16px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.d-unit2.today .d-unit2-head:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--d-green-lip); }
+.d-unit2.today .d-unit2-head > div:first-child b { font-size: 19px; line-height: 1.15; }
+.d-unit2.today .d-unit2-head > div:first-child span { font-size: 13px; }
+.d-unit2.today .d-unit2-head .d-anillos { width: 52px; height: 52px; }
+.d-unit2.today .d-unit2-head:focus-visible { outline: 3px solid var(--d-gold); outline-offset: 3px; }
+@media (max-width: 360px) { .d-unit2.today .d-unit2-head .d-anillos { width: 48px; height: 48px; } .d-unit2.today .d-unit2-head > div:first-child b { font-size: 18px; } }
+
+/* v11.5 · Estiramiento: Pausa y Siguiente siempre a la mano, aunque la postura traiga foto y pasos largos. */
+.st-play { padding-bottom: 96px; }
+.st-play .st-controls { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(480px, 100%); margin: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--d-page); border-top: 2px solid var(--d-line); z-index: 2; }
+.d-unit2.today .d-unit2-head { margin-bottom: 30px; }
+.d-start { letter-spacing: 0; }
+
+/* v11.5 · Invitar a un amigo (solo la cuenta dueña). */
+.admin-accounts { display: grid; gap: 12px; }
+.admin-code { justify-self: center; padding: 10px 22px; border: 2px dashed var(--d-gold); border-radius: var(--d-radius); background: var(--d-gold-light); color: var(--d-gold); font-family: var(--title); font-size: 30px; font-weight: 700; letter-spacing: .14em; font-variant-numeric: tabular-nums; cursor: pointer; }
+.admin-list li { border: 2px solid var(--d-line); border-radius: var(--d-radius); background: var(--d-bg); }
+.admin-list small { color: var(--d-dim); }
+
+/* v11.5 · La entrada (lo primero que ve un amigo invitado) habla como Bambú: sin mayúsculas ni azul. */
+.d-auth .d-btn, .d-auth .d-mode button, .d-auth .d-pass-eye, .d-auth .d-auth-link { text-transform: none; letter-spacing: 0; }
+.d-auth .d-pass-eye, .d-auth .d-auth-link { color: var(--d-gold); }
+
+/* v12 · Una mano a la vez */
+.una-mano-paso { margin: 0; padding: 10px 14px; border: 2px solid var(--d-line); border-radius: var(--d-radius); background: var(--d-bg); color: var(--d-dim); font-weight: 800; }
+.una-mano-paso b { color: var(--d-gold); font-variant-numeric: tabular-nums; }
+
+/* v12 · Elegir el día de una tarea: tira de 14 días con scroll lateral y el calendario para lo lejano. */
+.dia-picker { display: grid; gap: 8px; min-width: 0; }
+.dia-tira { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scroll-snap-type: x proximity; scrollbar-width: none; }
+.dia-tira::-webkit-scrollbar { display: none; }
+.dia-tira button { flex: none; display: grid; place-items: center; gap: 0; width: 50px; min-height: 58px; padding: 6px 0; border: 2px solid var(--d-line); border-radius: 14px; background: var(--d-bg); color: var(--d-dim); box-shadow: 0 3px 0 var(--d-line); scroll-snap-align: start; cursor: pointer; }
+.dia-tira button small { font-size: 12px; font-weight: 800; }
+.dia-tira button b { font-family: var(--title); font-size: 20px; color: var(--d-ink); font-variant-numeric: tabular-nums; }
+.dia-tira button.on { border-color: var(--d-green); background: var(--d-green-light); box-shadow: 0 3px 0 var(--d-green-lip); color: var(--d-green-ink); }
+.dia-tira button:active { transform: translateY(3px); box-shadow: none; }
+.dia-extra { display: flex; gap: 8px; flex-wrap: wrap; }
+.dia-extra .d-btn { min-height: 44px; flex: 1 1 auto; }
+.dia-extra .d-btn.on { border-color: var(--d-green); color: var(--d-green-ink); }
+.dia-cal { position: relative; overflow: hidden; }
+.dia-cal input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.d-tasks li:has(.dia-mover-panel) { flex-wrap: wrap; }
+.dia-mover-panel { flex: 1 0 100%; padding: 6px 2px 2px; min-width: 0; }
+.dia-mover.on { color: var(--d-green-ink); }
+
+/* v12 · Racha de lectura: la brasa es la racha, el dorado los escudos que ganaste. */
+.racha-lect { display: grid; gap: 14px; margin: 4px 0 16px; padding: 18px; border: 2px solid var(--d-line); border-radius: var(--d-radius-l); background: var(--d-surface); box-shadow: 0 4px 0 var(--d-line); }
+.racha-lect.hecho { border-color: var(--d-orange); box-shadow: 0 4px 0 var(--d-orange); }
+.rl-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.rl-num { display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 8px; }
+.rl-num b { font-family: var(--title); font-size: 56px; line-height: 1; color: var(--d-orange); font-variant-numeric: tabular-nums; }
+.racha-lect:not(.hecho) .rl-num b { color: var(--d-ink); }
+.rl-num span { grid-column: 1 / -1; color: var(--d-dim); font-weight: 800; font-size: 14px; }
+.rl-escudos { display: grid; grid-template-columns: repeat(2, auto); justify-items: center; gap: 2px 6px; text-align: center; }
+.rl-escudos small { grid-column: 1 / -1; color: var(--d-dim); font-size: 12px; font-weight: 800; }
+.rl-escudos span.on .duo-icon { filter: drop-shadow(0 0 6px var(--d-gold)); }
+.rl-semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.rl-semana li { display: grid; justify-items: center; gap: 4px; }
+.rl-semana small { color: var(--d-faint); font-size: 12px; font-weight: 900; }
+.rl-semana i { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--d-line); background: var(--d-bg); }
+.rl-semana .leido i { border-color: var(--d-orange); background: var(--d-orange); }
+.rl-semana .protegido i { border: 2px dashed var(--d-gold); background: var(--d-gold-light); }
+.rl-semana .hoy i { border: 2px dashed var(--d-orange); animation: rl-late 1.6s ease-in-out infinite; }
+.rl-semana .hoy small { color: var(--d-ink); }
+.rl-semana .antes i { opacity: .35; }
+@keyframes rl-late { 50% { transform: scale(1.08); } }
+.rl-hito { display: grid; gap: 6px; }
+.rl-hito span { color: var(--d-dim); font-weight: 800; font-size: 14px; }
+.rl-hito b { color: var(--d-ink); }
+.rl-barra { height: 10px; border-radius: 6px; background: var(--d-off); overflow: hidden; }
+.rl-barra i { display: block; height: 100%; border-radius: 6px; background: var(--d-orange); transition: width 420ms cubic-bezier(.2, .9, .3, 1.2); }
+.rl-frase { margin: 0; font-weight: 800; color: var(--d-ink); }
+.racha-lect.riesgo .rl-frase { color: var(--d-orange); }
+.rl-mejor { margin: 0; color: var(--d-faint); font-size: 13px; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .rl-semana .hoy i { animation: none; } }
+
+/* v12 · El plato que se llena: el festejo de llegar a tu energía del día. */
+.meta-moment { position: fixed; inset: 0; z-index: 56; display: grid; align-content: center; justify-items: center; gap: 12px; padding: 24px; text-align: center; background: var(--d-page); color: var(--d-ink); overflow: hidden; cursor: pointer; animation: ql-fade 200ms ease; }
+.mm-plato { position: relative; display: grid; place-items: center; }
+.mm-plato svg { transform: rotate(-90deg); }
+.mm-plato img { position: absolute; animation: mm-brote 520ms 780ms cubic-bezier(.2, .9, .3, 1.5) backwards; }
+.mm-pista { fill: none; stroke: var(--d-off); stroke-width: 12; }
+.mm-llena { fill: none; stroke: var(--d-green); stroke-width: 12; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; animation: mm-llenar 760ms cubic-bezier(.5, 0, .3, 1) forwards, mm-brillo 900ms 780ms ease-out; }
+.mm-title { font-family: var(--title); font-size: 30px; line-height: 1.1; max-width: 340px; animation: mm-sube 400ms 760ms cubic-bezier(.2, .9, .3, 1.3) backwards; }
+.mm-text { color: var(--d-dim); font-weight: 800; max-width: 320px; animation: mm-sube 400ms 860ms ease backwards; }
+.mm-extra { color: var(--d-gold); font-size: 18px; animation: mm-sube 400ms 960ms ease backwards; }
+.meta-moment .confetti i { animation-delay: var(--d); }
+@keyframes mm-llenar { to { stroke-dashoffset: 0; } }
+@keyframes mm-brillo { 0% { filter: drop-shadow(0 0 0 var(--d-green)); } 40% { filter: drop-shadow(0 0 22px var(--d-green)); } 100% { filter: drop-shadow(0 0 0 var(--d-green)); } }
+@keyframes mm-brote { from { transform: scale(.2) translateY(30px); opacity: 0; } }
+@keyframes mm-sube { from { transform: translateY(16px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .mm-llena { animation: none; stroke-dashoffset: 0; } .mm-plato img, .mm-title, .mm-text, .mm-extra { animation: none; } }
+
+/* v12 · Nutrientes del día: la fibra llena en verde (meta), azúcar y sodio en sol (referencia), sin rojo. */
+.nutr-lista { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.nutr-lista li { display: grid; gap: 5px; }
+.nutr-fila { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-weight: 800; }
+.nutr-fila span { color: var(--d-ink); }
+.nutr-fila b { font-variant-numeric: tabular-nums; color: var(--d-ink); }
+.nutr-fila small { color: var(--d-faint); font-weight: 700; }
+.nutr-barra { display: block; height: 10px; border-radius: 6px; background: var(--d-off); overflow: hidden; }
+.nutr-barra u { display: block; height: 100%; border-radius: 6px; background: var(--d-dim); transition: width 420ms cubic-bezier(.2, .9, .3, 1.2); }
+.nutr-lista .meta .nutr-barra u { background: var(--d-green); }
+.nutr-lista .tope .nutr-barra u { background: var(--d-gold); }
+.nutr-lista .meta.llena .nutr-fila b { color: var(--d-green-ink); }
+.nutr-nota { color: var(--d-dim); font-size: 13px; font-weight: 700; }
+
+/* v12 · Tu cuerpo: series por semana contra el rango sano y lo que te toca. */
+.mu-toca { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 12px 14px; border: 2px solid var(--d-green); border-radius: var(--d-radius); background: var(--d-green-light); box-shadow: 0 4px 0 var(--d-green-lip); }
+.mu-toca span { color: var(--d-green-ink); font-weight: 900; font-size: 13px; }
+.mu-toca b { grid-column: 1; font-family: var(--title); font-size: 26px; color: var(--d-ink); }
+.mu-toca small { grid-column: 1; color: var(--d-dim); font-weight: 700; }
+.mu-toca .d-btn { grid-column: 2; grid-row: 1 / span 3; }
+.mu-balance { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.mu-balance button { display: grid; grid-template-columns: 92px 1fr 62px; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 4px 6px; border: 0; border-radius: 12px; background: none; color: var(--d-ink); text-align: left; cursor: pointer; }
+.mu-balance button:active { background: var(--d-bg); }
+.mu-n { display: grid; font-weight: 800; }
+.mu-n i { font-style: normal; font-size: 11px; color: var(--d-gold); font-weight: 800; }
+.mu-pista { position: relative; height: 12px; border-radius: 7px; background: var(--d-off); overflow: hidden; }
+.mu-pista em { position: absolute; top: 0; bottom: 0; background: var(--d-line-2); }
+.mu-pista u { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 5px; background: var(--d-dim); }
+.mu-balance .bien .mu-pista u { background: var(--d-green); }
+.mu-balance .mucho .mu-pista u { background: var(--d-gold); }
+.mu-balance b { text-align: right; font-variant-numeric: tabular-nums; }
+.mu-balance b small { color: var(--d-faint); font-weight: 700; font-size: 11px; }
+
+/* v12 · Hoy es una caña que crece. Antes: círculos en zigzag (el camino de Duolingo) y 176 px por paso.
+   Ahora: segmentos de bambú en una caña recta, con su nudo, etiqueta al lado y 108 px por paso.
+   La caña pasa por el centro del segmento en --cana (50% - 92px). */
+.d-unit2 { --cana: calc(50% - 92px); }
+.d-unit2 .d-step2 { height: 108px; }
+.d-unit2.past .d-step2 { height: 80px; }
+.d-unit2 .d-step2::before { content: ""; position: absolute; top: 0; bottom: 0; left: calc(var(--cana) - 6px); width: 12px; background: var(--d-off); }
+.d-unit2 .d-step2:first-of-type::before { top: 40px; }
+.d-unit2 .d-step2.done::before { background: var(--d-gold-lip); }
+.d-unit2 .d-step2.chest::before { bottom: 50%; }
+.d-unit2 .d-node2 { top: 14px; left: var(--cana); width: 84px; height: 74px; margin-left: -42px; transform: none; border-radius: 22px; overflow: hidden; isolation: isolate; }
+.d-unit2.past .d-node2 { top: 10px; width: 62px; height: 54px; margin-left: -31px; border-radius: 17px; }
+.d-unit2 .d-node2:active:not(.locked) { transform: translateY(8px); }
+/* El nudo de bambú: la franja clara de arriba de cada segmento. */
+.d-unit2 .d-node2::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 11px; background: var(--d-white-60); z-index: 0; border-radius: 22px 22px 0 0; }
+.d-unit2.past .d-node2::before { border-radius: 17px 17px 0 0; height: 8px; }
+.d-unit2 .d-node2.now::before, .d-unit2 .d-node2.done::before { background: rgba(255, 255, 255, .22); }
+.d-unit2 .d-node2 .duo-icon { position: relative; z-index: 2; }
+.d-unit2 .d-node2.now { overflow: visible; }
+.d-unit2 .d-node2.now::after { inset: -10px; border-radius: 30px; border-width: 6px; }
+/* Lo que llevas llena el segmento desde abajo, como agua. */
+.d-node-llena { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--p) * 100%); background: var(--d-green-lip); z-index: 1; border-radius: 0 0 22px 22px; transition: height 420ms cubic-bezier(.2, .9, .3, 1.2); }
+.d-node2.now .d-node-llena { background: var(--d-green-ink); opacity: .55; }
+.d-unit2 .d-step2-label { top: 18px; left: calc(var(--cana) + 56px); right: 8px; width: auto; transform: none; justify-items: start; text-align: left; }
+.d-unit2.past .d-step2-label { top: 14px; left: calc(var(--cana) + 44px); }
+.d-unit2 .d-step2.now .d-step2-label { top: 40px; }
+.d-unit2 .d-step2 .d-start { top: 8px; left: calc(var(--cana) + 56px); transform: none; padding: 4px 10px; font-size: 14px; animation: none; }
+.d-unit2 .d-step2 .d-start::after { display: none; }
+.d-unit2 .d-step2.chest { height: 120px; }
+.d-unit2 .d-step2.chest .d-chest { top: 14px; left: var(--cana); width: 84px; height: 78px; margin-left: -42px; }
+.d-unit2 .d-step2.chest .d-step2-label { top: 30px; transform: none; }
+.d-unit2 .d-mascot { top: 6px; right: 0; width: 108px; }
+.d-unit2 .d-step2.now .d-step2-label { right: 110px; }
+@media (max-width: 360px) { .d-unit2 { --cana: calc(50% - 100px); } .d-unit2 .d-mascot { width: 84px; } .d-unit2 .d-mascot .brote-art { width: 80px; height: 80px; } .d-unit2 .d-step2.now .d-step2-label { right: 88px; } }
+
+.d-unit2 .d-step2.now { height: 150px; }
+.d-step2-tip { margin-top: 4px; font-style: normal; font-size: 13px; font-weight: 700; color: var(--d-dim); line-height: 1.3; }
+@media (max-width: 360px) { .d-unit2 .d-mascot { display: none; } .d-unit2 .d-step2.now .d-step2-label { right: 8px; } .d-unit2 .d-step2.now { height: 158px; } }
+
+/* v12 · Sistema: todo lo que se toca se hunde en el mismo tiempo. */
+.d-btn, .d-node2, .dia-tira button, .d-chips button, .d-seg button { transition-duration: var(--d-t-toque); }
+/* v12 · "No" en la hoja de la mañana: neutro, no rojo. Decir que no hoy no es un error (el rojo es solo para borrar). */
+.d-big-choice.neutro { background: var(--d-surface); border: 2px solid var(--d-line-2); color: var(--d-ink); box-shadow: 0 6px 0 var(--d-line); }
+.d-big-choice.neutro .d-no { color: var(--d-dim); }

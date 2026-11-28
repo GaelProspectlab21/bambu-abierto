@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { type Dir, type Perfil } from './perfil'
-import { DUELO_EJ } from './duelos'
+import { DUELO_EJ } from './duelosViejos'
+import { MAX_PERSONAS, tipoDeReto, type Reto, type TipoReto } from './retos'
 import { codigoAmigo, dueloDesdeFila, enlaceLlave, llaveSocial, perfilDesdeFila, perfilFila, repeticiones, type Amistad, type Duelo, type EstadoWidget } from './nubeSocialFormato'
 export type { Duelo, EstadoWidget } from './nubeSocialFormato'
 
@@ -71,6 +72,14 @@ export async function buscarPorCodigo(codigo: string): Promise<{ apodo: string; 
   const { data, error } = await db().rpc('bambu_buscar_por_codigo', { p_codigo: codigoAmigo(codigo) })
   revisar(error)
   return data?.[0] ?? null
+}
+/** v12: por apodo EXACTO (sin listar desconocidos: lo encuentras si sabes cómo se llama). */
+export async function buscarPorApodo(apodo: string): Promise<{ apodo: string; avatar: number; codigo: string }[]> {
+  const q = apodo.trim()
+  if (q.length < 2) return []
+  const { data, error } = await db().rpc('bambu_buscar_por_apodo', { p_apodo: q.slice(0, 24) })
+  revisar(error)
+  return (data ?? []) as { apodo: string; avatar: number; codigo: string }[]
 }
 export async function miCodigoAmigo(): Promise<string | null> {
   const { data, error } = await db().from('bambu_perfiles').select('codigo_amigo').eq('user_id', await yo()).maybeSingle()
@@ -151,3 +160,54 @@ export async function borrarWidgets(uid: string): Promise<void> {
   revisar((await db().from('bambu_widget').delete().eq('user_id', uid)).error)
 }
 export const urlWidget = (llave: string) => enlaceLlave(baseLlave(), 'widget', llave)
+
+// Retos de grupo (v11, Ricardo). Crear, marcar y salir pasan por RPC: el servidor valida amistad,
+// ejercicio y topes, y cada quien marca una sola vez. Misma forma que tenía firebase.ts.
+type FilaReto = { id: string; de: string; participantes: string[]; tipo: string; ejercicio: string; marcas: Record<string, unknown> | null; creado: string; movido: string }
+function retoDesdeFila(f: FilaReto): Reto {
+  const marcas: Record<string, number> = {}
+  for (const [k, v] of Object.entries(f.marcas ?? {})) if (typeof v === 'number') marcas[k] = v
+  return { id: f.id, de: f.de, participantes: f.participantes ?? [], tipo: tipoDeReto(f.tipo), ejercicio: f.ejercicio, marcas, creado: Date.parse(f.creado) || 0, movido: Date.parse(f.movido) || 0, version: f.movido }
+}
+export async function misRetos(uid: string): Promise<Reto[]> {
+  await yo(uid)
+  const { data, error } = await db().from('bambu_retos').select('*').contains('participantes', [uid]).order('movido', { ascending: false }).limit(60)
+  revisar(error)
+  return (data ?? []).map(f => retoDesdeFila(f as FilaReto))
+}
+export async function leerReto(id: string): Promise<Reto | null> {
+  const { data, error } = await db().from('bambu_retos').select('*').eq('id', id).maybeSingle()
+  revisar(error)
+  return data ? retoDesdeFila(data as FilaReto) : null
+}
+export async function crearReto(rivales: string[], tipo: TipoReto, ejercicio: string, marca: number): Promise<string> {
+  const { data, error } = await db().rpc('bambu_crear_reto', { p_rivales: rivales.slice(0, MAX_PERSONAS - 1), p_tipo: tipo, p_ejercicio: ejercicio, p_marca: Math.max(0, Math.round(marca)) })
+  revisar(error)
+  return String(data)
+}
+export async function marcarReto(r: Reto, _uid: string, marca: number): Promise<void> {
+  revisar((await db().rpc('bambu_marcar_reto', { p_id: r.id, p_marca: Math.max(0, Math.round(marca)) })).error)
+}
+export async function salirReto(r: Reto, _uid: string): Promise<void> {
+  revisar((await db().rpc('bambu_salir_reto', { p_id: r.id })).error)
+}
+export async function borrarReto(id: string): Promise<void> {
+  revisar((await db().from('bambu_retos').delete().eq('id', id).eq('de', await yo())).error)
+}
+export async function borrarRetos(uid: string): Promise<void> {
+  for (const r of await misRetos(uid)) await salirReto(r, uid)
+}
+export type Fallo = { donde: string; error: string; pila: string; version: string; navegador: string }
+/** Caja de fallos: solo con cuenta (sin cuenta queda en la consola). Tope de 30 por hora en el servidor. */
+export async function reportarFallo(f: Fallo): Promise<void> {
+  if (!supabase) { console.error('Fallo sin cuenta', f.donde, f.error); return }
+  const { data } = await supabase.auth.getSession()
+  const uid = data.session?.user.id
+  if (!uid) { console.error('Fallo sin sesión', f.donde, f.error); return }
+  const corto = (x: string, n: number) => String(x ?? '').slice(0, n)
+  revisar((await supabase.from('bambu_fallos').insert({ user_id: uid, donde: corto(f.donde, 40), error: corto(f.error, 400), pila: corto(f.pila, 800), version: corto(f.version, 60), navegador: corto(f.navegador, 200) })).error)
+}
+export async function borrarFallos(uid: string): Promise<void> {
+  await yo(uid)
+  revisar((await db().from('bambu_fallos').delete().eq('user_id', uid)).error)
+}

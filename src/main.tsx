@@ -1,4 +1,5 @@
 import React from 'react'
+import { iniciarTacto } from './lib/tacto'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { primeSounds } from './lib/sounds'
@@ -19,7 +20,9 @@ import '@fontsource-variable/nunito/index.css'
 import './duo.css'
 import './bambu.css'
 import { applyTheme, watchSystemTheme } from './lib/theme'
+import { quitarMarcaVersion } from './lib/version'
 
+quitarMarcaVersion()
 applyTheme()
 watchSystemTheme()
 
@@ -32,6 +35,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 }
 
 primeSounds()
+iniciarTacto()
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

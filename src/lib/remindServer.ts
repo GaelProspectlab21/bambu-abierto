@@ -5,6 +5,6 @@
  */
 export { applyRecords, diffRecords, type RecordRow } from './records'
 export { EMPTY_DATA, cleanSettings } from './model'
-export { dueKinds, dueNotes, testNote, type Note } from './reminders'
+export { dueKinds, dueNotes, PASE_VENTANA_MS, testNote, type Note } from './reminders'
 export { parseNfc } from './nfc'
 export { nfcServerAction } from './nfcActions'

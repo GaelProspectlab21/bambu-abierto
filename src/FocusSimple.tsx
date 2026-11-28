@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AppData } from './lib/model'
 import { dateKey } from './lib/model'
-import { BINAURAL, PAUSE_REASONS, activeSeconds, counts, hm } from './lib/focusStats'
+import { PAUSE_REASONS, activeSeconds, counts, hm } from './lib/focusStats'
 import { addItem, closeBlock, startBlock, toggleItem, type Pick } from './lib/bloque'
 import { BinauralAudio } from './BinauralAudio'
 import { chime, mmss, useNow, useWakeLock } from './ui'
@@ -9,6 +9,8 @@ import { haptic } from './lib/haptic'
 import { reward } from './juice'
 import { playSound } from './lib/sounds'
 import type { Preset } from './FocusPage'
+import { paraBloque } from './lib/tareas'
+import { fmtDay } from './ui'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Props = { data: AppData; commit: Commit; onMessage: (text: string, undo?: () => void) => void; preset?: Preset | null; onPresetUsed?: () => void }
@@ -23,7 +25,11 @@ export function FocusBlock(props: Props) {
 }
 
 function Setup({ data, commit, preset, onPresetUsed }: Props) {
-  const open = data.tasks.filter(t => t.status === 'pending' || t.status === 'in_progress')
+  // v11.2: primero tu sapo, lo atrasado, hoy y mañana. Lo de más adelante, detrás de un botón.
+  const hoy = dateKey()
+  const { cerca, despues } = paraBloque(data, hoy)
+  const [verDespues, setVerDespues] = useState(false)
+  const open = [...cerca, ...despues]
   const [picks, setPicks] = useState<Pick[]>(() => preset?.task ? [{ id: preset.taskId, text: preset.task }] : [])
   const [text, setText] = useState('')
   const last = [...data.focus].filter(counts).sort((x, y) => (y.startedAt ?? 0) - (x.startedAt ?? 0))[0]
@@ -46,7 +52,11 @@ function Setup({ data, commit, preset, onPresetUsed }: Props) {
     <section className="d-card fb-card">
       <h2 className="fb-title">¿Qué vas a mover?</h2>
       <p className="d-hint left">Toca una o varias. Las palomeas conforme las termines.</p>
-      {open.length > 0 && <div className="fb-tasks">{open.slice(0, 12).map(t => <button key={t.id} type="button" className={has(t.id) ? 'on' : ''} aria-pressed={has(t.id)} onClick={() => toggle(t.id, t.text)}><i aria-hidden="true">{has(t.id) ? '✓' : ''}</i><span>{t.text}</span></button>)}</div>}
+      {cerca.length > 0 && <div className="fb-tasks">{cerca.map(t => <button key={t.id} type="button" className={`${has(t.id) ? 'on' : ''} ${t.sapo === hoy ? 'sapo' : ''}`} aria-pressed={has(t.id)} onClick={() => toggle(t.id, t.text)}><i aria-hidden="true">{has(t.id) ? '✓' : ''}</i><span>{t.text}<small>{t.sapo === hoy ? 'Tu sapo' : t.dueDate && t.dueDate < hoy ? `Atrasada, ${fmtDay(t.dueDate)}` : t.dueDate === hoy ? 'Hoy' : 'Mañana'}</small></span></button>)}</div>}
+      {!cerca.length && despues.length > 0 && <p className="d-hint left">Nada para hoy ni mañana. Elige de lo que viene o escribe otra cosa.</p>}
+      {despues.length > 0 && (cerca.length > 0 && !verDespues
+        ? <button type="button" className="d-btn white wide" onClick={() => setVerDespues(true)}>Más adelante ({despues.length})</button>
+        : <div className="fb-tasks later">{despues.map(t => <button key={t.id} type="button" className={has(t.id) ? 'on' : ''} aria-pressed={has(t.id)} onClick={() => toggle(t.id, t.text)}><i aria-hidden="true">{has(t.id) ? '✓' : ''}</i><span>{t.text}<small>{t.dueDate ? fmtDay(t.dueDate) : 'Sin fecha'}</small></span></button>)}</div>)}
       {picks.filter(p => !p.id).map((p, i) => <div key={i} className="fb-loose"><span>{p.text}</span><button type="button" className="d-x small" aria-label={`Quitar ${p.text}`} onClick={() => setPicks(x => x.filter(y => y !== p))}>×</button></div>)}
       <form className="fb-add" onSubmit={e => { e.preventDefault(); addText() }}>
         <input className="d-input" value={text} maxLength={200} onChange={e => setText(e.target.value)} placeholder={open.length ? 'U otra cosa' : 'Ej. grabar la intro del video'} />
@@ -71,7 +81,6 @@ function Running({ data, commit, onMessage }: Props) {
   const a = data.activeFocus!
   const now = useNow(true)
   useWakeLock(!a.pausedAt)
-  const [profile, setProfile] = useState<string | null>(null)
   const [text, setText] = useState('')
   const [full, setFull] = useState(false)
   const box = useRef<HTMLDivElement>(null)
@@ -125,9 +134,8 @@ function Running({ data, commit, onMessage }: Props) {
       <form className="fb-add" onSubmit={e => { e.preventDefault(); if (text.trim()) { commit(d => addItem(d, text)); setText(''); onMessage('Agregada al bloque.') } }}>
         <input className="d-input" value={text} maxLength={200} onChange={e => setText(e.target.value)} placeholder="Agregar otra al bloque" />
       </form>
-      <details className="d-more"><summary>Sonido para concentrarte</summary>
-        <div className="d-chips">{BINAURAL.map(b => <button key={b.id} type="button" className={profile === b.id ? 'on' : ''} onClick={() => setProfile(profile === b.id ? null : b.id)}>{b.label}</button>)}</div>
-        {profile && <BinauralAudio key={profile} enabled={!a.pausedAt} beat={BINAURAL.find(b => b.id === profile)!.hz} />}
+      <details className="d-more fb-sonido"><summary>Sonido para concentrarte</summary>
+        <BinauralAudio enabled={!a.pausedAt} />
       </details>
     </section>
   </div>

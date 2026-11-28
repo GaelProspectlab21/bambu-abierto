@@ -88,15 +88,15 @@ export function Companion({ data, section, go, commit, now, cloud, inline = fals
     else { reward(container.current, `+${XP.habit} XP`); toggleHabit(commit, s.cta.habit) }
     setOpen(false)
   }
-  return <aside ref={container} className={`companion ${inline ? 'companion-inline' : ''} ${section === 'Noche' ? 'lifted' : ''} ${tucked && !open && !inline ? 'tucked' : ''}`} aria-label={training ? "Sugerencias de Tallo" : "Sugerencias de Brote"}>
+  return <aside ref={container} className={`companion ${inline ? 'companion-inline' : ''} ${section === 'Noche' ? 'lifted' : ''} ${tucked && !open && !inline ? 'tucked' : ''}`} aria-label={training ? "Sugerencias de tu coach" : "Sugerencias de Brote"}>
     {inline && <span className="companion-label">Un consejo de Brote</span>}
     {open && <div id={panelId} className="companion-panel" role="dialog" aria-label="Sugerencias">
-      <header><strong>{training ? 'Tallo, tu entrenador' : TITLE[look]}</strong><button ref={closeButton} className="quiet-button" aria-label="Cerrar consejos" onClick={() => { setOpen(false); trigger.current?.focus({ preventScroll: true }) }}>×</button></header>
+      <header><strong>{training ? 'Brote, tu entrenador' : TITLE[look]}</strong><button ref={closeButton} className="quiet-button" aria-label="Cerrar consejos" onClick={() => { setOpen(false); trigger.current?.focus({ preventScroll: true }) }}>×</button></header>
       <ul>{coach && coach.lines.map((line, i) => <li key={`coach-${i}`}><p>{line.text}</p></li>)}{items.map(s => <li key={s.id}><p>{s.text}</p>{s.cta && <button className="secondary-button" onClick={() => act(s)}>{s.cta.label}</button>}</li>)}</ul>
       <button className="quiet-button hide-btn" onClick={() => { setCompanionOn(false); setOpen(false) }}>Ocultar mascota</button>
     </div>}
-    <button ref={trigger} aria-controls={open ? panelId : undefined} className={`companion-fab look-${look} ${cheer ? 'cheer' : ''}`} aria-expanded={open} aria-label={open ? 'Cerrar sugerencias' : training ? 'Abrir sugerencias de Tallo' : `Abrir sugerencias de Brote (${items.length})`} onClick={toggle}>
-      <>{training ? <img src="img/tallo-guapo.png" width="66" height="72" alt="Tallo presumido" /> : <BroteArt mood={mood} look={look} size={58} />}</>
+    <button ref={trigger} aria-controls={open ? panelId : undefined} className={`companion-fab look-${look} ${cheer ? 'cheer' : ''}`} aria-expanded={open} aria-label={open ? 'Cerrar sugerencias' : training ? 'Abrir sugerencias de tu coach' : `Abrir sugerencias de Brote (${items.length})`} onClick={toggle}>
+      <>{training ? <BroteArt mood="orgulloso" look="coach" size={58} /> : <BroteArt mood={mood} look={look} size={58} />}</>
       {!seen && <i className="companion-dot" aria-hidden="true" />}
     </button>
   </aside>

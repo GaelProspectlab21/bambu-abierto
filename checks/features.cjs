@@ -27,7 +27,7 @@ const { normalizeData, EMPTY_DATA } = moduleOf('model')
   assert.equal(L.salidaLlave('pase', { hasta: 'ayer' }), null)
   assert.equal(L.salidaLlave('widget', { estado: [] }), null)
   const widget = L.salidaLlave('widget', { user_id: 'secreto', estado: { dia: '2026-11-25', rutina: 'Lista', racha: 3, nivel: 2, xpHoy: 20, meta: 100, minutos: -4, correo: 'privado' } })
-  assert.deepEqual(widget, { fields: { dia: { stringValue: '2026-11-25' }, rutina: { stringValue: 'Lista' }, racha: { integerValue: '3' }, nivel: { integerValue: '2' }, xpHoy: { integerValue: '20' }, meta: { integerValue: '100' }, minutos: { integerValue: '0' } } })
+  assert.deepEqual(widget, { fields: { dia: { stringValue: '2026-11-25' }, rutina: { stringValue: 'Lista' }, racha: { integerValue: '3' }, nivel: { integerValue: '2' }, xpHoy: { integerValue: '20' }, meta: { integerValue: '100' }, minutos: { integerValue: '0' }, retos: { integerValue: '0' } } })
   assert.doesNotMatch(JSON.stringify(widget), /secreto|privado|correo|user_id/)
   console.log('PASA v9 lectura por llave: validación, formato y minimización')
 }
@@ -182,6 +182,137 @@ ok('v9 lectura por llave: validación, formato y minimización')
   assert.equal(completeScore(0).length, 1)
   assert.equal(completeScore(5).length, 2, 'en racha suma la campana')
   ok('v10.3 sonido: encendido por defecto, interrupciones, partituras en escala e impulso con tope')
+}
+
+{
+  const { holdCues, transitionCue, variedSteps } = moduleOf('stretch')
+  const { SCORES } = moduleOf('sounds')
+  // v11.5: el estiramiento cuenta 3, 2, 1 una sola vez aunque el reloj salte de 250 en 250 ms.
+  let prev = 30, all = []
+  for (let left = 30; left >= -0.25; left -= 0.25) { all.push(...holdCues(prev, left, 30, 'static')); prev = left }
+  assert.deepEqual(all, ['breathe', 'count', 'count', 'count'])
+  // Un salto grande (el teléfono se durmió) no se come la cuenta: cruza los tres umbrales.
+  assert.deepEqual(holdCues(5, 0, 30, 'static'), ['count', 'count', 'count'])
+  // Las dinámicas y las cortas no llevan soplo; una de 2 s no cuenta un 3 que no existe.
+  assert.deepEqual(holdCues(16, 14, 30, 'dynamic'), [])
+  assert.deepEqual(holdCues(2, 0, 2, 'static'), ['count'])
+  // Mismo estiramiento del otro lado: suena del lado que toca. Postura nueva: campanita.
+  const izq = { name: 'Cuádriceps', side: 'Lado izquierdo' }, der = { name: 'Cuádriceps', side: 'Lado derecho' }
+  assert.equal(transitionCue(izq, der), 'sideR')
+  assert.equal(transitionCue(der, izq), 'sideL')
+  assert.equal(transitionCue(der, { name: 'Gato y vaca' }), 'pose')
+  assert.ok(SCORES.sideL.every(n => n[4] < 0) && SCORES.sideR.every(n => n[4] > 0), 'cada lado suena de su oído')
+  const steps = variedSteps('noche', '2026-11-27')
+  for (let k = 1; k < steps.length; k++) assert.ok(['sideL', 'sideR', 'pose'].includes(transitionCue(steps[k - 1], steps[k])))
+  ok('v11.5 estiramiento con sonido: cuenta 3 2 1, soplo a la mitad y el lado en su oído')
+}
+
+{
+  // v11.5: la cuenta dueña invita desde Ajustes; el enlace trae el código y no arrastra lo que había en la URL.
+  const { mensajeInvitacion } = moduleOf('invitar')
+  const m = mensajeInvitacion('AB23CD45', 'https://bambu-personal-gael.vercel.app/?ir=ajustes#x')
+  assert.match(m, /https:\/\/bambu-personal-gael\.vercel\.app\/\?invita=AB23CD45 /)
+  assert.doesNotMatch(m, /ir=ajustes|#x/)
+  assert.match(m, /AB23CD45\. Sirve una vez/)
+  assert.doesNotMatch(m, /—| - |\.\.\./, 'puntuación humana')
+  ok('v11.5 invitar: enlace limpio con el código puesto')
+}
+
+{
+  // v12: una mano a la vez. La serie espera las dos manos y cuenta la más débil.
+  const { juntarManos, unaManoPorDefecto } = moduleOf('unaMano')
+  assert.deepEqual(juntarManos(40, 35, 's'), { value: 35, note: 'Por mano: primera 40 s, segunda 35 s' })
+  assert.equal(juntarManos(12, 15, 'reps').value, 12)
+  assert.equal(unaManoPorDefecto({ id: 'backpack-hold', slot: 'agarre' }), true)
+  assert.equal(unaManoPorDefecto({ id: 'row-backpack-1arm', slot: 'jalon' }), true)
+  assert.equal(unaManoPorDefecto({ id: 'pushup', slot: 'empuje' }), false)
+  ok('v12 una mano a la vez: espera las dos y guarda la más débil')
+}
+
+{
+  // v12: tareas para cualquier día. La tira arranca hoy, cruza meses sin saltarse días.
+  const { proximosDias, moverTarea } = moduleOf('tareas')
+  const t = proximosDias('2026-11-27', 14)
+  assert.equal(t.length, 14)
+  assert.deepEqual(t.slice(0, 3).map(d => d.nombre), ['hoy', 'mañ', 'dom'])
+  assert.equal(t[4].day, '2026-12-01'); assert.equal(t[4].num, 1)
+  const d0 = { ...EMPTY_DATA, tasks: [{ id: 'a', text: 'x', status: 'pending', updatedAt: 1 }] }
+  assert.equal(moverTarea(d0, 'a', '2026-12-10').tasks[0].dueDate, '2026-12-10')
+  ok('v12 tareas: tira de 14 días y mover a cualquier fecha')
+}
+
+{
+  // v12: racha de lectura con escudos ganados.
+  const { rachaLectura, hitoAlcanzado } = moduleOf('rachaLectura')
+  const { shiftDay } = moduleOf('progress')
+  const seguidos = (desde, n) => Array.from({ length: n }, (_, i) => shiftDay(desde, i))
+  // 7 días seguidos ganan un escudo; un día fallado lo gasta y la racha sigue.
+  let r = rachaLectura([...seguidos('2026-11-01', 7), ...seguidos('2026-11-09', 3)], '2026-11-11')
+  assert.equal(r.actual, 10); assert.equal(r.escudos, 0); assert.deepEqual(r.protegidos, ['2026-11-08'])
+  // Sin escudo, el día fallado sí rompe.
+  r = rachaLectura([...seguidos('2026-11-01', 6), ...seguidos('2026-11-08', 2)], '2026-11-09')
+  assert.equal(r.actual, 2); assert.equal(r.mejor, 6)
+  // Hoy sin leer no rompe: la racha sigue viva y avisa si ya no hay escudo.
+  r = rachaLectura(seguidos('2026-11-01', 5), '2026-11-06')
+  assert.equal(r.actual, 5); assert.equal(r.hoyHecho, false); assert.equal(r.enRiesgo, true)
+  assert.equal(r.semana.at(-1).estado, 'hoy')
+  // Tope de 2 escudos y dos días seguidos cubiertos.
+  r = rachaLectura([...seguidos('2026-11-01', 21), ...seguidos('2026-11-24', 1)], '2026-11-24')
+  assert.deepEqual(r.protegidos, ['2026-11-22', '2026-11-23']); assert.equal(r.actual, 22)
+  assert.equal(rachaLectura(seguidos('2026-11-01', 21), '2026-11-21').escudos, 2)
+  assert.equal(r.hito, 30); assert.equal(r.faltan, 8)
+  assert.equal(hitoAlcanzado(16), 14); assert.equal(hitoAlcanzado(2), 0)
+  ok('v12 racha de lectura: escudos ganados cada 7 días, tope 2, hoy no rompe e hitos')
+}
+
+{
+  // v12: nutrientes sin cambiar la forma de la comida: salen del foodId por cantidad.
+  const { nutrientesDia, llegoAMeta, nutrDe } = moduleOf('nutrientes')
+  const { filaAFood } = moduleOf('alimentosMx')
+  const { registrarAlimentos } = moduleOf('foods')
+  const lata = filaAFood(['7501055300075', 'Refresco de cola', 'Marca', 'lata 355 ml', 355, 42, 0, 10.6, 10.6, 0, 0, 4])
+  assert.equal(lata.id, 'off-7501055300075'); assert.equal(lata.kcal, 149); assert.equal(lata.sugar, 37.6); assert.equal(lata.group, 'bebida')
+  assert.equal(filaAFood(['1', 'Galletas de avena', '', '', 0, 450, 6, 70, 30, 16, 3, 300]).unit, '100 g')
+  registrarAlimentos([lata])
+  assert.equal(nutrDe(lata.id).sugar, 37.6)
+  const d = { ...EMPTY_DATA, meals: [{ id: 'm', day: '2026-11-27', at: 1, slot: 'comida', items: [
+    { name: 'Refresco', qty: 2, unit: 'lata', kcal: 280, protein: 0, group: 'bebida', foodId: 'refresco' },
+    { name: 'Frijoles', qty: 1, unit: '1/2 taza', kcal: 115, protein: 7.5, group: 'leguminosa', foodId: 'frijoles' },
+    { name: 'Algo a ojo', qty: 1, unit: 'porción', kcal: 200, protein: 5, group: 'platillo' }] }] }
+  const n = nutrientesDia(d, '2026-11-27')
+  assert.equal(n.sugar, 78.3); assert.equal(n.fiber, 7.5); assert.equal(n.conDatos, 2); assert.equal(n.total, 3)
+  // El festejo es el momento de cruzar la meta, no cada vez que abres la app con la meta ya hecha.
+  assert.equal(llegoAMeta(1800, 2100, 2000), true)
+  assert.equal(llegoAMeta(2100, 2300, 2000), false)
+  assert.equal(llegoAMeta(0, 500, undefined), false)
+  ok('v12 comida: nutrientes por foodId, etiquetas de Open Food Facts y festejo al cruzar la meta')
+}
+
+{
+  // v12: Tu cuerpo dice qué te toca: lo más lejos de su rango semanal que ya descansó.
+  const { balance, MUSCLES } = moduleOf('musculos')
+  const st = Object.fromEntries(MUSCLES.map(m => [m, { muscle: m, sets: 0, lastDay: null }]))
+  st.Pecho = { muscle: 'Pecho', sets: 10, lastDay: '2026-11-27' }
+  st.Espalda = { muscle: 'Espalda', sets: 2, lastDay: '2026-11-20' }
+  st.Piernas = { muscle: 'Piernas', sets: 30, lastDay: '2026-11-25' }
+  const b = balance(st, 'semana', '2026-11-27')
+  const fila = m => b.filas.find(f => f.muscle === m)
+  assert.equal(fila('Pecho').estado, 'bien'); assert.equal(fila('Pecho').recuperando, true)
+  assert.equal(fila('Piernas').estado, 'mucho'); assert.equal(fila('Espalda').estado, 'falta')
+  assert.ok(['Hombros', 'Brazos', 'Abdomen'].includes(b.teToca), 'lo que tiene cero va antes que espalda con 2')
+  assert.equal(balance(st, 'siempre', '2026-11-27').teToca, null)
+  ok('v12 tu cuerpo: series por semana contra rango sano y lo que te toca')
+}
+
+{
+  // v12: jerarquía de volumen del sistema: el tacto es lo más bajito de la casa y el festejo de comida sube nota por nota.
+  const { SCORES } = moduleOf('sounds')
+  const vol = n => n[3] ?? 1
+  const tacto = Math.max(...SCORES.tacto.map(vol))
+  for (const [k, sc] of Object.entries(SCORES)) if (k !== 'tacto') assert.ok(Math.max(...sc.map(vol)) > tacto, `${k} debe sonar más que el tacto`)
+  const subida = SCORES.feast.filter(n => n[0] === 'wood').map(n => n[1])
+  assert.deepEqual(subida, [...subida].sort((a, b) => a - b)); assert.equal(subida.length, 10)
+  ok('v12 sonido: el tacto es lo más bajito y el festejo de comida sube la escala')
 }
 
 // Rachas y lectura
@@ -1702,7 +1833,7 @@ ok('datos de antes: se suben sin duplicar ni pisar lo de la cuenta, y conservan 
   assert.equal(patronDe('Subidas de talones en wall sit', 'reps'), 'generico')
   assert.equal(tipoDe('Tuck planche'), 'seconds'); assert.equal(tipoDe('Lagartijas diamante'), 'reps')
   assert.ok(esGeneral('Crunches') && !esGeneral('Lagartijas'))
-  assert.deepEqual(opcionesDe('Lagartijas inclinadas'), { inclinado: true, rodillas: false, doblado: false })
+  assert.deepEqual(opcionesDe('Lagartijas inclinadas'), { inclinado: true, rodillas: false, doblado: false, estirados: false, tuck: false })
   assert.equal(opcionesDe('Cuervo').doblado, true)
   assert.ok(CAMARA.length >= 50 && CAMARA_GRUPOS.length === 7)
   assert.ok(CAMARA.every(e => tipoDe(e.name) === e.kind), 'cada ejercicio de la lista se mide como reps o segundos según su tipo')
@@ -1740,6 +1871,186 @@ ok('datos de antes: se suben sin duplicar ni pisar lo de la cuenta, y conservan 
   assert.equal(moviendo.segundos, 0)
   assert.equal(moviendo.aviso, 'posicion')
 }
+{
+  const C = moduleOf('conteo')
+  const P = (x, y, v = 1) => ({ x, y, z: 0, v })
+  const cuerpo = (o) => { const pts = Array.from({ length: 33 }, () => P(0.5, 0.5, 0)); for (const [i, p] of Object.entries(o)) pts[i] = p; return { img: pts, mundo: pts, aspecto: 1 } }
+  const ambos = (i, p) => ({ [i]: p, [i + 1]: p })
+  const forma = (sh, el, wr, hp, kn, an, extra = {}) => cuerpo({ 0: P(sh.x - 0.06, sh.y - 0.02), ...ambos(11, sh), ...ambos(13, el), ...ambos(15, wr), ...ambos(23, hp), ...ambos(25, kn), ...ambos(27, an), ...ambos(29, P(an.x + 0.02, an.y)), ...ambos(31, P(an.x + 0.04, an.y)), ...extra })
+  const codos = forma(P(0.3, 0.6), P(0.3, 0.75), P(0.45, 0.75), P(0.6, 0.62), P(0.75, 0.66), P(0.9, 0.7))
+  const m1 = C.medir('plancha', codos, C.opcionesDe('Plancha'))
+  assert.ok(m1.postura && m1.recto, 'plancha en codos cuenta')
+  const acostado = forma(P(0.3, 0.74), P(0.38, 0.76), P(0.45, 0.76), P(0.6, 0.75), P(0.75, 0.75), P(0.9, 0.76))
+  assert.equal(C.medir('plancha', acostado, C.opcionesDe('Plancha')).postura, false, 'acostado en el piso no cuenta')
+  const rodillas = forma(P(0.3, 0.6), P(0.3, 0.75), P(0.45, 0.75), P(0.55, 0.65), P(0.68, 0.75), P(0.85, 0.75))
+  assert.equal(C.medir('plancha', rodillas, C.opcionesDe('Plancha')).recto, false, 'con las rodillas en el piso no cuenta')
+  const alta = forma(P(0.3, 0.5), P(0.3, 0.62), P(0.3, 0.75), P(0.6, 0.58), P(0.75, 0.64), P(0.9, 0.7))
+  assert.ok(C.medir('plancha', alta, C.opcionesDe('Plancha con brazos estirados')).postura, 'plancha con brazos estirados cuenta')
+  assert.equal(C.medir('plancha', codos, C.opcionesDe('Plancha con brazos estirados')).postura, false, 'en codos no vale como brazos estirados')
+  const vale = (m) => m.visto && m.postura && m.recto
+  const esfinge = forma(P(0.3, 0.6), P(0.3, 0.75), P(0.45, 0.76), P(0.6, 0.72), P(0.75, 0.74), P(0.9, 0.75))
+  assert.equal(vale(C.medir('plancha', esfinge, C.opcionesDe('Plancha'))), false, 'con la cadera en el piso no cuenta')
+  const hincado = forma(P(0.3, 0.6), P(0.3, 0.75), P(0.45, 0.75), P(0.6, 0.68), P(0.8, 0.745), P(0.97, 0.73))
+  assert.equal(vale(C.medir('plancha', hincado, C.opcionesDe('Plancha'))), false, 'apoyado en las rodillas no cuenta aunque el muslo quede casi recto')
+  const altaHincado = forma(P(0.3, 0.5), P(0.3, 0.62), P(0.3, 0.75), P(0.6, 0.62), P(0.78, 0.745), P(0.95, 0.72))
+  assert.equal(vale(C.medir('plancha', altaHincado, C.opcionesDe('Plancha con brazos estirados'))), false, 'brazos estirados con las rodillas en el piso no cuenta')
+  const caida = forma(P(0.3, 0.5), P(0.3, 0.62), P(0.3, 0.75), P(0.6, 0.71), P(0.75, 0.72), P(0.9, 0.73))
+  assert.equal(vale(C.medir('plancha', caida, C.opcionesDe('Plancha con brazos estirados'))), false, 'con la cadera caída no cuenta')
+  const frente = (o, hondo = {}) => { const pts = Array.from({ length: 33 }, () => P(0.5, 0.95, 0)); for (const [i, p] of Object.entries(o)) pts[i] = p; const mundo = pts.map((p, i) => i in hondo ? { ...p, z: hondo[i] } : p); return { img: pts, mundo, aspecto: 1 } }
+  const cara = { 0: P(0.5, 0.45), 11: P(0.35, 0.4), 12: P(0.65, 0.4), 13: P(0.36, 0.6), 14: P(0.64, 0.6) }
+  assert.ok(vale(C.medir('plancha', frente({ ...cara, 15: P(0.42, 0.63), 16: P(0.58, 0.63) }), C.opcionesDe('Plancha'))), 'de frente en codos cuenta')
+  assert.ok(vale(C.medir('plancha', frente({ ...cara, 15: P(0.42, 0.63), 16: P(0.58, 0.63), 23: P(0.4, 0.55), 24: P(0.6, 0.55) }, { 23: 0.5, 24: 0.5 }), C.opcionesDe('Plancha'))), 'de frente con la cadera atrás de los hombros cuenta')
+  assert.equal(C.medir('plancha', frente({ ...cara, 15: P(0.37, 0.8), 16: P(0.63, 0.8) }), C.opcionesDe('Plancha')).postura, false, 'de pie o sentado con los brazos colgando no cuenta')
+  assert.equal(C.medir('plancha', frente({ ...cara, 15: P(0.42, 0.63), 16: P(0.58, 0.63), 23: P(0.4, 0.8), 24: P(0.6, 0.8) }), C.opcionesDe('Plancha')).postura, false, 'sentado de frente con la cadera abajo no cuenta')
+  assert.equal(C.medir('plancha', frente({ ...cara, 13: P(0.36, 0.6), 14: P(0.64, 0.6), 15: P(0.37, 0.8), 16: P(0.63, 0.8), 23: P(0.4, 0.8), 24: P(0.6, 0.8) }), C.opcionesDe('Plancha con brazos estirados')).postura, false, 'de pie con los brazos estirados abajo no cuenta')
+  assert.equal(C.opcionesDe('Plancha con brazos estirados').estirados, true)
+  assert.ok(C.CAMARA.some(e => e.name === 'Plancha con brazos estirados' && e.kind === 'seconds'))
+  assert.match(C.comoDe('Plancha con brazos estirados', 'plancha'), /Brazos estirados/)
+  const enPiso = forma(P(0.4, 0.55), P(0.4, 0.65), P(0.4, 0.75), P(0.6, 0.5), P(0.55, 0.45), P(0.62, 0.75))
+  const base = C.calibrar(C.nuevoConteo('Tuck planche'), enPiso).base
+  assert.ok(base && Math.abs(base.pie - 0.75) < 1e-9 && base.largo > 0.1, 'mide el piso al terminar la cuenta')
+  assert.equal(C.medir('planche', enPiso, C.opcionesDe('Tuck planche'), base).postura, false, 'pies en el piso con rodillas arriba no cuenta')
+  const arriba = forma(P(0.4, 0.55), P(0.4, 0.65), P(0.4, 0.75), P(0.6, 0.52), P(0.55, 0.5), P(0.62, 0.6))
+  assert.ok(C.medir('planche', arriba, C.opcionesDe('Tuck planche'), base).postura, 'con los pies despegados sí cuenta')
+  const sinPies = cuerpo({ 0: P(0.34, 0.53), ...ambos(11, P(0.4, 0.55)), ...ambos(13, P(0.4, 0.65)), ...ambos(15, P(0.4, 0.75)), ...ambos(23, P(0.6, 0.5)), ...ambos(25, P(0.55, 0.45)) })
+  assert.equal(C.medir('planche', sinPies, C.opcionesDe('Tuck planche')).postura, false, 'si no ve los pies no cuenta')
+  assert.ok(C.esSkill('planche') && C.esSkill('lever') && !C.esSkill('plancha'))
+}
+ok('aguantes: plancha en codos y con brazos estirados por separado, acostado, con la cadera o las rodillas en el piso o sentado de frente no cuenta, tuck planche mide el piso y solo cuenta con los pies despegados')
+
+{
+  const C = moduleOf('conteo')
+  const P = (x, y, v = 1) => ({ x, y, z: 0, v })
+  const arma = (o) => { const pts = Array.from({ length: 33 }, () => P(0.5, 0.95, 0)); for (const [i, p] of Object.entries(o)) pts[i] = p; return { img: pts, mundo: pts, aspecto: 1 } }
+  const ambos = (i, p) => ({ [i]: p, [i + 1]: p })
+  const Y = (m) => 0.8 - m * 0.35
+  const lado = (cadera, rodilla, tobillo = 0.09) => arma({ 0: P(0.24, Y(0.32)), ...ambos(11, P(0.3, Y(0.3))), ...ambos(13, P(0.3, Y(0.04))), ...ambos(15, P(0.18, Y(0.03))), ...ambos(23, P(0.475, Y(cadera))), ...ambos(25, P(0.65, Y(rodilla))), ...ambos(27, P(0.8075, Y(tobillo))), ...ambos(29, P(0.82, Y(tobillo))), ...ambos(31, P(0.84, Y(0.02))) })
+  const gira = (c, g) => { const r = g * Math.PI / 180, f = (p) => ({ ...p, x: 0.5 + (p.x - 0.5) * Math.cos(r) - (p.y - 0.75) * Math.sin(r), y: 0.75 + (p.x - 0.5) * Math.sin(r) + (p.y - 0.75) * Math.cos(r) }); return { ...c, img: c.img.map(f), mundo: c.mundo.map(f) } }
+  const vale = (m) => m.visto && m.postura && m.recto
+  const op = C.opcionesDe('Plancha')
+  const recta = lado(0.228, 0.155), baja = lado(0.17, 0.13), esfinge = lado(0.11, 0.05, 0.06), hincado = lado(0.175, 0.05, 0.06)
+  for (const g of [0, -15, 15]) {
+    assert.ok(vale(C.medir('plancha', gira(recta, g), op)), `plancha recta de lado cuenta con el teléfono a ${g} grados`)
+    assert.ok(vale(C.medir('plancha', gira(baja, g), op)), `cadera un poco baja pero recta cuenta a ${g} grados`)
+    assert.equal(C.medir('plancha', gira(esfinge, g), op).falla, 'cadera', `esfinge no cuenta y pide subir la cadera a ${g} grados`)
+    assert.equal(C.medir('plancha', gira(hincado, g), op).falla, 'rodillas', `rodillas en el piso no cuenta y pide despegarlas a ${g} grados`)
+  }
+  assert.equal(C.medir('plancha', lado(0.45, 0.25), op).falla, 'alta', 'cadera muy alta pide bajarla')
+  const corre = (ej, cuadros) => cuadros.reduce((c, f, i) => C.paso(c, f, i * 200), C.nuevoConteo(ej, 'seconds'))
+  const orilla = lado(0.1326, 0.155)
+  assert.equal(vale(C.medir('plancha', orilla, op)), false, 'cadera en la orilla no arranca el tiempo')
+  assert.ok(vale(C.medir('plancha', orilla, op, undefined, true)), 'pero si ya estabas en plancha no la pausa')
+  const sigue = corre('Plancha', [...Array(10).fill(recta), ...Array(25).fill(orilla)])
+  assert.ok(sigue.segundos >= 6 && sigue.aviso === null, `ya adentro, temblar en la orilla no pausa (${sigue.segundos} s)`)
+  assert.equal(corre('Plancha', Array(25).fill(orilla)).segundos, 0)
+  const cae = corre('Plancha', [...Array(10).fill(recta), ...Array(10).fill(esfinge)])
+  assert.equal(cae.aviso, 'cadera', 'si bajas la cadera al piso se pausa y lo dice')
+  assert.match(C.AVISOS_AGUANTE.cadera, /Sube la cadera/); assert.match(C.AVISOS_AGUANTE.rodillas, /rodillas/); assert.match(C.AVISOS_AGUANTE.pies, /pies/); assert.match(C.AVISOS_AGUANTE.extiende, /brazos/)
+  const cara = { 0: P(0.5, 0.45), 11: P(0.35, 0.4), 12: P(0.65, 0.4), 13: P(0.36, 0.6), 14: P(0.64, 0.6), 15: P(0.42, 0.63), 16: P(0.58, 0.63) }
+  const piernas = (rod, tob) => ({ 23: P(0.42, 0.53), 24: P(0.58, 0.53), 25: P(0.45, rod), 26: P(0.55, rod), 27: P(0.47, tob), 28: P(0.53, tob) })
+  const deFrente = arma({ ...cara, ...piernas(0.57, 0.61) })
+  assert.ok(vale(C.medir('plancha', deFrente, op)), 'de frente con cadera y piernas a la vista cuenta (antes la medía como si fuera de lado)')
+  assert.equal(C.medir('plancha', arma({ ...cara, ...piernas(0.62, 0.61) }), op).falla, 'rodillas', 'de frente con las rodillas abajo de los tobillos no cuenta')
+  assert.equal(C.medir('plancha', arma({ 0: P(0.5, 0.6), 11: P(0.35, 0.58), 12: P(0.65, 0.58), 13: P(0.36, 0.62), 14: P(0.64, 0.62), 15: P(0.42, 0.63), 16: P(0.58, 0.63) }), op).falla, 'cadera', 'de frente acostado en el piso no cuenta')
+  const parejo = arma({ ...cara, ...piernas(0.61, 0.61) })
+  assert.equal(vale(C.medir('plancha', parejo, op)), false)
+  const frenteSigue = corre('Plancha', [...Array(10).fill(deFrente), ...Array(15).fill(parejo)])
+  assert.ok(frenteSigue.segundos >= 4 && frenteSigue.aviso === null, 'de frente, ya adentro, una rodilla mal vista no pausa')
+
+  const tuck = (o = {}) => arma({ 0: P(0.34, 0.53), ...ambos(11, P(0.4, 0.55)), ...ambos(13, P(0.4, 0.65)), ...ambos(15, P(0.4, 0.75)), ...ambos(23, P(0.6, 0.4)), ...ambos(25, P(0.55, 0.42)), ...ambos(27, P(0.62, 0.55)), ...ambos(29, P(0.64, 0.55)), ...ambos(31, P(0.66, 0.6)), ...o })
+  const opT = C.opcionesDe('Tuck planche')
+  assert.equal(opT.tuck, true); assert.equal(C.opcionesDe('Planche').tuck, false)
+  assert.ok(vale(C.medir('planche', tuck(), opT)), 'tuck planche con la cadera más alta que los hombros cuenta')
+  assert.equal(C.medir('planche', tuck(), C.opcionesDe('Planche')).postura, false, 'en planche completa sí se pide el cuerpo horizontal')
+  assert.ok(vale(C.medir('planche', tuck({ 14: P(0.48, 0.65, 0.6), 12: P(0.4, 0.55, 0.6), 16: P(0.4, 0.75, 0.6) }), opT)), 'el brazo de atrás mal visto no la tumba')
+  assert.equal(C.medir('planche', tuck({ ...ambos(13, P(0.47, 0.65)) }), opT).falla, 'extiende', 'brazos doblados pide estirarlos')
+  const plano = arma({ 0: P(0.34, 0.53), ...ambos(11, P(0.4, 0.55)), ...ambos(13, P(0.4, 0.65)), ...ambos(15, P(0.4, 0.75)), ...ambos(23, P(0.6, 0.5)), ...ambos(25, P(0.55, 0.45)), ...ambos(27, P(0.62, 0.75)), ...ambos(29, P(0.64, 0.75)), ...ambos(31, P(0.66, 0.76)) })
+  const baseT = C.calibrar(C.nuevoConteo('Tuck planche'), plano).base
+  assert.ok(Math.abs(baseT.pie - 0.75) < 1e-9, 'el piso se mide con tobillos y talones, no con la punta')
+  const puntas = tuck({ ...ambos(27, P(0.62, 0.62)), ...ambos(29, P(0.64, 0.62)), ...ambos(31, P(0.66, 0.74)) })
+  assert.ok(vale(C.medir('planche', puntas, opT, baseT)), 'con las puntas colgando hacia el piso cuenta')
+  assert.equal(C.medir('planche', plano, opT, baseT).falla, 'pies', 'con los pies en el piso pide despegarlos')
+  const oculto = (f) => ({ ...f, img: f.img.map((p, i) => [27, 28, 29, 30, 31, 32].includes(i) ? { ...p, v: 0.1 } : p) })
+  assert.equal(C.medir('planche', oculto(tuck()), opT).postura, false, 'sin ver los pies no arranca')
+  const tSigue = [...Array(10).fill(tuck()), ...Array(10).fill(oculto(tuck()))].reduce((c, f, i) => C.paso(c, f, i * 200), C.calibrar(C.nuevoConteo('Tuck planche'), plano))
+  assert.ok(tSigue.segundos >= 3 && tSigue.aviso === null, 'si ya estabas arriba y se tapan los pies, sigue contando')
+}
+ok('plancha y tuck planche: de frente con las piernas a la vista ya no se mide como de lado, de lado se mide contra el piso aunque el teléfono esté chueco, ya adentro tolera la orilla, avisos que dicen qué falla (cadera, rodillas, pies, brazos), tuck con la cadera alta, brazo de atrás mal visto y puntas colgando')
+
+{
+  const duolingo = ['58cc02', '46a302', '89e219', '7ac70c', '79e02a']
+  const archivos = ['src/tokens.css', 'src/lib/widget.ts', 'src/bambu.css', 'src/duo.css', 'index.html'].map(f => path.join(__dirname, '..', f)).filter(f => fs.existsSync(f))
+  for (const f of archivos) { const t = fs.readFileSync(f, 'utf8').toLowerCase(); for (const h of duolingo) assert.ok(!t.includes('#' + h), `${path.basename(f)} todavía trae el verde #${h} de Duolingo`) }
+  const tokens = fs.readFileSync(path.join(__dirname, '../src/tokens.css'), 'utf8')
+  assert.match(tokens, /--d-green: #37cb69/, 'el verde es el de la paleta de Gael')
+}
+ok('verde propio: ningún verde de Duolingo en la paleta ni en el widget, verde de la paleta de Gael')
+
+{
+  const A = moduleOf('armar')
+  const R = moduleOf('rutina')
+  const nombres = (w) => w.flatMap(rt => rt ? rt.items.map(i => i.name) : [])
+  const puede = (equipo) => (n) => { const o = A.OPCIONES.find(x => x.name === n); return o && o.equipo.every(e => e === 'nada' || equipo.includes(e)) }
+  const casa = A.armarSemana({ equipo: ['nada'], dias: 3, minutos: 30, nivel: 'empiezo' })
+  assert.deepEqual(casa.map(rt => rt ? rt.title : null), ['Torso', null, 'Pierna y core', null, 'Cuerpo completo', null, null], '3 días: torso, pierna y cuerpo completo con descanso entre medio')
+  assert.ok(nombres(casa).every(puede(['nada'])), 'solo con el piso no pone nada que necesite equipo')
+  assert.ok(casa.every(rt => !rt || (rt.items.length >= 3 && rt.items.length <= 5 && rt.rounds === 3)), '30 minutos: hasta 5 ejercicios y 3 rondas')
+  assert.ok(casa.every(rt => !rt || new Set(rt.items.map(i => i.name)).size === rt.items.length), 'ningún ejercicio se repite el mismo día')
+  const barra = A.armarSemana({ equipo: ['nada', 'barra', 'silla'], dias: 4, minutos: 45, nivel: 'entreno' })
+  assert.ok(nombres(barra).some(n => /Dominada|Chin ups|australianas/.test(n)), 'con barra entra un jalón de barra')
+  assert.ok(nombres(barra).every(puede(['nada', 'barra', 'silla'])))
+  assert.deepEqual(barra.map(rt => !!rt), [true, true, false, true, true, false, false])
+  assert.ok(barra.every(rt => !rt || rt.items.length <= 7))
+  assert.notDeepEqual(barra[0].items.map(i => i.name), barra[3].items.map(i => i.name), 'el segundo día de torso varía los ejercicios')
+  const corto = A.armarSemana({ equipo: ['nada'], dias: 2, minutos: 15, nivel: 'empiezo' })
+  assert.deepEqual(corto.map(rt => !!rt), [true, false, false, true, false, false, false])
+  assert.ok(corto.every(rt => !rt || (rt.items.length <= 3 && rt.rounds === 2)), '15 minutos: 3 ejercicios y 2 rondas')
+  assert.equal(A.armarSemana({ equipo: ['nada'], dias: 6, minutos: 30, nivel: 'empiezo' }).filter(Boolean).length, 6)
+  const empuje = (nivel) => A.armarSemana({ equipo: ['nada', 'silla', 'pared'], dias: 3, minutos: 30, nivel })[0].items[0]
+  const nivelDe = (n) => A.OPCIONES.find(o => o.name === n).level
+  assert.ok(nivelDe(empuje('avanzado').name) > nivelDe(empuje('empiezo').name), 'avanzado pone una versión más difícil que principiante')
+  const cambios = A.cambiosPara('Lagartija normal', ['nada'], 'reps')
+  assert.ok(cambios.some(c => c.opcion.name === 'Lagartija con rodillas' && c.etiqueta === 'Más fácil'))
+  assert.ok(cambios.some(c => c.opcion.name === 'Lagartija diamante' && c.etiqueta === 'Más difícil'))
+  assert.ok(cambios.every(c => puede(['nada'])(c.opcion.name)), 'solo ofrece cambios que puedes hacer con tu equipo')
+  assert.ok(A.cambiosPara('Muscle up', ['nada'], 'reps').length > 0, 'un ejercicio propio también se puede cambiar')
+  const plan = { deadline: '19:00', lock: false, restSeconds: 60, week: casa }
+  const cambiado = A.cambiarEnSemana(plan, casa[0].items[0].name, A.OPCIONES.find(o => o.name === 'Lagartija normal'))
+  assert.ok(nombres(cambiado.week).includes('Lagartija normal') && !nombres(cambiado.week).includes(casa[0].items[0].name), 'se cambia en todos los días')
+  assert.equal(cambiado.week[0].items[0].id, casa[0].items[0].id, 'conserva su lugar en la rutina')
+  const sinNada = casa[0].items.reduce((p, it) => A.quitarDeSemana(p, it.name), plan)
+  assert.equal(sinNada.week[0], null, 'si quitas todos los de un día, queda de descanso')
+  assert.deepEqual(A.semanaVacia().week, [null, null, null, null, null, null, null])
+  assert.equal(A.semanaVacia().lock, false, 'una cuenta nueva no arranca con las redes bloqueadas')
+  assert.ok(nombres(casa).every(n => R.label({ name: n, kind: 'reps', target: 1 })), 'cada ejercicio armado se muestra en la rutina')
+}
+ok('rutina armada por Bambú: días, tiempo, nivel y equipo, sin repetir ejercicios, cambiar por uno más fácil o más difícil en todos los días, quitar y cuenta nueva sin rutina ni candado')
+
+{
+  const A = moduleOf('armar')
+  const L = moduleOf('lectura')
+  const rt = { title: 'Torso', rounds: 3, items: [{ id: 'w', name: 'Muscle up', kind: 'reps', target: 2, when: 'before' }, ...['a', 'b', 'c', 'd', 'e', 'f', 'g'].map(id => ({ id, name: `Ej ${id}`, kind: 'reps', target: 10 })), { id: 'z', name: 'Colgarse', kind: 'seconds', target: 30, when: 'after' }] }
+  const quince = A.recortar(rt, 15), treinta = A.recortar(rt, 30)
+  assert.deepEqual(quince.items.map(i => i.id), ['a', 'b', 'c'], '15 min: los 3 primeros del circuito, sin los de antes y al final')
+  assert.equal(quince.rounds, 2)
+  assert.deepEqual(treinta.items.map(i => i.id), ['a', 'b', 'c', 'd', 'e'])
+  assert.equal(treinta.rounds, 3)
+  assert.equal(A.recortar(rt, 0), rt, 'completa no cambia nada')
+  assert.ok(A.minutosDe(quince, 60) < A.minutosDe(treinta, 60) && A.minutosDe(treinta, 60) < A.minutosDe(rt, 60))
+  assert.ok(A.minutosDe(quince, 60) >= 8 && A.minutosDe(quince, 60) <= 16, String(A.minutosDe(quince, 60)))
+  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true } })
+  const dia = '2026-11-26'
+  const leida = L.markBible(base, dia, [{ book: 1, chapter: 1 }, { book: 1, chapter: 2 }])
+  assert.equal(leida.bible.filter(m => m.day === dia).length, 2, 'marca los capítulos de la Biblia de hoy')
+  assert.equal(leida.reading.at(-1).title, L.BIBLIA)
+  const parcial = L.markBible(base, dia, [{ book: 43, chapter: 3 }], '1 al 16')
+  assert.equal(parcial.bible[0].verses, '1 al 16', 'con versículos queda como lectura parcial')
+  assert.equal(L.markBible(base, dia, []), base)
+}
+ok('sesión de 15 o 30 minutos sobre tu propia rutina y Biblia en el registro rápido (capítulos y versículos)')
+
+
+
 ok('cámara para todo: variantes (diamante, arqueras, abiertas, inclinadas…), planche, lever y bandera con postura, cualquier otro ejercicio aprende su recorrido y los aguantes cuentan solo quieto')
 
 ok('cámara: medidor de profundidad, media repetición vale cero, ritmo y cuerpo recto; lagartijas de frente por caída de hombros; plancha de frente y con tolerancia; 17 familias con variantes; dominadas con la barbilla arriba')
@@ -1748,10 +2059,10 @@ ok('cámara: medidor de profundidad, media repetición vale cero, ritmo y cuerpo
   const mi = moduleOf('minutos')
   const { logSet } = moduleOf('rutina')
   const day = '2026-11-25'
-  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'x', onboardingComplete: true } })
+  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'x', onboardingComplete: true }, settings: { minLibres: 0 } })
   const record = mi.conCamara(base, day, 'Lagartijas', 'reps', 40, 500)
   assert.equal(record.sets.at(-1).note, 'camara')
-  assert.equal(mi.ganados(record, day), 0, 'un récord con cámara fuera de Redes no da minutos')
+  assert.equal(mi.ganados(record, day), 20, 'cualquier ejercicio con cámara da minutos (rutina, Libre, retos)')
   assert.equal(moduleOf('libre').records(record, undefined, true).get('Lagartijas').best, 40)
   let d = mi.conCamara(base, day, 'Lagartijas', 'reps', 11, 1000, true)
   assert.equal(d.sets.at(-1).note, 'redes'); assert.equal(d.sets.at(-1).reps, 11)
@@ -1762,18 +2073,27 @@ ok('cámara: medidor de profundidad, media repetición vale cero, ritmo y cuerpo
   d = mi.conCamara(d, day, 'Dominadas', 'reps', 3, 3000, true)
   d = mi.conCamara(d, day, 'Plancha', 'seconds', 45, 4000, true)
   assert.equal(d.sets.at(-1).seconds, 45)
+  assert.equal(mi.ganados(d, day), 14)
   d = mi.conCamara(d, day, 'Sentadillas', 'reps', 80, 4500)
-  assert.equal(mi.ganados(d, day), 14)
+  assert.equal(mi.ganados(d, day), 34, 'la cámara fuera de Redes también suma')
   d = logSet(d, day, { id: 'x', name: 'Lagartijas', kind: 'reps', target: 10 }, 50)
-  assert.equal(mi.ganados(d, day), 14)
+  assert.equal(mi.ganados(d, day), 34, 'lo anotado a mano no da minutos')
   d = { ...d, activities: [...d.activities, mi.paseActivity(day, 'instagram', 10)] }
-  assert.equal(mi.gastados(d, day), 10); assert.equal(mi.saldo(d, day), 4)
+  assert.equal(mi.gastados(d, day), 10); assert.equal(mi.saldo(d, day), 24)
   d = normalizeData(d)
-  assert.equal(mi.saldo(d, day), 4)
+  assert.equal(mi.saldo(d, day), 24)
   assert.equal(mi.saldo(d, '2026-11-26'), 0)
-  assert.deepEqual(mi.semanaMinutos(d, '2026-11-26'), { ganados: 14, gastados: 10 })
-  d = { ...d, activities: [...d.activities, mi.paseActivity(day, 'tiktok', 15)] }
+  assert.deepEqual(mi.semanaMinutos(d, '2026-11-26'), { ganados: 34, gastados: 10 })
+  d = { ...d, activities: [...d.activities, mi.paseActivity(day, 'tiktok', 30)] }
   assert.equal(mi.saldo(d, day), 0)
+  const libre = normalizeData({ ...d, settings: { ...d.settings, minLibres: undefined } })
+  assert.equal(mi.libresDe(libre), 60, 'una hora libre al día por defecto')
+  assert.equal(mi.saldo(libre, day), 54); assert.equal(mi.saldo(libre, '2026-11-26'), 60, 'la hora libre vuelve cada día')
+  assert.equal(mi.saldo(normalizeData({ ...d, settings: { ...d.settings, minLibres: 90 } }), '2026-11-26'), 90)
+  assert.equal(normalizeData({ ...d, settings: { ...d.settings, minLibres: 999 } }).settings.minLibres, undefined, 'minutos libres raros se ignoran')
+  assert.deepEqual(mi.siguienteMinuto('Lagartijas', 5), { min: 2, faltan: 1 })
+  assert.deepEqual(mi.siguienteMinuto('Sentadillas', 5), { min: 1, faltan: 3 })
+  assert.deepEqual(mi.siguienteMinuto('Plancha', 25), { min: 1, faltan: 15 })
   assert.deepEqual(['Lagartijas', 'Sentadillas', 'Dominadas', 'Plancha'].map(n => mi.faltan(n, 5)), [10, 20, 3, 100])
   assert.equal(mi.tasaTexto('Dominadas'), '1 dominada = 2 min')
   assert.equal(mi.tasaTexto('Plancha'), '20 s de plancha = 1 min')
@@ -1795,9 +2115,9 @@ ok('cámara: medidor de profundidad, media repetición vale cero, ritmo y cuerpo
   assert.equal(mi.minutosDe('Burpees', 3), 3)
   assert.equal(mi.minutosDe('Handstand push up', 2), 4)
   const ms = Date.UTC(2026, 10, 25, 3, 7, 9)
-  const iso = mi.hastaISO(ms)
-  assert.match(iso, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$/)
-  assert.equal(new Date(iso).getTime(), ms)
+  const txt = mi.hastaTexto(ms)
+  assert.match(txt, /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/)
+  assert.equal(new Date(txt.replace(' ', 'T')).getTime(), ms, 'hora local del teléfono, sin zona')
   const llave = mi.nuevaLlave()
   assert.match(llave, /^[A-Za-z0-9]{18}$/)
   assert.equal(normalizeData({ ...base, settings: { ...base.settings, candado: { llave } } }).settings.candado.llave, llave)
@@ -1814,6 +2134,24 @@ ok('cámara: medidor de profundidad, media repetición vale cero, ritmo y cuerpo
   const nueva = R.kikiWeek().week.flatMap(r => r ? r.items : [])
   assert.ok(nueva.some(i => i.name === 'Dominadas' && i.target === 7) && nueva.some(i => i.name === 'Chin ups' && i.target === 7) && nueva.some(i => i.name === 'Curl de toalla inferior' && i.target === 20))
   assert.ok(!nueva.some(i => /lentas$/.test(i.name) && /^(Dominadas|Chin ups)/.test(i.name)))
+  const conToques = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, train: { week: [{ title: 'Empuje', rounds: 3, items: [{ id: 't', name: 'Handstand toque de hombros', kind: 'reps', target: 3, quiet: '2026-11-20' }, { id: 'f', name: 'Fondos', kind: 'reps', target: 10 }] }, null, null, { title: 'Empuje B', rounds: 3, items: [{ id: 't2', name: 'Handstand toque de hombros', kind: 'reps', target: 3 }] }, null, null, null] } } })
+  const toques = normalizeData(R.toquesA7(conToques))
+  assert.deepEqual(toques.settings.train.week.flatMap(r => r ? r.items.map(i => [i.name, i.target]) : []), [['Handstand toque de hombros', 7], ['Fondos', 10], ['Handstand toque de hombros', 7]], 'toque de hombros pasa de 3 a 7 en todos los días')
+  assert.equal(toques.settings.train.week[0].rounds, 3, 'las series no cambian')
+  assert.equal(toques.settings.toques2611, true)
+  assert.equal(R.label(toques.settings.train.week[0].items[0]), '7 reps')
+  assert.ok(nueva.filter(i => i.name === 'Handstand toque de hombros').every(i => i.target === 7) && nueva.some(i => i.name === 'Handstand toque de hombros'), 'la rutina nueva ya trae 7')
+  const conHspu = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, train: { week: [null, null, null, { title: 'Empuje B', rounds: 3, items: [{ id: 'h', name: 'Handstand push up con pared', kind: 'reps', target: 5 }, { id: 'p', name: 'Pike push ups', kind: 'reps', target: 5 }] }, null, null, null] } } })
+  const hspu = normalizeData(R.hspuA3(conHspu))
+  assert.deepEqual(hspu.settings.train.week[3].items.map(i => [i.name, i.target]), [['Handstand push up con pared', 3], ['Pike push ups', 5]], 'handstand push up pasa de 5 a 3 y lo demás no cambia')
+  assert.equal(hspu.settings.hspu2611, true)
+  const empujeB = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, sets: [{ id: 's1', day: '2026-11-24', exercise: 'Parado de cabeza', seconds: 20, at: 1 }], settings: { ...EMPTY_DATA.settings, train: { week: [null, null, null, { title: 'Empuje B', rounds: 3, items: [{ id: 'h', name: 'Handstand push up con pared', kind: 'reps', target: 5 }, { id: 'c', name: 'Parado de cabeza', kind: 'seconds', target: 20 }, { id: 'p', name: 'Pike push ups', kind: 'reps', target: 5 }] }, null, null, null] } } })
+  const sinEllos = normalizeData(R.quitar2611(R.hspuA3(empujeB)))
+  assert.deepEqual(sinEllos.settings.train.week[3].items.map(i => [i.id, i.name]), [['p', 'Pike push ups']], 'quita parado de cabeza y handstand push up de tu rutina y deja lo demás')
+  assert.equal(sinEllos.settings.quitar2611, true)
+  assert.equal(sinEllos.sets.length, 1, 'tu historial de esos ejercicios no se borra')
+  assert.ok(!nueva.some(i => R.QUITADOS_2611.includes(i.name)), 'la rutina nueva ya no los trae')
+  assert.ok(R.CATALOG.some(c => c[0] === 'Parado de cabeza') && R.CATALOG.some(c => c[0] === 'Handstand push up con pared'), 'siguen en la lista por si los quieres agregar después')
 }
 ok('rutina de Kiki: dominadas y chin ups normales a 7, curl de toalla inferior a 20, una sola vez')
 
@@ -1832,26 +2170,34 @@ ok('rutina de Kiki: dominadas y chin ups normales a 7, curl de toalla inferior a
 }
 ok('miércoles regresa a 3 rondas con dominadas y chin ups en 5')
 
-ok('minutos de redes: solo suma lo hecho con cámara dentro de Redes (2 lagartijas = 1 min, 1 dominada = 2); récords, rutina y duelos no dan minutos, los pases restan, se reinicia cada día y la llave del candado se valida')
+ok('minutos de redes: una hora libre al día (se cambia en Ajustes), cualquier ejercicio con cámara suma (2 lagartijas = 1 min, 1 dominada = 2), lo anotado a mano no, los pases restan y se reinicia cada noche')
 
 {
   const D = moduleOf('duelos')
+  const R = moduleOf('retos')
   const H = 3600000, ahora = Date.parse('2026-11-25T20:00:00Z')
-  const base = { id: 'x', de: 'ana', para: 'beto', ejercicio: 'Lagartijas', deReps: 23, paraReps: null, estado: 'abierto', creado: ahora - H, respondido: 0 }
-  assert.equal(D.estadoDe(base, 'beto', ahora), 'te-toca')
-  assert.equal(D.estadoDe(base, 'ana', ahora), 'esperando')
-  assert.equal(D.estadoDe({ ...base, creado: ahora - 49 * H }, 'beto', ahora), 'vencido')
-  const listo = { ...base, estado: 'listo', paraReps: 25, respondido: ahora - H }
-  assert.equal(D.estadoDe(listo, 'beto', ahora), 'gane')
-  assert.equal(D.estadoDe(listo, 'ana', ahora), 'perdi')
-  assert.equal(D.estadoDe({ ...listo, paraReps: 23 }, 'ana', ahora), 'empate')
-  assert.equal(D.rivalDe(listo, 'ana'), 'beto')
-  const viejo = { ...listo, id: 'v', creado: ahora - 10 * 24 * H, respondido: ahora - 9 * 24 * H }
-  assert.deepEqual(D.visibles([base, listo, viejo], 'ana', ahora).map(d => d.id), ['x', 'x'])
-  assert.deepEqual(D.marcador([listo, viejo, base], 'beto', ahora - 7 * 24 * H, ahora), { ganados: 1, perdidos: 0, empates: 0 })
-  assert.equal(D.abiertoCon([base], 'ana', 'beto', ahora), true)
-  assert.equal(D.abiertoCon([listo], 'ana', 'beto', ahora), false)
-  assert.ok(D.DUELO_EJ.every(e => moduleOf('conteo').esCamara(e) && !moduleOf('conteo').esAguante(moduleOf('conteo').patronDe(e))))
+  const base = { id: 'x', de: 'ana', participantes: ['ana', 'beto', 'caro'], tipo: 'reps', ejercicio: 'Lagartijas', marcas: { ana: 23 }, creado: ahora - H, movido: ahora - H, version: '' }
+  assert.equal(R.estadoReto(base, 'beto', ahora), 'te-toca')
+  assert.equal(R.estadoReto(base, 'ana', ahora), 'esperando')
+  assert.equal(R.estadoReto({ ...base, creado: ahora - 49 * H }, 'beto', ahora), 'vencido')
+  assert.equal(R.estadoReto({ ...base, creado: ahora - 49 * H }, 'ana', ahora), 'terminado', 'al vencer, quien ya jugó ve el resultado')
+  const listo = { ...base, marcas: { ana: 23, beto: 30, caro: 23 } }
+  assert.equal(R.estadoReto(listo, 'caro', ahora), 'terminado')
+  assert.deepEqual(R.lugares(listo).map(x => [x.uid, x.lugar]), [['beto', 1], ['ana', 2], ['caro', 2]])
+  assert.deepEqual(R.lugarDe(listo, 'ana'), { lugar: 2, de: 3, empate: true })
+  assert.deepEqual(R.aVencer(base), { uid: 'ana', valor: 23 })
+  assert.equal(R.valorTexto({ tipo: 'aguante', ejercicio: 'Plancha' }, 130), '2:10')
+  assert.equal(R.valorTexto({ tipo: 'cindy', ejercicio: 'Cindy' }, 382), '12 rondas + 22')
+  const viejo = { ...listo, id: 'v', creado: ahora - 10 * 24 * H, movido: ahora - 9 * 24 * H }
+  assert.deepEqual(R.visibles([base, listo, viejo], 'ana', [], ahora).map(d => d.id), ['x', 'x'])
+  assert.deepEqual(R.visibles([base, { ...listo, id: 'y' }], 'ana', ['y'], ahora).map(d => d.id), ['x'])
+  assert.deepEqual(R.marcador([listo, viejo, base], 'beto', ahora - 7 * 24 * H, ahora), { ganados: 1, perdidos: 0, empates: 0 })
+  assert.deepEqual(R.marcador([listo], 'ana', 0, ahora), { ganados: 0, perdidos: 1, empates: 0 })
+  assert.deepEqual(R.marcador([{ ...listo, marcas: { ana: 30, beto: 30, caro: 1 } }], 'ana', 0, ahora), { ganados: 0, perdidos: 0, empates: 1 })
+  const C = moduleOf('conteo')
+  assert.ok(R.TIPOS.find(t => t.tipo === 'reps').ejercicios.every(e => C.esCamara(e) && !C.esAguante(C.patronDe(e))))
+  assert.ok(R.TIPOS.find(t => t.tipo === 'aguante').ejercicios.every(e => C.esAguante(C.patronDe(e))))
+  assert.equal(R.tipoDeReto('raro'), 'reps')
   let r = { fase: 'espera', t: 0 }
   let p = D.pasoReloj(r, 1000, false, 60)
   assert.deepEqual([p.r.fase, p.mostrar, p.evento], ['espera', null, null])
@@ -1887,7 +2233,7 @@ ok('minutos de redes: solo suma lo hecho con cámara dentro de Redes (2 lagartij
   assert.equal(s.series, 3)
   assert.deepEqual(s.top.map(t => [t.name, t.valor]), [['Lagartijas', 42], ['Plancha', 75]])
   assert.deepEqual(s.nuevos.map(r => [r.name, r.best, r.antes]), [['Plancha', 75, 0], ['Lagartijas', 24, 20]].sort((a, b) => (b[1] - b[2]) / Math.max(1, b[2]) - (a[1] - a[2]) / Math.max(1, a[2])))
-  assert.equal(s.ganados, 12 + 9, 'la plancha fuera de Redes no da minutos')
+  assert.equal(s.ganados, 12 + 12, 'la plancha con cámara fuera de Redes también da minutos')
   assert.equal(s.usados, 10)
   assert.equal(S.rangoTexto(lunes, hoy), '23 al 25 nov')
   assert.equal(S.rangoTexto('2026-11-30', '2026-12-02'), '30 nov al 2 dic')
@@ -1903,12 +2249,34 @@ ok('resumen de la semana: solo cámara, desde el lunes, récords nuevos contra l
   let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, train: R.kikiWeek() } })
   d = M.conCamara(d, hoy, 'Lagartijas', 'reps', 20, Date.parse('2026-11-25T10:00:00'), true)
   const e = W.estadoWidget(d, hoy)
-  assert.equal(e.dia, hoy); assert.equal(e.minutos, 10); assert.equal(e.meta, 50); assert.ok(e.xpHoy > 0)
+  assert.equal(e.dia, hoy); assert.equal(e.minutos, 70, '60 libres + 10 ganados'); assert.equal(e.meta, 50); assert.ok(e.xpHoy > 0)
   assert.match(e.rutina, /^(Rutina \d+\/\d+|Rutina lista|Descanso)$/)
   assert.deepEqual(W.estadoParaAvisos(d, hoy), { ultimo: hoy, hecho: e.xpHoy >= 50, racha: e.racha })
-  assert.equal(W.estadoParaAvisos(d, '2026-11-26').ultimo, '')
+  assert.equal(W.estadoParaAvisos(d, '2026-11-26').ultimo, hoy, 'guarda el último día con actividad, no lo borra al día siguiente')
+  assert.equal(W.estadoParaAvisos(normalizeData({ ...EMPTY_DATA }), hoy).ultimo, '')
   const js = W.scriptWidget('https://x.test/w?key=1')
   assert.ok(js.includes('const URL = "https://x.test/w?key=1"') && js.includes('Script.setWidget(w)') && !/innerHTML|eval\(/.test(js))
+  assert.ok(js.includes('config.widgetFamily') && js.includes('accessoryRectangular') && js.includes('presentMedium'), 'un diseño por tamaño')
+  assert.deepEqual(W.ESTILOS_WIDGET.map(e => e.id), ['bosque', 'brote', 'logo'], 'tres diseños para elegir')
+  assert.equal(W.estadoWidget(d, hoy, 3).retos, 3, 'el widget sabe cuántos retos tienes pendientes')
+  {
+    class C { constructor(h) { this.h = h } static white() { return new C('#fff') } static clear() { return new C('') } }
+    const font = s => ({ s })
+    const Font = { heavyRoundedSystemFont: font, semiboldRoundedSystemFont: font }
+    class Nodo { constructor() { this.k = [] } addText(x) { const t = { x, centerAlignText() {}, rightAlignText() {}, leftAlignText() {} }; this.k.push(t); return t } addStack() { const n = new Nodo(); this.k.push(n); return n } addSpacer() {} addImage(i) { const n = { i }; this.k.push(n); return n } layoutHorizontally() {} layoutVertically() {} centerAlignContent() {} topAlignContent() {} bottomAlignContent() {} setPadding() {} }
+    class LW extends Nodo { presentSmall() {} presentMedium() {} }
+    class DC { addPath() {} setFillColor() {} fillPath() {} getImage() { return {} } }
+    class P { addRoundedRect() {} }
+    const textos = n => n.k.flatMap(x => x.x !== undefined ? [x.x] : x.k ? textos(x) : [])
+    const dia = new Date(), hoyLocal = dia.getFullYear() + '-' + String(dia.getMonth() + 1).padStart(2, '0') + '-' + String(dia.getDate()).padStart(2, '0')
+    for (const estilo of ['bosque', 'brote', 'logo']) for (const fam of ['small', 'medium', 'large', 'accessoryRectangular', 'accessoryInline', 'accessoryCircular']) {
+      let w
+      const datos = { fields: { dia: { stringValue: hoyLocal }, racha: { integerValue: '12' }, nivel: { integerValue: '5' }, minutos: { integerValue: '63' }, retos: { integerValue: '2' }, xpHoy: { integerValue: '20' }, meta: { integerValue: '50' }, rutina: { stringValue: 'Rutina 1/9' } } }
+      const fn = new Function('Color', 'Font', 'Size', 'Rect', 'Path', 'DrawContext', 'ListWidget', 'Request', 'Script', 'config', 'LinearGradient', 'Point', `return (async () => {\n${W.scriptWidget('https://x.test/w', estilo)}\n})()`)
+      fn(C, Font, class { constructor(a, b) { this.w = a; this.h = b } }, class {}, P, DC, LW, class { loadJSON() { return Promise.resolve(datos) } loadImage() { return Promise.resolve({}) } }, { setWidget(x) { w = x }, complete() {} }, { widgetFamily: fam, runsInApp: false }, class {}, class {})
+        .then(() => { assert.ok(w && textos(w).some(t => /63/.test(t)), `el widget ${estilo} ${fam} enseña tus minutos de redes`); if (/^(small|medium|large)$/.test(fam) && estilo !== 'logo') assert.ok(textos(w).some(t => /reto/.test(t) || /⚔️/.test(t)), `el widget ${estilo} ${fam} avisa de retos`) })
+    }
+  }
   assert.equal(normalizeData({ ...d, settings: { ...d.settings, widget: { llave: 'corta' }, avisos: { hora: '25:00' } } }).settings.widget, undefined)
   assert.deepEqual(normalizeData({ ...d, settings: { ...d.settings, widget: { llave: 'WidgetLlaveSecreta12' }, avisos: { hora: '19:00' } } }).settings.avisos, { hora: '19:00' })
 }
@@ -1931,10 +2299,91 @@ ok('widget y avisos: racha, XP de hoy, minutos y rutina; el aviso sabe si ya ent
   assert.ok(moduleOf('rutina').CATALOG.some(x => x[0] === 'Cindy' && x[3] === 'WOD'))
 }
 
+{
+  const Mo = moduleOf('modo')
+  const W = moduleOf('widget')
+  const M = moduleOf('minutos')
+  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true } })
+  assert.equal(base.settings.modo, undefined)
+  assert.equal(Mo.modoDe(base.settings), 'habitos')
+  assert.equal(normalizeData({ ...base, settings: { ...base.settings, modo: 'raro' } }).settings.modo, undefined)
+  const comp = normalizeData({ ...base, settings: { ...base.settings, modo: 'competir' } })
+  assert.equal(comp.settings.modo, 'competir'); assert.ok(Mo.esCompetir(comp.settings))
+  assert.deepEqual([...Mo.OCULTAS_EN_COMPETIR], ['Hoy', 'Historial'])
+  assert.equal(Mo.inicioDe(base.settings, ['Entrenar', 'Amigos']), 'Hoy')
+  assert.equal(Mo.inicioDe(comp.settings, ['Tareas', 'Entrenar', 'Amigos']), 'Entrenar')
+  assert.equal(Mo.inicioDe(comp.settings, ['Tareas', 'Amigos']), 'Amigos')
+  let d = M.conCamara(comp, '2026-11-25', 'Lagartijas', 'reps', 20, Date.parse('2026-11-25T10:00:00'))
+  assert.equal(W.estadoParaAvisos(d, '2026-11-25').racha, 0, 'en modo competir no hay avisos de racha')
+  assert.equal(W.estadoParaAvisos(d, '2026-11-25').ultimo, '2026-11-25')
+}
+ok('modo competir: se guarda, esconde Hoy y Jardín, empieza en Entrenar o Amigos y no manda avisos de racha')
+
+{
+  const L = moduleOf('legal')
+  assert.equal(L.legalListo(), false, 'sin datos del responsable no se publica')
+  assert.equal(L.legalListo({ nombre: 'X', domicilio: 'Y', correo: 'z@x.mx' }), true)
+  const aviso = L.avisoPrivacidad(), term = L.terminos()
+  const todo = JSON.stringify(aviso) + JSON.stringify(term)
+  assert.ok(/Secretaría Anticorrupción y Buen Gobierno/.test(todo) && !/INAI/.test(todo), 'autoridad nueva, sin INAI')
+  assert.ok(/rectificarlos, cancelarlos u oponerte/.test(todo) && /consentimiento expreso/.test(todo) && /nunca se guarda ni se envía/.test(todo))
+  assert.ok(/sustituye a un profesional de la salud/.test(todo) && /Ley Federal de Protección al Consumidor/.test(todo))
+  assert.ok(/Por completar/.test(todo))
+  assert.match(L.AVISO_CORTO(), /No vendemos tus datos/)
+  const d = normalizeData({ ...EMPTY_DATA, settings: { ...EMPTY_DATA.settings, legal: { version: L.VERSION_LEGAL, fecha: '2026-11-26T12:00:00.000Z', salud: true } } })
+  assert.deepEqual(d.settings.legal, { version: L.VERSION_LEGAL, fecha: '2026-11-26T12:00:00.000Z', salud: true })
+  assert.equal(normalizeData({ ...EMPTY_DATA, settings: { ...EMPTY_DATA.settings, legal: { version: 'x', fecha: 'y' } } }).settings.legal, undefined)
+}
+ok('legales: aviso de privacidad con autoridad nueva, ARCO y datos de salud con consentimiento expreso; términos con aviso de salud; no se publican sin los datos del responsable')
+
 ok('Cindy: 20 min de 5 dominadas, 10 lagartijas y 15 sentadillas; cambia sola de ejercicio y el puntaje sale en rondas + repeticiones')
 
 
-ok('duelos: te toca, esperando, vence a las 48 h, gana quien hace más, cuenta 3-2-1 y corta a los 60 s exactos')
+{
+  const F = moduleOf('felicitar')
+  const ahora = Date.parse('2026-11-25T20:00:00Z')
+  const r = (id, marcas, ps = ['ana', 'beto', 'caro']) => ({ id, de: 'ana', participantes: ps, tipo: 'aguante', ejercicio: 'Plancha', marcas, creado: ahora - 3600000, movido: ahora, version: '' })
+  const gane = r('g', { ana: 130, beto: 100, caro: 90 }), empate = r('e', { ana: 100, beto: 100, caro: 90 }), perdi = r('p', { ana: 50, beto: 100, caro: 90 }), abierto = r('a', { ana: 130 }), solo = r('s', { ana: 130 }, ['ana'])
+  assert.deepEqual(F.porFelicitar([gane, empate, perdi, abierto, solo], 'ana', [], ahora).map(x => x.id), ['g'])
+  assert.deepEqual(F.porFelicitar([gane], 'ana', ['g'], ahora), [], 'solo una vez por reto')
+  assert.equal(F.textoFelicitar(gane, 'ana'), 'Plancha: 2:10. Le ganaste a 2 personas.')
+}
+ok('felicitación al ganar: solo retos terminados que ganaste sin empate, una vez cada uno')
+
+ok('retos de 2 a 10: te toca, esperando, vence a las 48 h, lugares con empates, aguantar más y Cindy, cuenta 3-2-1 y corta a los 60 s exactos')
+
+async function versionChecks() {
+  const V = moduleOf('version')
+  assert.ok(V.faltaArchivo(new TypeError('Failed to fetch dynamically imported module: https://x/assets/MiRutina-a.js')))
+  assert.ok(V.faltaArchivo(new TypeError('Importing a module script failed.')))
+  assert.ok(V.faltaArchivo('error loading dynamically imported module'))
+  assert.equal(V.faltaArchivo(new TypeError("Cannot read properties of undefined (reading 'x')")), false)
+  const ss = new Map(), idas = []
+  const antes = { window: global.window, sessionStorage: global.sessionStorage, navigator: Object.getOwnPropertyDescriptor(global, 'navigator') }
+  global.sessionStorage = { getItem: k => ss.has(k) ? ss.get(k) : null, setItem: (k, v) => ss.set(k, String(v)) }
+  global.window = { location: { href: 'https://tuagentedeia.com/bambu/?ir=retos', replace: u => idas.push(u) }, history: { state: null, replaceState: (_s, _t, u) => idas.push('limpia ' + u) } }
+  Object.defineProperty(global, 'navigator', { value: { onLine: true }, configurable: true })
+  assert.equal(V.recargarPorVersion(1_000_000), true)
+  assert.match(idas[0], /\?ir=retos&v=/)
+  assert.equal(V.recargarPorVersion(1_030_000), false, 'no se recarga dos veces seguidas')
+  assert.equal(V.recargarPorVersion(1_030_000, true), true, 'el botón Reintentar sí recarga')
+  assert.equal(V.recargarPorVersion(2_000_000), true)
+  navigator.onLine = false
+  assert.equal(V.recargarPorVersion(9_000_000), false, 'sin señal no recarga')
+  navigator.onLine = true
+  ss.clear()
+  let colgada = false
+  V.siFaltaArchivo(new TypeError('Importing a module script failed.')).then(() => { colgada = true }, () => { colgada = true })
+  await assert.rejects(V.siFaltaArchivo(new Error('otra cosa')), /otra cosa/)
+  await new Promise(r => setTimeout(r, 20))
+  assert.equal(colgada, false, 'mientras recarga no enseña la pantalla de error')
+  window.location.href = 'https://tuagentedeia.com/bambu/?v=abc'
+  V.quitarMarcaVersion()
+  assert.equal(idas.at(-1), 'limpia /bambu/')
+  global.window = antes.window; global.sessionStorage = antes.sessionStorage
+  if (antes.navigator) Object.defineProperty(global, 'navigator', antes.navigator); else delete global.navigator
+  ok('versión nueva: si faltan los archivos de una versión vieja recarga sola una vez (no sin señal ni en bucle), Reintentar recarga y la marca ?v= se limpia')
+}
 
 {
   const { anillosDe, cerrados } = moduleOf('anillos')
@@ -1949,11 +2398,11 @@ ok('duelos: te toca, esperando, vence a las 48 h, gana quien hace más, cuenta 3
   const leido = logReading(base, day, { minutes: 10, mode: 'manual' })
   assert.equal(anillosDe(leido, day).mente, 1, 'leer cierra Mente')
   const conHabito = { ...leido, habits: { [day]: ['agua'] } }
-  assert.equal(anillosDe(conHabito, day).alma, 0.5, 'hábito hecho y Biblia pendiente: media Alma')
+  assert.equal(anillosDe(conHabito, day).alma, 1, 'v11.1: la Biblia ya no es un paso aparte, el hábito cierra Alma')
   const conBiblia = { ...conHabito, bible: [{ id: 'b1', book: 43, chapter: 1, day }] }
   assert.equal(anillosDe(conBiblia, day).alma, 1)
   const usaNoche = { ...conBiblia, checkins: [{ id: '2026-11-24', day: '2026-11-24', given: 80 }] }
-  assert.equal(Math.round(anillosDe(usaNoche, day).alma * 100), 67, 'quien ya usa la Noche: falta contestarla hoy')
+  assert.equal(anillosDe(usaNoche, day).alma, 0.5, 'quien ya usa la Noche: falta contestarla hoy')
   assert.equal(anillosDe({ ...usaNoche, checkins: [...usaNoche.checkins, { id: day, day, given: 90 }] }, day).alma, 1)
   assert.equal(cerrados(anillosDe({ ...usaNoche, checkins: [...usaNoche.checkins, { id: day, day, given: 90 }] }, day)), 3)
   const sinLectura = { ...base, settings: { ...base.settings, modules: { ...base.settings.modules, reading: false } } }
@@ -2014,7 +2463,7 @@ ok('csp unica: la meta y la cabecera de Vercel coinciden, con WebAssembly, Supab
 }
 ok('identidad v10: paleta propia (sin hex de Duolingo), capa Bambú solo con tokens y ningún dato sale a otro dominio')
 
-require('./social-edge.cjs')(moduleOf).then(() => ok('v9 Edge real: 404 uniforme, lectura mínima, sin caché y errores privados')).then(() => require('./share-auth.cjs')()).then(() => audioChecks()).then(() => syncChecks()).then(() => console.log(`PASS ${passed.length} grupos:\n - ${passed.join('\n - ')}`)).catch(error => { console.error(error); process.exit(1) })
+require('./social-edge.cjs')(moduleOf).then(() => ok('v9 Edge real: 404 uniforme, lectura mínima, sin caché y errores privados')).then(() => require('./share-auth.cjs')()).then(() => audioChecks()).then(() => syncChecks()).then(() => versionChecks()).then(() => console.log(`PASS ${passed.length} grupos:\n - ${passed.join('\n - ')}`)).catch(error => { console.error(error); process.exit(1) })
 
 // NFC preserves elapsed time immediately, and a repeated finish cannot duplicate it.
 {
@@ -2160,8 +2609,12 @@ async function audioChecks() {
     assert.equal(f.extra, goal === 'musculo' || goal === 'ambos' ? 450 : 0, 'sin subir en 4 semanas, el extra crece; nunca para bajar')
     assert.doesNotMatch(f.why, /bajar|déficit|pasaste|exceso|demasiad/)
   }
-  assert.ok(page.includes('<BodyInputs data={data} commit={commit} growth={growth} />'), 'un menor registra peso y estatura')
-  assert.doesNotMatch(page.slice(page.indexOf('function GrowthToday'), page.indexOf('function AdultToday')), /pasaste|Te quedan|exceso/, 'pasar el piso nunca es malo')
+  const metas = page.slice(page.indexOf('function Metas'), page.indexOf('export function FoodPage'))
+  assert.ok(metas.includes('Peso (kg)') && metas.includes('Estatura (cm)') && !/growth && <label>Peso|growth && <label>Estatura/.test(metas), 'un menor registra peso y estatura')
+  assert.ok(page.includes('<Metas data={data} commit={commit} growth={growth} plan={plan} />'))
+  const mensajeMenor = page.slice(page.indexOf(': growth ? (t.kcal'), page.indexOf('\n', page.indexOf(': growth ? (t.kcal')))
+  assert.ok(mensajeMenor.includes('piso'))
+  assert.doesNotMatch(mensajeMenor, /pasaste|Te quedan|exceso/, 'pasar el piso nunca es malo')
   const logger = fs.readFileSync(path.join(__dirname, '../src/FoodLogger.tsx'), 'utf8')
   const item = { name: 'Label protein only', qty: 1, unit: 'portion', kcal: 0, protein: 12, group: 'proteina' }
   const data = normalizeData({ ...EMPTY_DATA, settings: { age: 13 }, body: [{ day: '2026-11-22', weightKg: 50, heightCm: 160 }], meals: [1,2,3].map(i => ({ id: String(i), day: '2026-11-21', at: i, slot: 'comida', items: [item] })) })
@@ -2347,4 +2800,320 @@ async function audioChecks() {
     assert.ok(!/—| - |\.\.\.|…|\w\/\w/.test(q.text + q.source), `puntuación humana: ${q.text}`)
   }
   console.log(' - pie de página: alterna versículo y cita, sin Biblia solo citas, todas con fuente')
+}
+{
+  const leer = f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')
+  const rutina = leer('src/MiRutina.tsx'), app = leer('src/App.tsx'), ob = leer('src/Onboarding.tsx'), sw = leer('public/avisos-sw.js'), main = leer('src/main.tsx')
+  assert.doesNotMatch(rutina, /Recuperaci/, 'Recuperación ya no está en Mi rutina')
+  assert.ok(/esKiki && /.test(app) && !/uid === '[A-Za-z0-9]{20,}'/.test(app), 'los ajustes de rutina de Kiki solo corren en su cuenta y sin uid a la vista')
+  assert.ok(ob.includes("modules.food") && ob.includes("'edad'"), 'la edad solo se pregunta si eligen Comida')
+  assert.ok(ob.includes('Prefiero no decirla') && ob.includes('sinEdad'), 'la edad es opcional')
+  assert.equal(normalizeData({ ...EMPTY_DATA, settings: { sinEdad: true } }).settings.sinEdad, true, 'sin edad sobrevive a la limpieza')
+  assert.equal(normalizeData({ ...EMPTY_DATA, settings: { sinEdad: 'x' } }).settings.sinEdad, undefined)
+  assert.ok(fs.existsSync(path.join(__dirname, '../public/cuerpo/base.webp')) && !fs.existsSync(path.join(__dirname, '../public/cuerpo/base.png')), 'cuerpo en WebP')
+  assert.ok(sw.includes("addEventListener('fetch'") && sw.includes('caches.open') && main.includes('serviceWorker'), 'funciona sin internet')
+  const T = moduleOf('temporada')
+  const nombres = JSON.stringify(T)
+  assert.doesNotMatch(nombres, /Flojito|Gordito|Chiquito|ito"/, 'nombres serios en la temporada')
+  const foto = leer('src/lib/fotosComida.ts')
+  assert.ok(foto.includes('indexedDB') && !/fetch\(|firestore/i.test(foto), 'las fotos de comida no salen del teléfono')
+  ok('tanda 26-nov: sin Recuperación, ajustes solo en la cuenta de Kiki, edad con Comida, cuerpo WebP, sin internet, nombres serios y fotos locales')
+}
+
+{
+  const mi = moduleOf('minutos')
+  const leer = f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')
+  const t = mi.hastaTexto(Date.parse('2026-11-26T21:35:07'))
+  assert.equal(t, '2026-11-26 21:35:07', 'el pase va sin T ni zona: el lector de fechas de Atajos leía 2026-11-26T21:35:00-06:00 como las 12:00')
+  const day = '2026-11-26'
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, settings: { minLibres: 0, candado: { llave: 'abcdefghijkmnpqrstu' } } })
+  d = mi.conCamara(d, day, 'Lagartijas', 'reps', 20, 1000, true)
+  const pase = mi.paseActivity(day, 'instagram', 5)
+  d = { ...d, activities: [...d.activities, pase], settings: { ...d.settings, candado: { llave: 'abcdefghijkmnpqrstu', desde: 1000, hasta: 301000, pase: pase.id } } }
+  d = normalizeData(d)
+  assert.equal(d.settings.candado.hasta, 301000, 'el pase abierto sobrevive a la limpieza')
+  assert.ok(/^pase:/.test(d.settings.candado.pase))
+  assert.equal(mi.saldo(d, day), 5)
+  assert.deepEqual(mi.paseAbierto(d, 2000), { desde: 1000, hasta: 301000, pase: pase.id })
+  assert.equal(mi.paseAbierto(d, 400000), null)
+  const devuelto = mi.devolverPase(d)
+  assert.equal(mi.saldo(devuelto, day), 10, 'si el atajo te regresó, te devuelve los minutos')
+  assert.deepEqual(devuelto.settings.candado, { llave: 'abcdefghijkmnpqrstu' })
+  const e = { ...d, activities: [...d.activities, mi.emergenciaActivity(day, 'instagram'), mi.emergenciaActivity(day, 'tiktok')] }
+  assert.equal(mi.saldo(e, day), 5, 'la emergencia no gasta tus minutos y no tiene límite')
+  const r = mi.devolver2611({ ...d, activities: [...d.activities, mi.paseActivity('2026-11-25', 'instagram', 5)] })
+  assert.equal(mi.saldo(r, day), 10, 'se devuelven los pases del 26-nov que el atajo no dejó usar')
+  assert.equal(r.activities.filter(a => mi.paseMinutos(a) > 0).length, 1, 'los de otros días se quedan')
+  assert.equal(normalizeData(r).settings.devolver2611, true)
+  const cand = leer('src/Candado.tsx'), cam = leer('src/CamaraReps.tsx'), sw = leer('public/avisos-sw.js')
+  assert.ok(cand.includes('Buscar ejercicio') && cand.includes('sinAcentos'), 'buscador de ejercicios sin acentos')
+  assert.ok(cand.includes('Minutos libres cada día') && cand.includes('LIBRES_OPCIONES'), 'los minutos libres se cambian en Ajustes')
+  assert.ok(cand.includes('{!data.settings.sinUsoImportante && <button') && cand.includes('role="switch"'), 'el botón de uso importante se prende o apaga en Ajustes')
+  assert.equal(normalizeData({ ...EMPTY_DATA, settings: { sinUsoImportante: true } }).settings.sinUsoImportante, true)
+  assert.ok(cand.includes('Devolverme los minutos') && cand.includes('{EMERGENCIA_MIN} min para uso importante') && !cand.includes('🚨'), 'el pase rápido no es rojo ni se llama emergencia')
+  assert.ok(cand.includes('Probar mi atajo') && /guardarPase\(llave, hastaTexto\(Date\.now\(\) \+ 60000\)\)/.test(cand), 'probar el atajo abre 1 minuto sin gastar minutos')
+  assert.ok(cam.includes('d-cam-gana') && cam.includes("'minuto'"), 'la cámara dice cuánto vas ganando')
+  assert.ok(sw.includes('Promise.race') && sw.includes('1500'), 'con señal lenta abre lo guardado')
+  ok('candado: hora del pase que entiende Atajos, devolver minutos si el atajo te regresa, emergencia de 10 min sin límite, tus minutos del 26-nov de vuelta, buscador y cuánto vas ganando')
+}
+
+{
+  const D = moduleOf('deportes')
+  const R = moduleOf('rutina')
+  const day = '2026-11-26'
+  const it = (name, kind = 'reps', target = 10) => ({ id: name, name, kind, target })
+  const semana = R.seedWeek()
+  const idx = R.weekIndex(day)
+  semana.week[idx] = { day: idx, title: 'Cuerpo completo', rounds: 3, items: [it('Sentadillas'), it('Lagartijas'), it('Dominadas', 'reps', 5), it('Plancha', 'seconds', 30), it('Desplantes')] }
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, train: semana } })
+  assert.equal(R.routineFor(d, day).items.length, 5)
+  assert.equal(D.buscarDeportes('futb').map(x => x.name).join(), 'Fútbol,Fútbol americano', 'buscador sin acentos')
+  assert.ok(D.DEPORTES.length >= 25)
+  assert.deepEqual([[30, 1], [45, 2], [60, 2], [90, 2], [60, 3], [120, 1]].map(([m, i]) => D.nivelDe(D.carga(m, i))), ['nada', 'rebaja', 'rebaja', 'descanso', 'descanso', 'descanso'])
+  const fut = D.deportePorId('futbol')
+  const conFut = (min, int, ajusta = true) => normalizeData({ ...d, activities: [...d.activities, D.deporteActivity(day, fut, '', min, int, ajusta)] })
+  const rebaja = R.routineFor(conFut(45, 2), day)
+  assert.deepEqual(rebaja.items.map(i => i.name), ['Lagartijas', 'Dominadas', 'Plancha'], 'fútbol moderado quita pierna')
+  assert.equal(rebaja.rounds, 2, 'y baja a 2 rondas')
+  assert.equal(R.routineFor(conFut(90, 2), day), null, 'fútbol fuerte: descanso, cuenta como entreno')
+  assert.equal(R.lockActive({ ...conFut(90, 2), settings: { ...conFut(90, 2).settings, train: { ...semana, lock: true, deadline: '08:00' } } }, day, '20:00'), false, 'el deporte fuerte quita el candado de la hora de entrenar')
+  assert.equal(R.routineFor(conFut(90, 3, false), day).items.length, 5, 'solo registrarlo no cambia la rutina')
+  assert.equal(R.routineFor(conFut(30, 1), day).items.length, 5, 'algo ligero no cambia nada')
+  const esc = normalizeData({ ...d, activities: [...d.activities, D.deporteActivity(day, D.deportePorId('escalar'), '', 60, 2, true)] })
+  assert.deepEqual(R.routineFor(esc, day).items.map(i => i.name), ['Sentadillas', 'Lagartijas', 'Desplantes'], 'escalar quita jalón y abdomen')
+  const otro = normalizeData({ ...d, activities: [...d.activities, D.deporteActivity(day, null, 'Paintball', 60, 2, true)] })
+  assert.equal(D.nombreDeporte(otro.activities.at(-1)), 'Paintball')
+  assert.equal(otro.activities.at(-1).deporte, 'otro')
+  assert.equal(R.routineFor(otro, day).rounds, 2, 'un deporte que no conozco solo baja rondas')
+  assert.equal(D.decision(D.ajusteDe(conFut(45, 2), day), semana.week[idx]), 'Te quito pierna y bajo a 2 rondas.')
+  assert.equal(D.decision(D.ajusteDe(conFut(90, 2), day), semana.week[idx]), 'Hoy descansas: ya cumpliste tu entreno.')
+  assert.equal(moduleOf('xp').xpOn(conFut(90, 2), day) - moduleOf('xp').xpOn(d, day), 30, 'el deporte fuerte da XP como una rutina')
+  assert.equal(normalizeData({ ...d, activities: [{ id: 'x1', day, kind: 'other', deporte: 'NO VALE', sinAjuste: 'si' }] }).activities[0].deporte, undefined)
+  ok('otros deportes: buscador, duración e intensidad deciden descanso, quitar músculos usados o nada; solo registrarlo no cambia la rutina; da XP y quita el candado de la hora')
+}
+
+{
+  const mi = moduleOf('minutos')
+  const day = '2026-11-26'
+  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'K', onboardingComplete: true }, settings: { minLibres: 30, candado: { llave: 'abcdefghijkmnpqrstu' } } })
+  const pase = mi.paseActivity(day, 'instagram', 10)
+  const t0 = Date.parse('2026-11-26T21:00:00')
+  const d = normalizeData({ ...base, activities: [pase], settings: { ...base.settings, candado: { llave: 'abcdefghijkmnpqrstu', desde: t0, hasta: t0 + 600000, pase: pase.id } } })
+  assert.equal(mi.saldo(d, day), 20)
+  assert.equal(mi.sobranDe(d, t0 + 3 * 60000 + 20000), 6, 'a los 3 min 20 s sobran 6 completos')
+  const fin = mi.terminarPase(d, t0 + 3 * 60000 + 20000)
+  assert.equal(mi.saldo(fin, day), 26, 'ya terminé: te devuelve lo que sobró')
+  assert.match(fin.activities[0].note, /· 4 min$/)
+  assert.deepEqual(fin.settings.candado, { llave: 'abcdefghijkmnpqrstu' })
+  assert.equal(mi.saldo(mi.terminarPase(d, t0 + 5000), day), 29, 'el minuto empezado cuenta como usado')
+  assert.equal(mi.sobranDe(d, t0 + 700000), 0, 'ya vencido no devuelve nada')
+  const urg = mi.emergenciaActivity(day, 'instagram')
+  const e = normalizeData({ ...base, activities: [urg], settings: { ...base.settings, candado: { llave: 'abcdefghijkmnpqrstu', desde: t0, hasta: t0 + 600000, pase: urg.id } } })
+  assert.equal(mi.sobranDe(e, t0 + 60000), 0, 'la emergencia no devuelve minutos')
+  assert.equal(mi.terminarPase(e, t0 + 60000).activities.length, 1)
+  ok('ya terminé: cierra el pase en la nube y devuelve los minutos completos que sobran')
+}
+
+// v11: despertador de lagartijas. Se apaga solo con la meta, una vez por día, e insiste cada 5 min una hora.
+{
+  const D = moduleOf('despertador')
+  const { nfcServerAction } = moduleOf('nfcActions')
+  const { parseNfc } = moduleOf('nfc')
+  const R = moduleOf('reminders')
+  const day = '2026-12-02'
+  const base = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true }, settings: { ...EMPTY_DATA.settings, reminders: { ...EMPTY_DATA.settings.reminders, wake: '06:30' }, despertador: { on: true, reps: 10 } } })
+  assert.deepEqual(D.despertadorDe(base), { on: true, reps: 10 })
+  assert.deepEqual(D.despertadorDe(normalizeData({ ...base, settings: { ...base.settings, despertador: { on: true, reps: 7 } } })).reps, 10, 'reps raras vuelven a 10')
+  assert.deepEqual(parseNfc('?nfc=despertar&k=x'), { tag: 'despertar' })
+  assert.equal(nfcServerAction(base, { tag: 'despertar', wake: { reps: 9 } }, Date.now(), day, '06:41').next, base, '9 de 10 no apaga')
+  assert.equal(nfcServerAction(base, { tag: 'despertar' }, Date.now(), day, '06:41').next, base, 'sin conteo no apaga')
+  const r = nfcServerAction(base, { tag: 'despertar', wake: { reps: 12 } }, Date.now(), day, '06:41')
+  assert.ok(D.despertoHoy(r.next, day))
+  assert.ok(r.next.activities.some(a => a.note === 'Despertador: 12 lagartijas a las 06:41'))
+  assert.ok(r.next.activities.some(a => a.id === `wake:${day}`), 'deja tu hora de despertar')
+  assert.equal(D.logDespertar(r.next, day, 30, '07:00'), r.next, 'una vez por día')
+  assert.equal(D.ranuraInsistir(base, day, '06:29'), null, 'antes de tu hora no insiste')
+  assert.equal(D.ranuraInsistir(base, day, '06:30'), 0)
+  assert.equal(D.ranuraInsistir(base, day, '06:46'), 3)
+  assert.equal(D.ranuraInsistir(base, day, '07:30'), null, 'después de una hora ya no')
+  assert.equal(D.ranuraInsistir(r.next, day, '06:46'), null, 'ya las hiciste')
+  assert.equal(D.ranuraInsistir({ ...base, settings: { ...base.settings, despertador: { on: false, reps: 10 } } }, day, '06:46'), null, 'apagado no insiste')
+  const at = h => new Date(`${day}T${h}:00`).getTime()
+  const k1 = R.dueNotes(base, at('06:31')).find(n => n.kind === 'alarm'), k2 = R.dueNotes(base, at('06:36')).find(n => n.kind === 'alarm')
+  assert.ok(k1 && k2 && k1.key !== k2.key, 'cada 5 min un aviso nuevo (llave distinta)')
+  assert.equal(R.dueNotes(r.next, at('06:36')).find(n => n.kind === 'alarm'), undefined)
+  ok('despertador: solo la meta lo apaga, una vez por día, deja la hora de despertar e insiste cada 5 min una hora')
+}
+
+// v11: catálogo grande de comida. Sin ids repetidos, valores físicamente posibles y se encuentra al buscar.
+{
+  const F = moduleOf('foods')
+  assert.ok(F.FOODS.length >= 400, `el catálogo creció: ${F.FOODS.length}`)
+  assert.equal(new Set(F.FOODS.map(x => x.id)).size, F.FOODS.length, 'ids únicos')
+  for (const x of F.FOODS) {
+    assert.ok(x.kcal >= 0 && x.kcal <= 1500, `${x.name}: ${x.kcal} kcal fuera de rango`)
+    assert.ok(x.protein * 4 <= x.kcal * 1.05 + 2, `${x.name}: la proteína (${x.protein} g) da más calorías que el total (${x.kcal})`)
+    assert.ok(!/—| - |\.\.\.|…|[a-záéíóú]\/[a-záéíóú]/i.test(x.name + x.unit), `puntuación humana: ${x.name}`)
+  }
+  for (const q of ['birria', 'torta ahogada', 'takis', 'tejuino', 'chilaquiles', 'big mac', 'proteina']) assert.ok(F.searchFoods(q).length > 0, `buscar "${q}"`)
+  assert.equal(F.searchFoods('ahogada')[0].id, 'torta-ahogada')
+  ok(`comida: ${F.FOODS.length} alimentos, sin ids repetidos, valores posibles y búsqueda de lo tapatío`)
+}
+
+// v11: bienvenida personalizada. Las metas encienden módulos y hábitos; el reporte es la cuenta honesta.
+{
+  const B = moduleOf('bienvenida')
+  assert.deepEqual(B.modulosDe(['fuerte']), { training: true, reading: false, bible: false, focus: false, food: false })
+  assert.equal(B.modulosDe(['dios']).bible, true)
+  assert.equal(B.modulosDe(['dios']).reading, true, 'la Biblia vive en Lectura')
+  assert.equal(B.modulosDe([]).training, true, 'sin metas, un arranque razonable')
+  assert.ok(B.habitosDe(['dormir']).includes('pantallas'))
+  assert.ok(B.habitosDe(['dios']).includes('oracion'))
+  const r = B.reporteCel(3, 13)
+  assert.equal(r.anos, Math.round(3 * 67 / 24 * 10) / 10, '3 h al día de los 13 a los 80')
+  assert.equal(r.recuperas, Math.round(67 / 24 * 10) / 10)
+  assert.equal(B.reporteCel(3, undefined).hasta, 65, 'sin edad se usa 15')
+  assert.ok(!/—| - |\.\.\.|…/.test(B.compromiso('Gael') + B.METAS.map(m => m.label + m.text).join(' ') + B.HORAS_CEL.map(h => h.label).join(' ')), 'puntuación humana')
+  ok('bienvenida: metas encienden módulos y hábitos, reporte con la cuenta honesta y compromiso con tu nombre')
+}
+// v11.1: la lectura del NFC no se duplica. Toque 1 empieza, toque 2 guarda (servidor), Terminar ACTUALIZA esa fila.
+{
+  const N = moduleOf('nfcActions'), Lx = moduleOf('lectura')
+  const t0 = Date.parse('2026-11-27T07:00:00-06:00'), day = '2026-11-27'
+  let d = normalizeData({ ...EMPTY_DATA, profile: { name: 'G', onboardingComplete: true } })
+  d = N.nfcServerAction(d, { tag: 'reading' }, t0, day).next
+  d = N.nfcServerAction(d, { tag: 'reading' }, t0 + 1527000, day).next
+  assert.equal(d.reading.length, 1, 'el segundo toque guarda una')
+  assert.ok(d.activeReading?.endedAt, 'queda detenida para completar detalles')
+  d = Lx.stopReading(d, t0 + 1600000)
+  assert.equal(d.reading.length, 1, 'Terminar no crea otra fila')
+  assert.equal(d.reading[0].seconds, 1527)
+  assert.equal(d.activeReading, null)
+  // Capítulos de la Biblia después del cronómetro: se pegan a la misma lectura.
+  d = Lx.markBible(d, day, [{ book: 42, chapter: 13 }])
+  assert.equal(d.reading.length, 1)
+  assert.equal(d.reading[0].bible.length, 1)
+  // Datos que ya quedaron dobles: se juntan, conservando capítulos y libro de la copia.
+  const a = { id: 'reading:a', day: '2026-11-26', minutes: 14, seconds: 870, note: '', title: 'La Biblia', captureMode: 'timer', source: 'bambu' }
+  const b = { id: 'reading:b', day: '2026-11-26', minutes: 15, seconds: 870, note: '', title: 'La Biblia', captureMode: 'timer', source: 'bambu', bible: [{ book: 42, from: 12, to: 12 }], location: 'Lucas 12', workId: 'work:x' }
+  const c = { id: 'reading:c', day: '2026-11-26', minutes: 10, seconds: 600, note: '', captureMode: 'timer', source: 'bambu' }
+  const m = Lx.mergeDuplicateReadings({ ...d, reading: [a, b, c] })
+  assert.deepEqual(m.reading.map(r => r.id), ['reading:a', 'reading:c'])
+  assert.equal(m.reading[0].location, 'Lucas 12'); assert.equal(m.reading[0].workId, 'work:x'); assert.equal(m.reading[0].minutes, 15)
+  assert.equal(Lx.mergeDuplicateReadings(m), m, 'sin dobles no cambia nada')
+  console.log('PASA v11.1 lectura por NFC sin duplicados y limpieza de los viejos')
+}
+
+{
+  const leer = f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')
+  const top = leer('src/DuoTop.tsx'), cand = leer('src/Candado.tsx')
+  assert.ok(top.includes("'?candado=redes'") && top.includes('saldo(data, today)'), 'arriba se ven tus minutos de redes y abren el candado dentro de la app')
+  assert.ok(cand.includes('Abrir mis redes') && cand.includes("new URL('?candado=redes', document.baseURI)"), 'en Redes se abre un pase sin pasar por Safari')
+  ok('abrir mis redes desde la app de la pantalla de inicio: botón en Redes y minutos arriba')
+}
+
+{
+  const leer = f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')
+  // Portado a Supabase: el cron de avisos lee candado.hasta de tus ajustes (ya no hay Firebase).
+  const R = moduleOf('reminders'), M = moduleOf('minutos')
+  const hasta = Date.parse('2026-11-27T18:00:00Z')
+  const conPase = normalizeData({ ...EMPTY_DATA, settings: { ...EMPTY_DATA.settings, candado: { llave: 'x'.repeat(24), desde: hasta - 600000, hasta, pase: 'p1' } } })
+  assert.equal(R.paseNote(conPase, hasta - 60000), null, 'antes de acabar no avisa')
+  assert.equal(R.paseNote(conPase, hasta + 120000).key, `pase:${hasta}`, 'al acabar avisa, una sola llave por pase')
+  assert.equal(R.paseNote(conPase, hasta + R.PASE_VENTANA_MS), null, 'pasada la ventana ya no')
+  assert.ok(R.dueNotes(conPase, 0, hasta + 60000).some(n => n.kind === 'pase'), 'dueNotes lo incluye con la hora real')
+  assert.equal(R.paseNote(M.terminarPase(conPase, hasta - 60000), hasta + 60000), null, 'Ya terminé lo cancela')
+  assert.equal(R.paseNote(M.devolverPase(conPase), hasta + 60000), null, 'devolver lo cancela')
+  const idx = fs.readFileSync(path.join(__dirname, '../supabase/functions/bambu-remind/index.ts'), 'utf8')
+  assert.ok(idx.includes('!paseRecien') && idx.includes('dueNotes(data, now, real)'), 'el paso barato del cron no se salta el aviso del pase')
+  ok('aviso al acabar el pase desde el cron de Supabase (y se cancela con Ya terminé o devolver)')
+}
+
+// v11.2: Tareas. El bloque muestra primero hoy y mañana; sapo único por día con bono; tablero semanal.
+{
+  const T = moduleOf('tareas'), X = moduleOf('xp')
+  const today = '2026-11-27'
+  const t = (id, dueDate, extra = {}) => ({ id, text: id, status: 'pending', minutes: 25, level: null, updatedAt: 1, ...(dueDate ? { dueDate } : {}), ...extra })
+  let d = normalizeData({ ...EMPTY_DATA, tasks: [t('dic5', '2026-12-05'), t('sin'), t('hoy', today), t('manana', '2026-11-28'), t('atrasada', '2026-11-25'), t('hecha', today, { status: 'done', completedOn: today })] })
+  const b = T.paraBloque(d, today)
+  assert.deepEqual(b.cerca.map(x => x.id), ['atrasada', 'hoy', 'manana'], 'cerca: atrasadas, hoy y mañana; nada del 5 de diciembre')
+  assert.deepEqual(b.despues.map(x => x.id), ['dic5', 'sin'])
+  d = T.marcarSapo(d, 'dic5', today)
+  assert.equal(T.sapoDe(d, today).id, 'dic5')
+  assert.equal(d.tasks.find(x => x.id === 'dic5').dueDate, today, 'el sapo se trae a hoy')
+  assert.equal(T.paraBloque(d, today).cerca[0].id, 'dic5', 'el sapo va primero en el bloque')
+  d = T.marcarSapo(d, 'hoy', today)
+  assert.deepEqual(d.tasks.filter(x => x.sapo === today).map(x => x.id), ['hoy'], 'un solo sapo por día')
+  assert.equal(T.marcarSapo(d, 'hoy', today).tasks.some(x => x.sapo), false, 'tocarlo otra vez lo quita')
+  assert.equal(normalizeData(d).tasks.find(x => x.id === 'hoy').sapo, today, 'el sapo sobrevive a la limpieza (nube)')
+  const sinSapo = X.xpOn({ ...d, tasks: d.tasks.map(x => x.id === 'manana' ? { ...x, status: 'done', completedOn: today } : x) }, today)
+  const conSapo = X.xpOn({ ...d, tasks: d.tasks.map(x => x.id === 'hoy' ? { ...x, status: 'done', completedOn: today } : x) }, today)
+  assert.equal(conSapo - sinSapo, X.XP.sapo, 'comerte el sapo vale más')
+  assert.equal(T.lunesDe('2026-11-27'), '2026-11-23'); assert.equal(T.lunesDe('2026-11-23'), '2026-11-23'); assert.equal(T.lunesDe('2026-11-29'), '2026-11-23')
+  const s = T.semanaDe(d, '2026-11-23')
+  assert.equal(s.dias.length, 7)
+  assert.deepEqual(s.dias[4].tareas.map(x => x.id), ['hoy', 'dic5', 'hecha'], 'viernes: el sapo arriba, la hecha al final (dic5 se quedó hoy al ser sapo)')
+  assert.deepEqual(s.sinFecha.map(x => x.id), ['sin'])
+  const m = T.moverTarea(d, 'hoy', '2026-11-29')
+  assert.equal(m.tasks.find(x => x.id === 'hoy').dueDate, '2026-11-29'); assert.equal(m.tasks.find(x => x.id === 'hoy').sapo, undefined, 'si mueves el sapo a otro día, deja de serlo')
+  assert.equal(T.moverTarea(d, 'sin', undefined), d, 'mover al mismo lugar no cambia nada')
+  assert.equal(T.moverTarea(d, 'manana', undefined).tasks.find(x => x.id === 'manana').dueDate, undefined, 'a sin fecha')
+  ok('tareas: bloque con hoy y mañana primero, sapo único con bono y tablero de la semana')
+}
+
+// v11.3: los anillos dicen qué cuentan (Gael no distinguía Mente de Alma con un porcentaje).
+{
+  const A = moduleOf('anillos'), O = moduleOf('oro')
+  const day = '2026-11-25'
+  const base = normalizeData({ ...EMPTY_DATA, settings: { ...EMPTY_DATA.settings, walkDaily: false, modules: { reading: true, bible: false, training: false, focus: true, food: false }, habits: [{ id: 'agua', label: 'Agua', mark: 'A' }, { id: 'cama', label: 'Cama', mark: 'C' }] }, tasks: [{ id: 't1', text: 'a', status: 'done', completedOn: day, dueDate: day, minutes: 25, level: null, updatedAt: 1 }, { id: 't2', text: 'b', status: 'pending', dueDate: day, minutes: 25, level: null, updatedAt: 1 }], habits: { [day]: ['agua'] } })
+  const d = A.detalleAnillos(base, day)
+  assert.equal(d.cuerpo, 'descanso')
+  assert.equal(d.mente, 'sin leer · 1 de 2 tareas')
+  assert.equal(d.alma, '1 de 2 hábitos')
+  assert.equal(O.RING_NAME.alma, 'Hábitos', 'el tercer anillo se llama por lo que mide')
+  assert.ok(!Object.values(O.EXTRAS).flat().some(x => /Biblia/.test(x)), 'la Biblia ya no es un paso aparte')
+  ok('anillos: cada uno dice qué cuenta y qué falta, y Alma ahora es Hábitos')
+}
+
+// v11.4: progresiones y diagnóstico. Si no sale ni una pica, primero se aprende la posición; se baja y se sube de escalón.
+{
+  const E = moduleOf('exercises'), C = moduleOf('coach'), G = moduleOf('diagnostico')
+  const hombro = E.ladder('hombro').map(e => e.id)
+  assert.deepEqual(hombro.slice(0, 3), ['pike-hold', 'pike-negative', 'pike'], 'antes de la pica: sostenida y negativa')
+  assert.equal(E.nextInLadder('pike-hold').id, 'pike-negative', 'de segundos a repeticiones cuando no hay otro igual')
+  assert.equal(E.nextInLadder('plank').id, 'hollow', 'la plancha sigue yendo a hollow (mismo tipo primero)')
+  assert.equal(E.prevInLadder('pike').id, 'pike-negative')
+  assert.equal(E.prevInLadder('pushup-knee', ['nada']), undefined, 'sin pared ni silla no hay escalón de abajo disponible')
+  assert.equal(E.prevInLadder('pushup-knee', ['nada', 'pared']).id, 'pushup-wall')
+  assert.deepEqual(E.pasoDe('pike'), { n: 3, total: E.ladder('hombro').length })
+  for (const p of G.PRUEBAS) for (const o of p.opciones) assert.ok(E.exercise(o.id) && E.exercise(o.id).slot === p.slot, `${o.id} existe y es de ${p.slot}`)
+  const day = '2026-11-27', now = Date.parse('2026-11-27T10:00:00-06:00')
+  let d = normalizeData({ ...EMPTY_DATA, settings: { ...EMPTY_DATA.settings, equipment: ['nada'] } })
+  d = G.aplicarDiagnostico(d, { empuje: 0, hombro: 0, pierna: 2 }, day, now)
+  assert.equal(d.settings.diagnostico, day)
+  assert.equal(C.currentForSlot(d, 'hombro').id, 'pike-hold', 'cero picas: arrancas sosteniendo la posición')
+  assert.equal(C.currentForSlot(d, 'empuje').id, 'pushup-knee', 'sin silla, la inclinada baja a la que sí puedes (rodillas)')
+  assert.equal(C.currentForSlot(d, 'pierna').id, 'lunge')
+  assert.equal(G.escalonPara('row-backpack', ['nada']).id, 'row-backpack', 'espalda sin equipo: se queda el de tu respuesta, no queda vacío')
+  assert.deepEqual(normalizeData(d).settings.escalones, d.settings.escalones, 'los escalones sobreviven a la limpieza (nube)')
+  // Serie registrada después del diagnóstico: manda la serie.
+  const conSerie = { ...d, sets: [{ id: 's1', day, exercise: 'pike', reps: 1, at: now + 1000 }] }
+  assert.equal(C.currentForSlot(conSerie, 'hombro').id, 'pike')
+  // "No me sale con técnica": bajar gana sobre la serie anterior.
+  const bajado = G.bajarEscalon(conSerie, 'hombro', 'pike-negative', now + 2000)
+  assert.equal(C.currentForSlot(bajado, 'hombro').id, 'pike-negative')
+  // El coach sugiere bajar si la vez pasada no llegó ni a la mitad del mínimo.
+  const ayer = { ...d, sets: [{ id: 'a', day: '2026-11-26', exercise: 'pike', reps: 1, at: now - 86400000 }, { id: 'b', day: '2026-11-26', exercise: 'pike', reps: 2, at: now - 86300000 }] }
+  const pr = C.progression(ayer, E.exercise('pike'), 2, day)
+  assert.equal(pr.verdict, 'bajar'); assert.equal(pr.prev.id, 'pike-negative')
+  assert.ok(!/—| - |…|\.\.\./.test(pr.message + G.PRUEBAS.map(p => p.pregunta + p.como + p.opciones.map(o => o.label).join('')).join('')), 'puntuación humana')
+  ok('progresiones y diagnóstico: escalones antes de la pica, arranque por respuesta y equipo, bajar gana, el coach sugiere bajar')
+}
+
+// v11.4: todo sonido que se ofrece existe en el motor (16 y 40 Hz tronaban con "Frecuencia no admitida").
+{
+  const { BINAURAL } = moduleOf('focusStats'), { AUDIO_PRESETS, binauralWav } = moduleOf('binaural')
+  for (const b of BINAURAL) assert.ok(AUDIO_PRESETS.some(p => p.beat === b.hz), `${b.label}: ${b.hz} Hz no lo genera el motor`)
+  for (const p of AUDIO_PRESETS) assert.ok(binauralWav(p.beat).byteLength > 1000, `${p.name} genera audio`)
+  ok('sonido: cada modo ofrecido genera audio de verdad')
 }

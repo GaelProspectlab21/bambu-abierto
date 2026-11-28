@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { dateKey, type AppData } from './lib/model'
-import { ROUTINES, STRETCH_EVENT, logStretch, openStretch, stepsOf, stretchRow, stretchSlot, stretchStreak, stretchedOn, totalSeconds, variedSteps, type StretchWhen } from './lib/stretch'
+import { ROUTINES, STRETCH_EVENT, holdCues, logStretch, openStretch, stepsOf, stretchRow, stretchSlot, stretchStreak, stretchedOn, totalSeconds, transitionCue, variedSteps, type StretchWhen } from './lib/stretch'
+import { playSound } from './lib/sounds'
 import { Card, useWakeLock } from './ui'
 import { Icon } from './Icons'
 import { haptic } from './lib/haptic'
 import { reward } from './juice'
 import { StretchPhoto } from './StretchPhoto'
+import { BroteArt } from './BroteArt'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Message = (t: string, undo?: () => void) => void
@@ -58,9 +60,14 @@ export function StretchPlayer({ when, commit, onMessage, streak, onClose, onSave
     return () => window.clearInterval(t)
   }, [started, paused, done, i])
 
+  const prevLeft = useRef(left)
   useEffect(() => {
-    if (!started || done || left > 0) return
-    if (i + 1 < steps.length) { haptic([30, 60, 30]); setI(i + 1); setLeft(steps[i + 1].seconds) }
+    if (!started || done) return
+    const step = steps[i]
+    holdCues(prevLeft.current, left, step.seconds, step.kind).forEach(c => playSound(c))
+    prevLeft.current = left
+    if (left > 0) return
+    if (i + 1 < steps.length) { haptic([30, 60, 30]); playSound(transitionCue(step, steps[i + 1])); prevLeft.current = steps[i + 1].seconds; setI(i + 1); setLeft(steps[i + 1].seconds) }
     else finish()
   }, [left]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -82,6 +89,7 @@ export function StretchPlayer({ when, commit, onMessage, streak, onClose, onSave
     setDone(true)
     const row = save(totalSeconds(steps))
     haptic([20, 40, 60])
+    playSound('stretchDone')
     window.setTimeout(() => reward(doneBtn.current, '+1 flexibilidad'), 80)
     if (row && commit) onMessage('Estiramiento guardado.', () => commit(d => ({ ...d, activities: d.activities.filter(a => a.id !== row.id) })))
   }
@@ -92,7 +100,7 @@ export function StretchPlayer({ when, commit, onMessage, streak, onClose, onSave
     }
     onClose()
   }
-  function jump(to: number) { if (to < 0 || to >= steps.length) return; haptic(10); setI(to); setLeft(steps[to].seconds) }
+  function jump(to: number) { if (to < 0 || to >= steps.length) return; haptic(10); playSound(transitionCue(steps[i], steps[to])); prevLeft.current = steps[to].seconds; setI(to); setLeft(steps[to].seconds) }
 
   const r = ROUTINES[when]
   const step = steps[i]
@@ -118,7 +126,7 @@ export function StretchPlayer({ when, commit, onMessage, streak, onClose, onSave
         <button type="button" className={!short ? 'on' : ''} aria-pressed={!short} onClick={() => { setShort(false); setLeft(full[0].seconds) }}>Completa · {Math.round(totalSeconds(full) / 60)} min</button>
         <button type="button" className={short ? 'on' : ''} aria-pressed={short} onClick={() => { setShort(true); setLeft(stepsOf(when, true)[0].seconds) }}>Sin ganas · 2 min</button>
       </div>
-      <button type="button" className="primary-button st-go" onClick={() => { haptic(14); setStarted(true) }}>Empezar <span>↗</span></button>
+      <button type="button" className="primary-button st-go" onClick={() => { haptic(14); playSound('stretchIn'); prevLeft.current = steps[0].seconds; setStarted(true) }}>Empezar <span>↗</span></button>
       {streak > 1 && <small className="st-streak"><Icon name="racha" size={14} /> {streak} días seguidos estirando</small>}
     </div>}
 
@@ -137,13 +145,13 @@ export function StretchPlayer({ when, commit, onMessage, streak, onClose, onSave
       <p className="st-next">{next ? <>Sigue: <strong>{next.name}{next.side && next.name === step.name ? ', otro lado' : ''}</strong></> : 'Última. Respira largo.'}</p>
       <div className="st-controls">
         <button type="button" className="st-ctl" onClick={() => jump(i - 1)} disabled={i === 0} aria-label="Anterior">‹</button>
-        <button type="button" className="st-ctl st-main" onClick={() => { haptic(10); setPaused(!paused) }}>{paused ? 'Seguir' : 'Pausa'}</button>
+        <button type="button" className="st-ctl st-main" onClick={() => { haptic(10); playSound(paused ? 'resume' : 'pause'); setPaused(!paused) }}>{paused ? 'Seguir' : 'Pausa'}</button>
         <button type="button" className="st-ctl" onClick={() => i + 1 < steps.length ? jump(i + 1) : finish()} aria-label="Siguiente">›</button>
       </div>
     </div>}
 
     {done && <div className="st-done">
-      <span className="st-badge big"><Icon name="check" size={40} /></span>
+      <BroteArt mood="orgulloso" size={132} />
       <h2>Listo. Tu cuerpo te lo agradece.</h2>
       <p>{streak > 1 ? `Van ${streak} días seguidos. La flexibilidad se gana así, poco a poco y diario.` : 'Día uno. La flexibilidad se gana así, poco a poco y diario.'}</p>
       <button ref={doneBtn} type="button" className="primary-button st-go" onClick={onClose}>Cerrar</button>

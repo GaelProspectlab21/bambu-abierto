@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { AppData } from './lib/model'
 import { supabase } from './lib/supabase'
 import { tabla, miSemana, type Publicado } from './lib/tablaSemana'
-import { aceptarAmistad, buscarPorCodigo, cancelarSolicitud, miPerfil, pedirAmistad, pendientes, publicarMiSemana, quitarAmigo, semanaDeAmigos, type MiPerfil, type Pendiente } from './lib/amigosNube'
+import { aceptarAmistad, buscarPorApodo, buscarPorCodigo, cancelarSolicitud, miPerfil, pedirAmistad, pendientes, publicarMiSemana, quitarAmigo, semanaDeAmigos, type MiPerfil, type Pendiente } from './lib/amigosNube'
 import { AMIGO_KEY } from './Amigos'
 import { haptic } from './lib/haptic'
 import { DuoIcon } from './DuoIcons'
@@ -21,7 +21,7 @@ export function AmigosSimple({ data, onMessage }: Props) {
   const [error, setError] = useState('')
   const [apodo, setApodo] = useState(data.settings.tablas?.apodo ?? data.profile.name ?? '')
   const [codigo, setCodigo] = useState(() => { try { return localStorage.getItem(AMIGO_KEY) ?? '' } catch { return '' } })
-  const [hallado, setHallado] = useState<{ apodo: string } | null>(null)
+  const [hallados, setHallados] = useState<{ apodo: string; codigo: string }[] | null>(null)
   const [busy, setBusy] = useState(false)
 
   const cargar = useCallback(async (id: string) => {
@@ -43,21 +43,29 @@ export function AmigosSimple({ data, onMessage }: Props) {
     try { await publicarMiSemana(data, uid, apodo); await cargar(uid); onMessage('Listo. Ya tienes tu código.') } catch (e) { onMessage(e instanceof Error ? e.message : 'No se pudo.') }
     setBusy(false)
   }
+  /** v12: un solo campo. Si parece código, busca el código; siempre busca también el apodo exacto. */
   async function buscar() {
-    const c = codigo.trim().toUpperCase()
-    if (c.length !== 8) { onMessage('El código tiene 8 letras y números.'); return }
+    const q = codigo.trim()
+    if (q.length < 2) { onMessage('Escribe su apodo completo o su código.'); return }
     setBusy(true)
-    try { const r = await buscarPorCodigo(c); setHallado(r); if (!r) onMessage('No encontramos ese código. Revísalo con tu amigo.') } catch (e) { onMessage(e instanceof Error ? e.message : 'No se pudo buscar.') }
+    try {
+      const esCodigo = /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$/.test(q.toUpperCase())
+      const [porCodigo, porApodo] = await Promise.all([esCodigo ? buscarPorCodigo(q.toUpperCase()) : Promise.resolve(null), buscarPorApodo(q)])
+      const lista = [...(porCodigo ? [{ apodo: porCodigo.apodo, codigo: q.toUpperCase() }] : []), ...porApodo.map(p => ({ apodo: p.apodo, codigo: p.codigo }))]
+        .filter((x, i, all) => all.findIndex(y => y.codigo === x.codigo) === i)
+      setHallados(lista)
+      if (!lista.length) onMessage('No encontramos a nadie así. El apodo tiene que ir completo, o pídele su código.')
+    } catch (e) { onMessage(e instanceof Error ? e.message : 'No se pudo buscar.') }
     setBusy(false)
   }
-  async function pedir() {
+  async function pedir(a: { apodo: string; codigo: string }) {
     if (!uid) return
     setBusy(true)
     try {
-      await pedirAmistad(uid, codigo.trim().toUpperCase())
+      await pedirAmistad(uid, a.codigo)
       haptic([12, 30, 12])
-      onMessage(`Solicitud enviada a ${hallado?.apodo}. Cuando acepte, aparece en tu tabla.`)
-      setCodigo(''); setHallado(null); try { localStorage.removeItem(AMIGO_KEY) } catch { /* sin almacenamiento */ }
+      onMessage(`Solicitud enviada a ${a.apodo}. Cuando acepte, aparece en tu tabla.`)
+      setCodigo(''); setHallados(null); try { localStorage.removeItem(AMIGO_KEY) } catch { /* sin almacenamiento */ }
       await cargar(uid)
     } catch (e) { onMessage(e instanceof Error ? e.message : 'No se pudo mandar.') }
     setBusy(false)
@@ -113,10 +121,11 @@ export function AmigosSimple({ data, onMessage }: Props) {
     <div className="d-card am-card">
       <div className="fb-label">Agregar amigo</div>
       <div className="fb-add">
-        <input className="d-input am-code" value={codigo} maxLength={8} autoCapitalize="characters" onChange={e => { setCodigo(e.target.value.toUpperCase()); setHallado(null) }} placeholder="Su código" />
-        <button type="button" className="d-btn white" disabled={busy || codigo.trim().length !== 8} onClick={() => void buscar()}>Buscar</button>
+        <input className="d-input am-code" value={codigo} maxLength={24} autoCapitalize="none" autoCorrect="off" enterKeyHint="search" onKeyDown={e => { if (e.key === 'Enter') void buscar() }} onChange={e => { setCodigo(e.target.value); setHallados(null) }} placeholder="Su apodo o su código" aria-label="Apodo o código de tu amigo" />
+        <button type="button" className="d-btn white" disabled={busy || codigo.trim().length < 2} onClick={() => void buscar()}>Buscar</button>
       </div>
-      {hallado && <div className="am-sol"><b>{hallado.apodo}</b><button type="button" className="d-btn green" disabled={busy} onClick={() => void pedir()}>Mandar solicitud</button></div>}
+      <p className="d-hint left">Escribe su apodo completo, tal como lo puso. Nadie ve una lista de todos.</p>
+      {hallados?.map(h => <div key={h.codigo} className="am-sol"><b>{h.apodo}</b><button type="button" className="d-btn green" disabled={busy} onClick={() => void pedir(h)}>Mandar solicitud</button></div>)}
       {pend.salientes.map(p => <div key={p.uid} className="am-sol pend"><span>Esperando a <b>{p.apodo}</b></span><button type="button" className="d-link" onClick={() => uid && void cancelarSolicitud(uid, p.uid).then(() => cargar(uid))}>Cancelar</button></div>)}
     </div>
 

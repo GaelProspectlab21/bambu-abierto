@@ -5,8 +5,11 @@
  * tendencias; el motor se calibra con TU peso, no con la tabla.
  */
 import type { FoodGroup, MealItem } from './model'
+import { MAS } from './foodsMas'
 
-export type Food = { id: string; name: string; unit: string; kcal: number; protein: number; group: FoodGroup; words?: string; estimated?: boolean; source?: string }
+export type Food = { id: string; name: string; unit: string; kcal: number; protein: number; group: FoodGroup; words?: string; estimated?: boolean; source?: string
+  /** v12: por porción. Solo los empaquetados con etiqueta (Open Food Facts) los traen aquí. */
+  carbs?: number; sugar?: number; fat?: number; fiber?: number; sodium?: number; brand?: string }
 
 const f = (id: string, name: string, unit: string, kcal: number, protein: number, group: FoodGroup, words?: string): Food => ({ id, name, unit, kcal, protein, group, words })
 
@@ -123,7 +126,10 @@ export const FOODS: Food[] = [
   f('chocolate', 'Chocolate', 'barra chica', 250, 3, 'dulce'),
   f('helado', 'Helado', '1/2 taza', 140, 2.5, 'dulce', 'nieve'),
   f('pastelito', 'Pastelito empaquetado', 'pieza', 180, 2, 'dulce', 'gansito'),
+  // v11: el catálogo grande (foodsMas.ts). Si un id ya existe arriba, gana el de arriba.
 ]
+const ARRIBA = new Set(FOODS.map(x => x.id))
+for (const [id, name, unit, kcal, protein, group, words] of MAS) if (!ARRIBA.has(id)) FOODS.push({ ...f(id, name, unit, kcal, protein, group, words), estimated: true })
 
 /**
  * A ojo con la mano (método de porciones con la mano de Precision Nutrition). Una palma de
@@ -139,17 +145,22 @@ export const HAND: Food[] = [
 ]
 
 const ALL = [...FOODS, ...HAND]
-export function foodById(id: string): Food | undefined { return ALL.find(x => x.id === id) }
+/** v12: los empaquetados de México se bajan aparte (public/alimentos/mx.json) y se registran aquí. */
+const EXTRA = new Map<string, Food>()
+export function registrarAlimentos(list: Food[]) { list.forEach(f => EXTRA.set(f.id, f)) }
+export const hayEmpaquetados = () => EXTRA.size > 0
+export function foodById(id: string): Food | undefined { return ALL.find(x => x.id === id) ?? EXTRA.get(id) }
 
 const plain = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 /** Busca por nombre y por palabras sueltas, sin acentos. Lo que empieza igual va primero. */
 export function searchFoods(query: string, limit = 12): Food[] {
   const q = plain(query.trim())
   if (!q) return []
-  const hits = FOODS.map(x => {
-    const name = plain(x.name), words = plain(x.words ?? '')
-    const score = name.startsWith(q) ? 3 : name.split(' ').some(w => w.startsWith(q)) ? 2 : (name.includes(q) || words.includes(q)) ? 1 : 0
-    return { x, score }
+  const hits = [...FOODS, ...EXTRA.values()].map(x => {
+    const name = plain(x.name), words = plain(`${x.words ?? ''} ${x.brand ?? ''}`)
+    // Los caseros ganan empates: "leche" primero da la leche entera, luego las marcas.
+    const base = name.startsWith(q) ? 3 : name.split(' ').some(w => w.startsWith(q)) ? 2 : (name.includes(q) || words.includes(q)) ? 1 : 0
+    return { x, score: base ? base + (x.brand ? 0 : 0.5) : 0 }
   }).filter(h => h.score > 0)
   return hits.sort((a, b) => b.score - a.score || a.x.name.localeCompare(b.x.name)).slice(0, limit).map(h => h.x)
 }

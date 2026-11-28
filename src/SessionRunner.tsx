@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { dateKey, type AppData } from './lib/model'
-import { SLOT_LABEL } from './lib/exercises'
+import { nextInLadder, pasoDe, prevInLadder, SLOT_LABEL, type Slot } from './lib/exercises'
+import { bajarEscalon } from './lib/diagnostico'
 import { setValue } from './lib/coach'
 import { currentStep, sessionQueue, type Group } from './lib/session'
 import { ExerciseFigure, RestTimer, SetLogger, SwapPicker, type Commit, type OnMessage } from './TrainingParts'
@@ -47,6 +48,7 @@ export function SessionRunner({ data, commit, onMessage, grouped, express, now, 
     {step ? <article className="runner-card" key={`${step.item.exercise.id}-${step.set}`}>
       <span className="eyebrow">{SLOT_LABEL[step.item.slot].toUpperCase()} · SERIE {step.set} DE {step.item.sets}</span>
       <h2>{step.item.exercise.name}</h2>
+      <Escalera id={step.item.exercise.id} />
       {express && step.item.slot && (() => {
         const mate = live.find(g => g.includes(step.item))?.find(i => i !== step.item)
         return mate ? <p className="pair-note">Superserie: alterna con {mate.exercise.name}. Mientras uno trabaja, el otro descansa.</p> : null
@@ -58,6 +60,14 @@ export function SessionRunner({ data, commit, onMessage, grouped, express, now, 
       {swapping && onSwap && <SwapPicker ex={step.item.exercise} equipment={data.settings.equipment} onPick={id => { setSwapping(false); onSwap(step.item.slot, id) }} onClose={() => setSwapping(false)} />}
       <div className="runner-foot">
         {onSwap && !swapping && step.set === 1 && <button type="button" className="quiet-button" onClick={() => setSwapping(true)}>Cambiar</button>}
+        {(() => {
+          const prev = prevInLadder(step.item.exercise.id, data.settings.equipment)
+          return prev && <button type="button" className="quiet-button" onClick={() => {
+            commit(d => bajarEscalon(d, step.item.slot as Slot, prev.id))
+            onSwap?.(step.item.slot, prev.id)
+            onMessage(`Bajamos a ${prev.name}. Cuando la domines, regresas a ${step.item.exercise.name}.`)
+          }}>No me sale con técnica</button>
+        })()}
         <button type="button" className="quiet-button" onClick={() => { setSkipped(s => [...s, step.item.exercise.id]); onMessage(`Saltaste ${step.item.exercise.name}. Si te duele, anótalo en el check-in.`) }}>Saltar</button>
         {after && <small>Después: {after.item.exercise.name}</small>}
       </div>
@@ -70,6 +80,17 @@ export function SessionRunner({ data, commit, onMessage, grouped, express, now, 
         <button type="button" className="primary-button wide" onClick={onEnd}>Terminar sesión <span>✓</span></button>
       </article>}
   </section>
+}
+
+/** La escalera del ejercicio: en qué paso vas y qué sigue. Así sabes que hay camino antes y después. */
+function Escalera({ id }: { id: string }) {
+  const paso = pasoDe(id)
+  const next = nextInLadder(id)
+  if (!paso || paso.total < 2) return null
+  return <div className="escalera" aria-label={`Paso ${paso.n} de ${paso.total}`}>
+    <div className="escalera-pasos" aria-hidden="true">{Array.from({ length: paso.total }, (_, k) => <i key={k} className={k < paso.n - 1 ? 'hecho' : k === paso.n - 1 ? 'aqui' : ''} />)}</div>
+    <small>Paso {paso.n} de {paso.total}{next ? `. Sigue: ${next.name}` : '. Último escalón: súbele peso.'}</small>
+  </div>
 }
 
 function RestMobility({ move }: { move: StretchMove }) {

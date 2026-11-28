@@ -135,3 +135,23 @@ export function logStretch(data: AppData, when: StretchWhen, seconds: number, da
   const marked = (data.habits[day] ?? []).includes('stretch')
   return { ...data, activities: [...data.activities, row], habits: habit && !marked ? { ...data.habits, [day]: [...(data.habits[day] ?? []), 'stretch'] } : data.habits }
 }
+
+/**
+ * v11.5: qué suena mientras sostienes una postura. El reloj avanza en saltos de 250 ms, así que se
+ * mira qué umbral cruzaste entre el valor anterior y el nuevo: 3, 2 y 1 segundos (la cuenta para
+ * cambiar) y, en las posturas quietas de 30 s o más, la mitad (un soplo para soltar el aire).
+ */
+export type HoldCue = 'count' | 'breathe'
+export function holdCues(prev: number, left: number, seconds: number, kind: StretchMove['kind']): HoldCue[] {
+  const cues: HoldCue[] = []
+  const half = seconds / 2
+  if (kind === 'static' && seconds >= 30 && prev > half && left <= half) cues.push('breathe')
+  for (const k of [3, 2, 1]) if (k < seconds && prev > k && left <= k) cues.push('count')
+  return cues
+}
+
+/** Al pasar de una postura a otra: si es la misma del otro lado, el toc-toc suena de ESE lado. */
+export function transitionCue(from: StretchStep, to: StretchStep): 'sideL' | 'sideR' | 'pose' {
+  if (to.side && from.name === to.name && from.side !== to.side) return to.side === 'Lado izquierdo' ? 'sideL' : 'sideR'
+  return 'pose'
+}

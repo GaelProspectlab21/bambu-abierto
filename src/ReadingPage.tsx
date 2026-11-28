@@ -3,11 +3,13 @@ import { useMemo, useState } from 'react'
 import { dateKey, makeId, modulesOf, type AppData, type BibleMark, type Reading, type Work } from './lib/model'
 import { firstDay } from './lib/jardin'
 import { finishReading, pauseReading, readingSeconds, type ActiveReading } from './lib/readingSession'
-import { CANON, ETAPAS, TOTAL_CHAPTERS, addChapterMarks, book, bibleProgress, describeRanges, etapaDe, nextChapters, toRanges } from './lib/bible'
-import { backfillDays, streak, realReading } from './lib/progress'
+import { CANON, ETAPAS, TOTAL_CHAPTERS, addChapterMarks, book, bibleProgress, describeRanges, nextChapters, toRanges } from './lib/bible'
+import { backfillDays, realReading } from './lib/progress'
 import { BinauralAudio } from './BinauralAudio'
-import { Card, Chips, Empty, Heading, Stepper, Tabs, fmtDay, mmss, useNow, useWakeLock } from './ui'
+import { Card, Chips, Empty, Stepper, Tabs, fmtDay, mmss, useNow, useWakeLock } from './ui'
+import { freshReading } from './lib/sesionLectura'
 import { plural } from './lib/text'
+import { RachaLecturaCard } from './RachaLectura'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Props = { data: AppData; commit: Commit; onMessage: (text: string, undo?: () => void) => void }
@@ -21,12 +23,9 @@ function takeOpenBible(): boolean { try { const v = sessionStorage.getItem(OPEN_
 export function ReadingPage(props: Props) {
   const [direct] = useState(takeOpenBible)
   const [tab, setTab] = useState<Tab>(direct && modulesOf(props.data.settings).bible ? 'biblia' : 'sesion')
-  const s = useMemo(() => streak(props.data.reading.filter(realReading).map(r => r.day)), [props.data.reading])
   return <>
-    <Heading eyebrow="LECTURA" title="Tu rincón de lectura." text="Cinco minutos cuentan. El tiempo real va aparte." aside={<div className="completion"><strong>{s.current}</strong><span>días seguidos · mejor {s.best}</span></div>} />
+    <RachaLecturaCard data={props.data} onLeer={tab !== 'sesion' && !props.data.activeReading ? () => setTab('sesion') : undefined} />
     <Tabs label="Lectura" value={tab} onChange={setTab} options={[['sesion', props.data.activeReading ? 'Leyendo' : 'Leer'], ...(modulesOf(props.data.settings).bible ? [['biblia', 'Biblia'] as [Tab, string]] : []), ['libros', 'Libros'], ['cronica', 'Crónica']]} />
-    {tab === 'sesion' && modulesOf(props.data.settings).bible && !props.data.activeReading && <button type="button" className="verses-quick" onClick={() => { try { sessionStorage.setItem(OPEN_BIBLE_KEY, '1') } catch { /* abre la pestaña igual */ } setTab('biblia') }}>
-      <span><strong>¿Leíste solo unos versículos?</strong><small>Ábrelos, tócalos y guarda cuánto tiempo les diste. Con tu nota si quieres.</small></span><i aria-hidden="true">→</i></button>}
     {tab === 'sesion' && <Session {...props} />}
     {tab === 'biblia' && <BibleView {...props} direct={direct} />}
     {tab === 'libros' && <Works {...props} />}
@@ -34,9 +33,6 @@ export function ReadingPage(props: Props) {
   </>
 }
 
-export function freshReading(): ActiveReading {
-  return { id: `reading:${makeId()}`, day: dateKey(), startedAt: Date.now(), title: '', location: '' }
-}
 
 function Session({ data, commit, onMessage }: Props) {
   const bibleOn = modulesOf(data.settings).bible
@@ -74,9 +70,8 @@ function Session({ data, commit, onMessage }: Props) {
       <span className="eyebrow">ABRE TU LIBRO</span>
       <h2>Un rato para ti.</h2>
       <p>Empieza aquí o acerca el teléfono a tu etiqueta. Al terminar, vuelve a acercarlo.</p>
-      {suggestions[0] && <p className="note note-logro">Lo que sigue en tu ruta: <strong>{book(suggestions[0].book).name} {suggestions[0].chapter}</strong> ({etapaDe(suggestions[0].book)?.nombre})</p>}
-      <button className="primary-button wide" onClick={() => commit(d => d.activeReading ? d : ({ ...d, activeReading: freshReading() }))}>Empezar lectura <span>↗</span></button>
-      <button className="quiet-button" onClick={() => setManual(manual ? null : dateKey())}>Ya leí, registrar a mano</button>
+      <button className="primary-button wide" onClick={() => commit(d => d.activeReading ? d : ({ ...d, activeReading: freshReading() }))}>Empezar lectura</button>
+      <button className="quiet-button wide" onClick={() => setManual(manual ? null : dateKey())}>Ya leí, registrar a mano</button>
     </Card>
     <DayBand data={data} selected={manual} onPick={day => setManual(manual === day ? null : day)} />
     {manual && <ManualReading key={manual} data={data} commit={commit} day={manual} onSaved={msg => { setManual(null); onMessage(msg) }} />}
@@ -207,21 +202,23 @@ function BibleView({ data, commit, onMessage, direct = false }: Props & { direct
   const groups = order === 'ruta' ? ETAPAS.map(e => ({ name: e.nombre, why: e.porQue, books: e.libros })) : [{ name: 'Antiguo Testamento', why: '', books: CANON.filter(id => book(id).testament === 'AT') }, { name: 'Nuevo Testamento', why: '', books: CANON.filter(id => book(id).testament === 'NT') }]
   if (reading) return <BibleReader data={data} commit={commit} onMessage={onMessage} start={reading} onClose={() => setReading(null)} />
   return <>
+    <div className="lec-top">
     {p.next && <Card className="read-here"><span className="eyebrow">LEER AQUÍ</span><h2>{book(p.next.book).name} {p.next.chapter}</h2>
       <p className="hint">Lees dentro de bambú y al terminar el capítulo se marca solo.</p>
-      <button type="button" className="primary-button wide" onClick={() => setReading(p.next)}>Abrir la Biblia <span>↗</span></button></Card>}
+      <button type="button" className="primary-button wide" onClick={() => setReading(p.next)}>Abrir la Biblia</button></Card>}
     <TravelCard />
     <Card tone="accent"><span className="eyebrow">LA BIBLIA</span><h2>{p.read.toLocaleString('es-MX')} de {TOTAL_CHAPTERS.toLocaleString('es-MX')} capítulos · {p.percent}%</h2>
       <div className="bar"><span style={{ width: `${p.percent}%` }} /></div>
       <p>{p.next ? <>Sigue: <strong>{book(p.next.book).name} {p.next.chapter}</strong>. </> : '¡La terminaste! '}{p.finishOn ? `A tu ritmo de 30 días (${p.perDay30.toFixed(1)} capítulos al día) terminas el ${new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${p.finishOn}T12:00:00`))}.` : 'Lee unos días y te digo cuándo terminas.'}{p.partial ? ` ${plural(p.partial, 'capítulo', 'capítulos')} a medias.` : ''}</p>
       <Chips label="Orden" value={order} onChange={v => commit(d => ({ ...d, settings: { ...d.settings, bibleOrder: v } }))} options={[['ruta', 'Ruta recomendada'], ['canonico', 'Orden de la Biblia']]} /></Card>
+    </div>
     {groups.map(g => <Card key={g.name}><h2>{g.name}</h2>{g.why && <p className="hint">{g.why}</p>}
       <div className="books">{g.books.map(id => {
         const b = book(id), done = p.byBook.get(id)
         const count = done ? [...done.values()].filter(m => !m.verses).length : 0
         return <div key={id} className="book">
           <button className="book-head" onClick={() => setOpenBook(openBook === id ? null : id)} aria-expanded={openBook === id}><strong>{b.name}</strong><small>{count}/{b.chapters}</small><span className="trazo" style={{ ['--pct' as string]: `${count / b.chapters * 100}%` }} /></button>
-          {openBook === id && <button type="button" className="quiet-button read-book" onClick={() => setReading({ book: id, chapter: Array.from({ length: b.chapters }, (_, i) => i + 1).find(c => !done?.get(c) || done.get(c)!.verses) ?? 1 })}>Leer {b.name} aquí ↗</button>}
+          {openBook === id && <button type="button" className="quiet-button read-book" onClick={() => setReading({ book: id, chapter: Array.from({ length: b.chapters }, (_, i) => i + 1).find(c => !done?.get(c) || done.get(c)!.verses) ?? 1 })}>Leer {b.name} aquí</button>}
           {openBook === id && <div className="chapters">{Array.from({ length: b.chapters }, (_, i) => { const m = done?.get(i + 1); return <button key={i} className={m ? m.verses ? 'ch partial' : 'ch read' : 'ch'} aria-pressed={!!m} title={m ? `Leído ${fmtDay(m.day)}${m.verses ? ` (versículos ${m.verses})` : ''}` : 'Sin leer'} onClick={() => toggle(id, i + 1)}>{i + 1}</button> })}</div>}
         </div>
       })}</div></Card>)}
@@ -234,7 +231,7 @@ function Works({ data, commit, onMessage }: Props) {
   const [author, setAuthor] = useState('')
   const [pages, setPages] = useState(200)
   const works = data.works.filter(w => w.title !== 'La Biblia')
-  return <>
+  return <div className="lec-libros">
     <Card><span className="eyebrow">NUEVO LIBRO</span><form onSubmit={e => { e.preventDefault(); if (!title.trim()) return; const w: Work = { id: `work:${makeId()}`, title: title.trim(), ...(author.trim() ? { author: author.trim() } : {}), totalPages: pages, currentPage: 0, status: 'reading', startedOn: dateKey() }; commit(d => ({ ...d, works: [...d.works, w] })); setTitle(''); setAuthor(''); onMessage('Libro agregado. Elígelo al cerrar tu próxima lectura.') }}>
       <label className="field-label">Título<input className="text-input" value={title} maxLength={200} onChange={e => setTitle(e.target.value)} required /></label>
       <label className="field-label">Autor <span>opcional</span><input className="text-input" value={author} maxLength={120} onChange={e => setAuthor(e.target.value)} /></label>
@@ -242,7 +239,7 @@ function Works({ data, commit, onMessage }: Props) {
       <button className="primary-button wide">Agregar libro</button></form></Card>
     {works.length ? works.map(w => { const pct = w.totalPages ? Math.round((w.currentPage ?? 0) / w.totalPages * 100) : 0; const minutes = data.reading.filter(r => r.workId === w.id).reduce((s, r) => s + r.minutes, 0); return <Card key={w.id}><div className="section-heading"><div><h2>{w.title}</h2><small>{w.author ?? ''}</small></div><span className="subtle-count">{w.status === 'done' ? 'Terminado' : `${pct}%`}</span></div><div className="bar"><span style={{ width: `${pct}%` }} /></div><p className="hint">Página {w.currentPage ?? 0}{w.totalPages ? ` de ${w.totalPages}` : ''} · {minutes} min leídos</p>
       <div className="row-actions"><button className="quiet-button" onClick={() => commit(d => ({ ...d, works: d.works.map(x => x.id === w.id ? { ...x, status: x.status === 'paused' ? 'reading' : 'paused' } : x) }))}>{w.status === 'paused' ? 'Retomar' : 'Pausar'}</button><button className="quiet-button" onClick={() => commit(d => ({ ...d, works: d.works.map(x => x.id === w.id ? { ...x, status: 'done', finishedOn: dateKey() } : x) }))}>Lo terminé</button></div></Card> }) : <Empty>Agrega el libro que lees ahora.</Empty>}
-  </>
+  </div>
 }
 
 function Chronicle({ data }: { data: AppData }) {

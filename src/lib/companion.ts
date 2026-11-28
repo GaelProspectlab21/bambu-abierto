@@ -16,7 +16,7 @@ export type SectionId = 'Hoy' | 'Noche' | 'Lectura' | 'Entrenar' | 'Comida' | 'E
 export type Cta = { label: string; go: SectionId } | { label: string; habit: string }
 export type Suggestion = { id: string; text: string; cta?: Cta }
 /** Cómo se ve la mascota en cada sección. */
-export type Look = 'base' | 'lector' | 'tareas' | 'habitos' | 'noche' | 'historial' | 'ajustes'
+export type Look = 'base' | 'coach' | 'lector' | 'tareas' | 'habitos' | 'noche' | 'historial' | 'ajustes'
 
 export function lookOf(section: SectionId): Look {
   return section === 'Lectura' ? 'lector' : section === 'Tareas' || section === 'Enfoque' ? 'tareas' : section === 'Hábitos' ? 'habitos'

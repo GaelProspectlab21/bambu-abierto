@@ -9,7 +9,7 @@
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'npm:@supabase/supabase-js@2.112.3'
 // @ts-types="../_shared/core.d.ts"
-import { applyRecords, cleanSettings, dueKinds, dueNotes, EMPTY_DATA, testNote } from '../_shared/core.js'
+import { applyRecords, cleanSettings, dueKinds, dueNotes, EMPTY_DATA, PASE_VENTANA_MS, testNote } from '../_shared/core.js'
 
 type Note = { kind: string; key: string; title: string; body: string; url: string }
 type RecordRow = { collection: string; id: string; payload: Record<string, unknown>; deleted: boolean; clientUpdatedAt: number }
@@ -70,9 +70,16 @@ async function runCron() {
     // Paso barato primero: solo los ajustes. Si a esta hora no toca nada, no se carga el historial.
     const meta = await rowsOf(userId, 'meta')
     const settings = cleanSettings(meta.find(r => r.id === 'settings')?.payload.value)
-    if (!dueKinds(settings.reminders, settings.sleepTarget, now).length) continue
+    // El despertador insiste aunque los demás avisos estén apagados: una hora desde tu hora de despertar.
+    const d = new Date(now), [wh, wm] = settings.reminders.wake.split(':').map(Number)
+    const desde = d.getHours() * 60 + d.getMinutes() - (wh * 60 + wm)
+    const despierta = settings.despertador?.on === true && desde >= 0 && desde < 60
+    // El aviso de fin de pase tampoco depende de los recordatorios: basta con que tu pase acabe de cerrarse.
+    const real = Date.now(), hasta = settings.candado?.hasta ?? 0
+    const paseRecien = hasta > 0 && real >= hasta && real < hasta + PASE_VENTANA_MS
+    if (!despierta && !paseRecien && !dueKinds(settings.reminders, settings.sleepTarget, now).length) continue
     const data = applyRecords({ ...EMPTY_DATA }, await rowsOf(userId))
-    for (const note of dueNotes(data, now)) {
+    for (const note of dueNotes(data, now, real)) {
       // Se apunta ANTES de enviar: si dos corridas se cruzan, solo una gana la fila.
       const { data: claimed, error: logError } = await db.from('bambu_push_log').insert({ user_id: userId, key: note.key }).select('key')
       if (logError?.code === '23505') continue

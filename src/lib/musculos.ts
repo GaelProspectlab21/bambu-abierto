@@ -1,24 +1,14 @@
 import type { AppData, TrainingSet } from './model'
 import { exerciseList } from './libre'
+import { musculoDeNombre } from './musculoNombre'
 
 export type Muscle = 'Pecho' | 'Espalda' | 'Hombros' | 'Brazos' | 'Abdomen' | 'Piernas'
 export const MUSCLES: Muscle[] = ['Pecho', 'Espalda', 'Hombros', 'Brazos', 'Abdomen', 'Piernas']
 
 const BY_GROUP: Record<string, Muscle> = { Pecho: 'Pecho', Espalda: 'Espalda', Hombros: 'Hombros', Abdomen: 'Abdomen', Piernas: 'Piernas', 'Bíceps': 'Brazos', 'Tríceps': 'Brazos', Antebrazo: 'Brazos' }
-const GUESS: [RegExp, Muscle][] = [
-  [/handstand|pike|hombro|parado de cabeza|planche/, 'Hombros'],
-  [/lagartij|push|fondo|pecho/, 'Pecho'],
-  [/domin|chin|pull|remo|australian|lever|muscle up|espalda|toalla/, 'Espalda'],
-  [/sentadill|squat|desplante|zancada|talon|gluteo|wall sit|puente|pierna|nordic/, 'Piernas'],
-  [/abs|abdom|plancha|hollow|russian|crunch|l sit|dragon|v-up|toes/, 'Abdomen'],
-  [/bicep|tricep|curl|brazo|antebrazo|colgar/, 'Brazos'],
-]
-const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-
 export function muscleOf(name: string, group: string): Muscle | null {
   if (BY_GROUP[group]) return BY_GROUP[group]
-  const n = plain(name)
-  return GUESS.find(([re]) => re.test(n))?.[1] ?? null
+  return musculoDeNombre(name)
 }
 
 export type Period = 'semana' | 'mes' | 'siempre'
@@ -71,4 +61,23 @@ export function bodyAdvice(stats: Record<Muscle, MuscleStat>): string {
   const least = all.filter(s => s.sets < all[0].sets).at(-1)
   const n = (k: number) => `${k} ${k === 1 ? 'serie' : 'series'}`
   return `Lo que más entrenas: ${all[0].muscle.toLowerCase()} (${n(all[0].sets)}).${least ? ` Lo que menos: ${least.muscle.toLowerCase()} (${n(least.sets)}).` : ''}`
+}
+
+/**
+ * v12: series por semana contra un rango sano (suma de los rangos del catálogo de cada músculo, para
+ * 13 años y método Juanma: más no es mejor si no recuperas). Con eso "Tu cuerpo" dice qué te toca.
+ */
+export const RANGO_SEMANAL: Record<Muscle, [number, number]> = { Pecho: [6, 14], Espalda: [6, 14], Hombros: [4, 10], Brazos: [6, 16], Abdomen: [4, 10], Piernas: [10, 24] }
+export type Balance = { muscle: Muscle; porSemana: number; rango: [number, number]; estado: 'falta' | 'bien' | 'mucho'; recuperando: boolean }
+export function balance(stats: Record<Muscle, MuscleStat>, period: Period, today: string): { filas: Balance[]; teToca: Muscle | null } {
+  const semanas = period === 'semana' ? 1 : period === 'mes' ? 30 / 7 : null
+  const ayer = shift(today, -1)
+  const filas = MUSCLES.map(m => {
+    const porSemana = semanas ? Math.round(stats[m].sets / semanas * 10) / 10 : stats[m].sets
+    const [lo, hi] = RANGO_SEMANAL[m]
+    return { muscle: m, porSemana, rango: RANGO_SEMANAL[m], estado: (porSemana < lo ? 'falta' : porSemana > hi ? 'mucho' : 'bien') as Balance['estado'], recuperando: !!stats[m].lastDay && stats[m].lastDay! >= ayer }
+  })
+  // Lo que te toca: lo más lejos de su rango que ya descansó. Sin periodo medible no hay sugerencia.
+  const toca = semanas ? filas.filter(f => f.estado === 'falta' && !f.recuperando).sort((a, b) => a.porSemana / a.rango[0] - b.porSemana / b.rango[0])[0] : undefined
+  return { filas, teToca: toca?.muscle ?? null }
 }

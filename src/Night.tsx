@@ -4,6 +4,7 @@ import { activeHabits, dateKey, modulesOf, type AppData, type Checkin } from './
 import { compareDay, measures, measureStats, verdict } from './lib/measure'
 import { shift } from './lib/coach'
 import { haptic } from './lib/haptic'
+import { playSound } from './lib/sounds'
 import { HabitList } from './HabitsPage'
 import { ClosingSheet } from './ClosingSheet'
 import { BroteArt } from './Brote'
@@ -103,6 +104,7 @@ export function NightPage({ data, commit, onMessage, go }: { data: AppData; comm
       blocker: v.kind === 'parte' && blocker ? blocker : undefined, reflection: text.trim() || undefined }
     if (m.training) { next.proteinMeals = meals; next.pain = pain || undefined }
     commit(d => ({ ...d, checkins: [...d.checkins.filter(c => c.day !== today), next] }))
+    playSound('night')
     haptic([20, 40, 20])
     setClosing(true)
   }

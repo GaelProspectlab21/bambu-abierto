@@ -1,9 +1,9 @@
-import type { Anillos } from './lib/anillos'
+import type { Anillos, Detalle } from './lib/anillos'
 
 const RINGS: { key: keyof Anillos; label: string; r: number }[] = [
   { key: 'cuerpo', label: 'Cuerpo', r: 42 },
   { key: 'mente', label: 'Mente', r: 31 },
-  { key: 'alma', label: 'Alma', r: 20 },
+  { key: 'alma', label: 'Hábitos', r: 20 },
 ]
 
 /** Tres anillos concéntricos: de un vistazo sabes cómo vas hoy. Un anillo que no aplica no se dibuja. */
@@ -18,8 +18,9 @@ export function AnillosDia({ a, size = 76, oro }: { a: Anillos; size?: number; o
   </svg>
 }
 
-export function AnillosLeyenda({ a, oro }: { a: Anillos; oro?: Partial<Record<keyof Anillos, boolean>> }) {
-  return <div className="d-anillos-ley">
-    {RINGS.filter(x => a[x.key] !== null).map(x => <span key={x.key} className={`${x.key}${oro?.[x.key] ? ' oro' : ''}`}><i />{x.label} <b>{Math.round((a[x.key] ?? 0) * 100)}%</b></span>)}
+/** La leyenda dice QUÉ cuenta cada anillo y qué falta (v11.3), no un porcentaje suelto. */
+export function AnillosLeyenda({ a, oro, detalle }: { a: Anillos; oro?: Partial<Record<keyof Anillos, boolean>>; detalle?: Detalle }) {
+  return <div className={`d-anillos-ley ${detalle ? 'detalle' : ''}`}>
+    {RINGS.filter(x => a[x.key] !== null).map(x => <span key={x.key} className={`${x.key}${oro?.[x.key] ? ' oro' : ''}${(a[x.key] ?? 0) >= 1 ? ' cerrado' : ''}`}><i /><b>{x.label}</b>{detalle ? <small>{detalle[x.key]}</small> : <b>{Math.round((a[x.key] ?? 0) * 100)}%</b>}</span>)}
   </div>
 }

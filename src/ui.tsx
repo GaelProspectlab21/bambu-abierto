@@ -62,6 +62,18 @@ export function chime() {
   playSound('focusEnd', true)
 }
 
+/**
+ * v11.5: arranque y fin de descanso en el entreno. Antes usaban la campana lenta del bloque
+ * (2 s de cuenco): en una serie se sentía tarde. Ahora es "¡va!": madera y campana, corto.
+ * Igual que la campana, suena aunque los premios estén en silencio, porque es un aviso.
+ */
+export function goSignal() {
+  try { navigator.vibrate?.(120) } catch { /* sin vibración */ }
+  playSound('go', true)
+}
+/** Los últimos 3 segundos antes de arrancar o de volver a la serie. */
+export function countTick() { playSound('count') }
+
 /** Mantiene la pantalla encendida mientras haya una sesión abierta. */
 let awakeVideo: HTMLVideoElement | null = null
 let awakeUsers = 0
@@ -155,10 +167,10 @@ export function MoveImage({ start, end, alt, similar, size = 'big', drawn = fals
   </figure>
 }
 
-export type Celebration = { title: string; text?: string; kind?: 'level' | 'rank' | 'achievement' | 'day' | 'record' | 'streak'; image?: string; count?: number; sound?: SoundKind }
+export type Celebration = { title: string; text?: string; kind?: 'level' | 'rank' | 'achievement' | 'day' | 'record' | 'streak' | 'meta'; image?: string; count?: number; sound?: SoundKind; extra?: string }
 export { soundsOn, setSounds } from './lib/sounds'
 export function rewardSound(big = false) { playSound(big ? 'achieve' : 'complete') }
-const CELEBRATION_SOUND: Record<NonNullable<Celebration['kind']>, SoundKind> = { level: 'level', rank: 'level', achievement: 'achieve', day: 'day', record: 'record', streak: 'streak' }
+const CELEBRATION_SOUND: Record<NonNullable<Celebration['kind']>, SoundKind> = { level: 'level', rank: 'level', achievement: 'achieve', day: 'day', record: 'record', streak: 'streak', meta: 'feast' }
 export function celebrate(detail: Celebration) {
   window.dispatchEvent(new CustomEvent<Celebration>('bambu:celebrate', { detail }))
 }
@@ -181,14 +193,33 @@ export function CelebrationLayer() {
   useEffect(() => {
     if (!current) return
     // Una etapa nueva pasa pocas veces: se queda más para que se vea la imagen.
-    const timer = window.setTimeout(() => setQueue(q => q.slice(1)), current.kind === 'rank' || current.kind === 'streak' ? 5200 : 3200)
+    const timer = window.setTimeout(() => setQueue(q => q.slice(1)), current.kind === 'rank' || current.kind === 'streak' || current.kind === 'meta' ? 5600 : 3200)
     return () => window.clearTimeout(timer)
   }, [current])
   if (!current) return null
   if (current.kind === 'streak') return <StreakMoment c={current} onDone={() => setQueue(q => q.slice(1))} />
+  if (current.kind === 'meta') return <MetaMoment c={current} onDone={() => setQueue(q => q.slice(1))} />
   return <div className={`celebration cel-${current.kind ?? 'achievement'}`} role="status" onClick={() => setQueue(q => q.slice(1))}>
     <div className="confetti" aria-hidden="true">{Array.from({ length: 28 }, (_, i) => <i key={`${current.id}-${i}`} style={{ ['--x' as string]: `${(i * 37) % 100}%`, ['--d' as string]: `${(i % 7) * 70}ms`, ['--r' as string]: `${(i * 53) % 360}deg`, background: CONFETTI[i % CONFETTI.length] }} />)}</div>
     <div className="cel-card">{current.image ? <img className="cel-art" src={current.image} alt="" width="168" height="168" /> : <img src="brote.svg" alt="" width="64" height="76" />}<strong>{current.title}</strong>{current.text && <span>{current.text}</span>}</div>
+  </div>
+}
+
+/**
+ * v12: llegaste a tu energía del día. El plato se llena en 0.8 s al ritmo de la madera (sonido 'feast'),
+ * revienta en confeti y Brote festeja. Se gana una vez al día, nunca al azar.
+ */
+function MetaMoment({ c, onDone }: { c: Celebration; onDone: () => void }) {
+  return <div className="meta-moment" role="status" onClick={onDone}>
+    <div className="confetti" aria-hidden="true">{Array.from({ length: 40 }, (_, i) => <i key={i} style={{ ['--x' as string]: `${(i * 29) % 100}%`, ['--d' as string]: `${800 + (i % 8) * 60}ms`, ['--r' as string]: `${(i * 47) % 360}deg`, background: CONFETTI[i % CONFETTI.length] }} />)}</div>
+    <div className="mm-plato" aria-hidden="true">
+      <svg viewBox="0 0 120 120" width="190" height="190"><circle cx="60" cy="60" r="50" className="mm-pista" /><circle cx="60" cy="60" r="50" className="mm-llena" pathLength="100" /></svg>
+      <img src="brote.svg" alt="" width="104" height="104" />
+    </div>
+    <strong className="mm-title">{c.title}</strong>
+    {c.text && <span className="mm-text">{c.text}</span>}
+    {c.extra && <b className="mm-extra">{c.extra}</b>}
+    <button type="button" className="primary-button sm-go" onClick={onDone}>¡Vamos!</button>
   </div>
 }
 

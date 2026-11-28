@@ -57,11 +57,18 @@ export const EXERCISES: Exercise[] = [
   { id: 'pushup-backpack', name: 'Lagartija con mochila', slot: 'empuje', level: 8, mode: 'reps', range: [6, 12], muscles: { pecho: 1, triceps: 0.5, hombros: 0.5, core: 0.5 }, equipment: ['mochila', 'paralelas'],
     cues: ['Mochila con libros bien apretada en la espalda alta', 'Pesa la mochila en la báscula y anota los kilos', 'Sube los kilos poco a poco'], mistakes: ['Mochila suelta que se resbala al cuello'] },
   // ── Empuje vertical ──
-  { id: 'pike', name: 'Lagartija pica (pike)', slot: 'hombro', level: 1, mode: 'reps', range: [6, 12], muscles: { hombros: 1, triceps: 0.5 }, equipment: ['nada'],
+  // v11.4: dos escalones ANTES de la pica. Si no sale ni una con técnica, primero se aprende la posición y luego la bajada.
+  { id: 'pike-hold', name: 'Pica sostenida', slot: 'hombro', level: 1, mode: 'seconds', range: [20, 40], muscles: { hombros: 1, triceps: 0.5 }, equipment: ['nada'],
+    cues: ['Desde lagartija, camina con los pies hacia las manos hasta que tu cuerpo sea una V al revés', 'Brazos estirados, orejas entre los brazos, empuja el piso lejos de ti', 'Cadera arriba y piernas lo más rectas que puedas; respira tranquilo'],
+    mistakes: ['Hombros encogidos hacia las orejas', 'Espalda redonda por doblar mucho las rodillas'] },
+  { id: 'pike-negative', name: 'Pica negativa (solo bajar)', slot: 'hombro', level: 2, mode: 'reps', range: [4, 8], muscles: { hombros: 1, triceps: 0.5 }, equipment: ['nada'],
+    cues: ['En posición de pica, baja la cabeza hacia el piso en 4 segundos', 'Codos hacia atrás, no hacia los lados', 'Abajo, apoya las rodillas y vuelve a la V sin empujar: solo cuenta la bajada'],
+    mistakes: ['Caer de golpe en lugar de frenar', 'Bajar la frente en lugar de la coronilla'] },
+  { id: 'pike', name: 'Lagartija pica (pike)', slot: 'hombro', level: 3, mode: 'reps', range: [6, 12], muscles: { hombros: 1, triceps: 0.5 }, equipment: ['nada'],
     cues: ['Empieza en lagartija y camina con los pies hacia las manos hasta que la cadera quede arriba: tu cuerpo es una V al revés', 'Manos al ancho de hombros, dedos abiertos, piernas lo más rectas que puedas', 'Dobla los codos hacia atrás (no hacia los lados) y baja la cabeza a un punto un poco adelante de las manos: manos y cabeza forman un triángulo', 'Toca el piso con la frente o casi, y empuja el piso lejos hasta estirar los brazos'], mistakes: ['Convertirla en lagartija normal bajando la cadera', 'Abrir los codos como alas', 'Bajar la cabeza entre las manos en vez de adelante'] },
-  { id: 'pike-elevated', name: 'Pike con pies en silla', slot: 'hombro', level: 2, mode: 'reps', range: [6, 12], muscles: { hombros: 1, triceps: 0.5 }, equipment: ['silla'],
+  { id: 'pike-elevated', name: 'Pike con pies en silla', slot: 'hombro', level: 4, mode: 'reps', range: [6, 12], muscles: { hombros: 1, triceps: 0.5 }, equipment: ['silla'],
     cues: ['Silla pegada a la pared para que no se mueva; pies (o rodillas, más fácil) arriba de la silla', 'Camina con las manos hacia la silla hasta que la cadera quede casi sobre los hombros', 'Baja lento, en 2 o 3 segundos, con la cabeza un poco adelante de las manos', 'Empuja hasta estirar los brazos sin perder la cadera alta'], mistakes: ['Silla que se resbala', 'Manos demasiado lejos de la silla: se vuelve lagartija declinada'] },
-  { id: 'pike-parallettes', name: 'Pike en mini paralelas', slot: 'hombro', level: 3, mode: 'reps', range: [6, 12], muscles: { hombros: 1, triceps: 0.5 }, equipment: ['paralelas', 'silla'],
+  { id: 'pike-parallettes', name: 'Pike en mini paralelas', slot: 'hombro', level: 5, mode: 'reps', range: [6, 12], muscles: { hombros: 1, triceps: 0.5 }, equipment: ['paralelas', 'silla'],
     cues: ['Igual que el pike con pies en silla, pero con las manos en las mini paralelas', 'Como las manos quedan más altas, la cabeza baja más abajo que las manos: ese es el rango extra', 'Bajada de 3 segundos, codos hacia atrás', 'Si no llegas abajo con buena técnica, regresa al escalón anterior'], mistakes: ['Bajar de golpe', 'Paralelas que se deslizan: ponlas sobre un tapete'] },
   // ── Espalda sin barra: los tres movimientos (idea de Seba Galex, ver BACK_METHOD en science.ts) ──
   // Grosor: jalar hacia atrás con los brazos abiertos, juntando los omóplatos.
@@ -168,7 +175,22 @@ export function ladder(slot: Slot): Exercise[] { return EXERCISES.filter(e => e.
 export function nextInLadder(id: string): Exercise | undefined {
   const e = exercise(id)
   if (!e) return undefined
-  return ladder(e.slot).find(x => x.level > e.level && x.mode === e.mode)
+  // Mismo tipo primero (plancha a hollow); si no hay, el siguiente escalón aunque cambie (pica sostenida a negativa).
+  const up = ladder(e.slot).filter(x => x.level > e.level)
+  return up.find(x => x.mode === e.mode) ?? up[0]
+}
+/** El escalón de abajo, para cuando todavía no sale con buena técnica. */
+export function prevInLadder(id: string, equipment?: string[]): Exercise | undefined {
+  const e = exercise(id)
+  if (!e) return undefined
+  return ladder(e.slot).filter(x => x.level < e.level && (!equipment || x.equipment.every(q => q === 'nada' || equipment.includes(q)))).pop()
+}
+/** En qué paso de su escalera vas: "paso 2 de 5". */
+export function pasoDe(id: string): { n: number; total: number } | null {
+  const e = exercise(id)
+  if (!e) return null
+  const l = ladder(e.slot)
+  return { n: l.findIndex(x => x.id === e.id) + 1, total: l.length }
 }
 export function muscleLabel(id: string): string { return MUSCLES.find(m => m.id === id)?.label ?? id }
 
@@ -225,7 +247,15 @@ export const IMAGES: Record<string, { similar?: string; photo?: string }> = {
  */
 export const DRAWN = ['pike', 'pike-elevated', 'pike-parallettes', 'curl-towel', 'hollow', 'tuck-lsit', 'copenhagen', 'nordic', 'floor-towel-pull']
 export type ExerciseImage = { start: string; end: string; similar?: string; drawn?: boolean }
+/** Escalones previos que usan el dibujo de la pica (misma posición). */
+const COMO_PICA: Record<string, string> = {
+  'pike-hold': 'Quédate en la posición de arriba (la V), sin bajar.',
+  'pike-negative': 'Solo la bajada, en 4 segundos. Para subir, apoya las rodillas.',
+}
 export function imageOf(id: string): ExerciseImage | null {
+  if (COMO_PICA[id]) return id === 'pike-hold'
+    ? { start: 'ejercicios/pike-0.svg', end: 'ejercicios/pike-0.svg', similar: COMO_PICA[id], drawn: true }
+    : { start: 'ejercicios/pike-0.svg', end: 'ejercicios/pike-1.svg', similar: COMO_PICA[id], drawn: true }
   if (DRAWN.includes(id)) return { start: `ejercicios/${id}-0.svg`, end: `ejercicios/${id}-1.svg`, drawn: true }
   const meta = IMAGES[id]
   const file = meta?.photo ?? id

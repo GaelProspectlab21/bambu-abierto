@@ -3,7 +3,7 @@ import { dateKey, type AppData } from './lib/model'
 import { esNotaCamara, exerciseList, FAMOUS, ghostLine, ghostOf, norm, recordTable, records, weeklyChallenge, CHALLENGE_XP, type Exercise, type Level } from './lib/libre'
 import { logSet, undoLast } from './lib/rutina'
 import { XP } from './lib/xp'
-import { celebrate, chime, fmtDay, rewardSound, useNow, useWakeLock } from './ui'
+import { celebrate, countTick, fmtDay, goSignal, rewardSound, useNow, useWakeLock } from './ui'
 import { haptic } from './lib/haptic'
 import { DuoIcon } from './DuoIcons'
 import { conCamara } from './lib/minutos'
@@ -53,7 +53,7 @@ function Logger({ data, commit, ex, onClose, camaraYa = false }: { data: AppData
 
   useEffect(() => {
     if (!prepUntil) return
-    if (prepLeft <= 0) { setPrepUntil(null); setTimer({ startedAt: Date.now(), before: 0 }); chime() } else if (prepLeft <= 3) haptic(30)
+    if (prepLeft <= 0) { setPrepUntil(null); setTimer({ startedAt: Date.now(), before: 0 }); goSignal() } else if (prepLeft <= 3) { haptic(30); countTick() }
   }, [prepLeft, prepUntil])
   useEffect(() => {
     if (running && beat > 0 && elapsed > beat && !passed.current) { passed.current = true; haptic([20, 40, 20]) }

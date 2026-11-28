@@ -23,6 +23,8 @@ export type PersonalTask = {
   notes?: string
   project?: string
   completedOn?: string
+  /** Día en que esta tarea fue tu sapo (la más difícil, la primera). Una por día. */
+  sapo?: string
   subtasks?: { id: string; text: string; done: boolean }[]
 }
 
@@ -66,6 +68,7 @@ export function normalizeTasks(value: unknown): PersonalTask[] {
       level: level !== null && Number.isFinite(level) && level >= 1 && level <= 4 ? level : null,
       dueDate: taskDay(row.dueDate),
       completedOn: taskDay(row.completedOn),
+      ...(taskDay(row.sapo) ? { sapo: taskDay(row.sapo) } : {}),
       notes: typeof row.notes === 'string' ? row.notes.slice(0, 4000) : '',
       project: typeof row.project === 'string' ? row.project.slice(0, 60) : '',
       subtasks: Array.isArray(row.subtasks) ? row.subtasks.slice(0, 100).filter((s): s is {id:string;text:string;done:boolean} => !!s && typeof s === 'object' && typeof s.id === 'string' && typeof s.text === 'string').map(s => ({ id: s.id.slice(0, 80), text: s.text.slice(0, 200), done: s.done === true })) : [],

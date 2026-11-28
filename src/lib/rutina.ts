@@ -1,4 +1,5 @@
 import { todayPlan, weekPlan } from './coach'
+import { ajustar, ajusteDe } from './deportes'
 import { dateKey, makeId, type AppData, type Routine, type RoutineItem, type RoutineKind, type TrainPlan, type TrainingSet } from './model'
 
 export const WEEK_DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -16,10 +17,10 @@ function routine(day: number, title: string, seeds: Seed[]): Routine {
   return { title, rounds: 3, items: seeds.map(([name, kind, target, extra], i) => ({ id: `d${day}-${i}`, name, kind, target, ...(extra ?? {}) })) }
 }
 
-const PUSH_A: Seed[] = [s('Handstand contra pared', 30), r('Handstand toque de hombros', 0), s('Planche lean', 10), r('Pike push ups', 5), r('Fondos', 10), r('Lagartijas', 15), r('Lagartijas up', 15), r('Lagartijas lentas', 10), r('Lagartijas diamante', 10)]
+const PUSH_A: Seed[] = [s('Handstand contra pared', 30), r('Handstand toque de hombros', 7), s('Planche lean', 10), r('Pike push ups', 5), r('Fondos', 10), r('Lagartijas', 15), r('Lagartijas up', 15), r('Lagartijas lentas', 10), r('Lagartijas diamante', 10)]
 const LEGS_A: Seed[] = [r('Sentadillas', 15), r('Desplantes', 15), pistol, s('Wall sit', 60), r('Subidas de talones en wall sit', 15), r('Elevaciones de talones', 15), calfOne, bridgeOne, s('Hollow hold', 45), r('Abs con piernas arriba', 25), r('Abs crackers', 15), r('Russian twist', 55), s('Plancha', 60), s('Aguante isométrico de abs', 30)]
 const PULL: Seed[] = [['Muscle up', 'reps', 2, { when: 'before' }], ['Dominadas', 'reps', 7, { rounds: 5 }], r('Curl de toalla superior', 15), r('Curl de toalla inferior', 20), r('Remo con toalla en barra', 10), ['Chin ups', 'reps', 7, { rounds: 5 }], s('Colgarse de la barra', 30)]
-const PUSH_B: Seed[] = [s('Handstand contra pared', 30), r('Handstand toque de hombros', 0), r('Handstand push up con pared', 5), s('Tuck planche', 15), s('Planche lean', 10), s('Parado de cabeza', 20), r('Pike push ups', 5), r('Fondos', 10), r('Lagartijas down', 15), r('Lagartijas con toque de hombro', 10), r('Lagartijas lentas', 10), r('Lagartijas diamante', 10)]
+const PUSH_B: Seed[] = [s('Handstand contra pared', 30), r('Handstand toque de hombros', 7), s('Tuck planche', 15), s('Planche lean', 10), r('Pike push ups', 5), r('Fondos', 10), r('Lagartijas down', 15), r('Lagartijas con toque de hombro', 10), r('Lagartijas lentas', 10), r('Lagartijas diamante', 10)]
 const LEGS_B: Seed[] = [r('Sentadillas', 15), r('Desplantes', 15), pistol, s('Wall sit', 60), r('Subidas de talones en wall sit', 15), r('Elevaciones de talones', 15), calfOne, bridgeOne, s('L sit', 10), r('Crunches', 25), sidePlank, s('Hollow hold', 45), r('Abs con piernas arriba', 25), s('Aguante isométrico de abs', 30), r('Salto de cuerda', 20)]
 const CORE: Seed[] = [s('Hollow hold', 45), r('Abs con piernas arriba', 25), r('Abs crackers', 15), r('Russian twist', 55), r('Crunches', 25), sidePlank, s('Plancha', 60), s('Aguante isométrico de abs', 30), r('Burpees suaves sin lagartija', 20), r('Salto de cuerda', 20), ['Correr 5 km o bici', 'free', 0, { when: 'after' }]]
 
@@ -47,14 +48,14 @@ export function kikiWeek(): TrainPlan {
 }
 
 export const CATALOG: [string, RoutineKind, number, string, boolean?][] = [
-  ['Handstand contra pared', 'seconds', 30, 'Hombros'], ['Handstand toque de hombros', 'reps', 0, 'Hombros'], ['Handstand push up con pared', 'reps', 5, 'Hombros'],
+  ['Handstand contra pared', 'seconds', 30, 'Hombros'], ['Handstand toque de hombros', 'reps', 7, 'Hombros'], ['Handstand push up con pared', 'reps', 3, 'Hombros'],
   ['Tuck planche', 'seconds', 15, 'Hombros'], ['Planche lean', 'seconds', 10, 'Hombros'], ['Parado de cabeza', 'seconds', 20, 'Hombros'], ['Pike push ups', 'reps', 5, 'Hombros'],
   ['Fondos', 'reps', 10, 'Pecho'], ['Lagartijas', 'reps', 15, 'Pecho'], ['Lagartijas up', 'reps', 15, 'Pecho'], ['Lagartijas down', 'reps', 15, 'Pecho'],
   ['Lagartijas con toque de hombro', 'reps', 10, 'Pecho'], ['Lagartijas lentas', 'reps', 10, 'Pecho'], ['Lagartijas diamante', 'reps', 10, 'Tríceps'],
   ['Pistol squat asistida', 'reps', 5, 'Piernas', true], ['Sentadillas', 'reps', 15, 'Piernas'], ['Desplantes', 'reps', 15, 'Piernas'], ['Wall sit', 'seconds', 60, 'Piernas'],
   ['Subidas de talones en wall sit', 'reps', 15, 'Piernas'], ['Elevaciones de talones', 'reps', 15, 'Piernas'], ['Elevaciones de talón a una pierna', 'reps', 15, 'Piernas', true],
   ['Puente de glúteo a una pierna', 'reps', 12, 'Piernas', true], ['Hollow hold', 'seconds', 45, 'Abdomen'], ['Abs con piernas arriba', 'reps', 25, 'Abdomen'],
-  ['Abs crackers', 'reps', 15, 'Abdomen'], ['Russian twist', 'reps', 55, 'Abdomen'], ['Plancha', 'seconds', 60, 'Abdomen'], ['L sit', 'seconds', 10, 'Abdomen'],
+  ['Abs crackers', 'reps', 15, 'Abdomen'], ['Russian twist', 'reps', 55, 'Abdomen'], ['Plancha', 'seconds', 60, 'Abdomen'], ['Plancha con brazos estirados', 'seconds', 45, 'Abdomen'], ['L sit', 'seconds', 10, 'Abdomen'],
   ['Crunches', 'reps', 25, 'Abdomen'], ['Plancha lateral', 'seconds', 30, 'Abdomen', true], ['Aguante isométrico de abs', 'seconds', 30, 'Abdomen'],
   ['Dominadas lentas', 'reps', 5, 'Espalda'], ['Curl de toalla superior', 'reps', 15, 'Espalda'], ['Curl de toalla inferior', 'reps', 20, 'Espalda'],
   ['Remo con toalla en barra', 'reps', 10, 'Espalda'], ['Muscle up', 'reps', 2, 'Espalda'], ['Chin ups lentas', 'reps', 5, 'Bíceps'], ['Colgarse de la barra', 'seconds', 30, 'Antebrazo'],
@@ -85,7 +86,7 @@ export function planOf(data: AppData): TrainPlan {
 export function routineFor(data: AppData, day: string): Routine | null {
   if (usesCoach(data)) return coachRoutine(data, day)
   const rt = planOf(data).week[weekIndex(day)]
-  return rt && rt.items.length ? rt : null
+  return rt && rt.items.length ? ajustar(rt, ajusteDe(data, day)) : null
 }
 
 /**
@@ -219,6 +220,22 @@ export function ajustarRutina2611(data: AppData): AppData {
     : i.name === 'Curl de toalla inferior' ? { ...i, target: 20 } : i
   const next = train ? { ...train, week: train.week.map(rt => rt ? { ...rt, items: rt.items.map(cambia) } : rt) } : undefined
   return { ...data, settings: { ...data.settings, train: next, rutina2611: true } }
+}
+
+function fijarMeta(train: TrainPlan | undefined, nombres: string[], target: number): TrainPlan | undefined {
+  return train ? { ...train, week: train.week.map(rt => rt ? { ...rt, items: rt.items.map(i => nombres.includes(i.name) ? { ...i, target, quiet: undefined } : i) } : rt) } : undefined
+}
+export function toquesA7(data: AppData): AppData {
+  return { ...data, settings: { ...data.settings, train: fijarMeta(data.settings.train, ['Handstand toque de hombros'], 7), toques2611: true } }
+}
+export const QUITADOS_2611 = ['Parado de cabeza', 'Handstand push up con pared', 'Handstand push up']
+export function quitar2611(data: AppData): AppData {
+  const train = data.settings.train
+  const next = train ? { ...train, week: train.week.map(rt => rt ? { ...rt, items: rt.items.filter(i => !QUITADOS_2611.includes(i.name)) } : rt) } : undefined
+  return { ...data, settings: { ...data.settings, train: next, quitar2611: true } }
+}
+export function hspuA3(data: AppData): AppData {
+  return { ...data, settings: { ...data.settings, train: fijarMeta(data.settings.train, ['Handstand push up con pared', 'Handstand push up'], 3), hspu2611: true } }
 }
 
 export function deshacerRondas2611(data: AppData): AppData {

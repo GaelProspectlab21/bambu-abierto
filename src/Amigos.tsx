@@ -3,39 +3,16 @@ import { dateKey, type AppData } from './lib/model'
 import { boards, buildPerfil, buscar, codigoDe, ranking, type Dir } from './lib/perfil'
 import { cuenta, cuentaActiva, setLocalOnly } from './lib/nube'
 import { Avatar, FollowButton, Join, PerfilView, RankList, type Commit } from './Tablas'
-import { alternar, cargarSocial, relDe, responder, useSocial, type Social } from './useSocial'
+import { alternar, relDe, responder, useSocial } from './useSocial'
 import { Sheet } from './Sheet'
 import { DuoIcon } from './DuoIcons'
+import { esCompetir } from './lib/modo'
+import { AMIGO_KEY, SEEN_KEY, avisos } from './amigosNuevos'
 
-export const AMIGO_KEY = 'bambu.amigo.pendiente'
-const SEEN_KEY = (uid: string) => `bambu.amigos.vistos.${uid}`
+export { AMIGO_KEY }
+
 const LIGA = ['xpSemana', 'reps', 'racha', 'xp'] as const
 const LIGA_LABEL: Record<(typeof LIGA)[number], string> = { xpSemana: 'XP semana', reps: 'Reps semana', racha: 'Racha', xp: 'Nivel' }
-
-function seen(uid: string): string[] {
-  try { const v = JSON.parse(localStorage.getItem(SEEN_KEY(uid)) ?? '[]'); return Array.isArray(v) ? v : [] } catch { return [] }
-}
-function avisos(s: Social, uid: string, privada: boolean): string[] {
-  const nuevos = privada ? [] : s.dir.filter(d => d.uid !== uid && d.siguiendo.includes(uid)).map(d => d.uid)
-  return [...new Set([...s.entrantes, ...nuevos])]
-}
-
-export function useAmigosNuevos(data: AppData, uid: string | undefined, page: string): number {
-  const [n, setN] = useState(0)
-  const joined = !!data.settings.tablas
-  const privada = data.settings.tablas?.privada === true
-  useEffect(() => {
-    if (!uid || !joined) { setN(0); return }
-    let alive = true
-    cargarSocial(uid, data.settings.amigos ?? []).then(s => {
-      if (!alive) return
-      const vistos = seen(uid)
-      setN(page === 'Amigos' ? 0 : avisos(s, uid, privada).filter(id => !vistos.includes(id)).length)
-    }).catch(() => undefined)
-    return () => { alive = false }
-  }, [uid, joined, page, privada]) // eslint-disable-line react-hooks/exhaustive-deps
-  return n
-}
 
 function activo(ts?: string): string {
   if (!ts) return ''
@@ -64,6 +41,8 @@ export function AmigosPage({ data, commit, onMessage }: { data: AppData; commit:
   const [open, setOpen] = useState<string | null>(null)
   const [edit, setEdit] = useState(false)
   const [busy, setBusy] = useState('')
+  const [aceptadosAhora, setAceptadosAhora] = useState<string[]>([])
+  const [red, setRed] = useState<'sigues' | 'siguen'>('sigues')
   const [invite, setInvite] = useState(() => { try { return localStorage.getItem(AMIGO_KEY) ?? '' } catch { return '' } })
 
   useEffect(() => {
@@ -96,7 +75,7 @@ export function AmigosPage({ data, commit, onMessage }: { data: AppData; commit:
     try { onMessage(await fn()) } catch { onMessage('No se pudo. Revisa tu señal.') } finally { setBusy(''); reload() }
   }
   const toggle = (d: Dir) => act(d, () => alternar(commit, uid, amigos, d, social))
-  const contestar = (d: Dir, si: boolean) => act(d, () => responder(commit, uid, d, si))
+  const contestar = (d: Dir, si: boolean) => act(d, async () => { const m = await responder(commit, uid, d, si); if (si) setAceptadosAhora(x => [...new Set([...x, d.uid])]); return m })
   const code = codigoDe(uid)
   async function share() {
     const url = `${window.location.origin}${window.location.pathname}?amigo=${code}`
@@ -111,7 +90,8 @@ export function AmigosPage({ data, commit, onMessage }: { data: AppData; commit:
   const entrantes = (social?.entrantes ?? []).map(dirOf).filter((d): d is Dir => !!d)
   const friends = others.filter(d => amigos.includes(d.uid))
   const visibles = friends.filter(d => visible(d.uid))
-  const back = t?.privada ? [] : others.filter(d => d.siguiendo.includes(uid) && !amigos.includes(d.uid))
+  const teSiguen = others.filter(d => d.siguiendo.includes(uid) && (!t?.privada || (aceptados ?? []).includes(d.uid)))
+  const recien = aceptadosAhora.map(dirOf).filter((d): d is Dir => !!d && !amigos.includes(d.uid))
   const invited = invite ? others.find(d => codigoDe(d.uid).toLowerCase() === invite.toLowerCase()) : undefined
   const found = buscar(others, q, uid)
   const suggest = others.filter(d => !amigos.includes(d.uid) && !d.siguiendo.includes(uid) && !social?.entrantes.includes(d.uid)).sort((a, b) => b.nivel - a.nivel).slice(0, 5)
@@ -130,7 +110,7 @@ export function AmigosPage({ data, commit, onMessage }: { data: AppData; commit:
       <div className="d-am-me-info">
         <b>{me.apodo}</b>
         <span>{me.rango} · nivel {me.nivel}</span>
-        <small><DuoIcon name="fuego" size={18} /> {me.racha} {me.racha === 1 ? 'día' : 'días'} de racha</small>
+        {!esCompetir(data.settings) && <small><DuoIcon name="fuego" size={18} /> {me.racha} {me.racha === 1 ? 'día' : 'días'} de racha</small>}
         <small><DuoIcon name="rayo" size={18} /> {me.xpSemana.toLocaleString('es-MX')} XP esta semana</small>
       </div>
       <div className="d-am-code"><small>Tu código</small><b>{code}</b></div>
@@ -154,8 +134,12 @@ export function AmigosPage({ data, commit, onMessage }: { data: AppData; commit:
       </>}
     </div>}
 
-    {entrantes.length > 0 && <div className="d-card d-am-invite">
-      <h2>Solicitudes <small className="d-am-count">{entrantes.length}</small></h2>
+    {(entrantes.length > 0 || recien.length > 0) && <div className="d-card d-am-invite">
+      <h2>Solicitudes {entrantes.length > 0 && <small className="d-am-count">{entrantes.length}</small>}</h2>
+      {recien.map(d => <div className="d-am-req" key={`r-${d.uid}`}>
+        <Who d={d} sub="Aceptaste su solicitud" onOpen={() => setOpen(d.uid)} />
+        <button type="button" className="d-btn green wide small" disabled={busy === d.uid} onClick={() => void toggle(d)}>{d.privada ? 'Solicitar ser su amigo' : 'Agregar de regreso'}</button>
+      </div>)}
       {entrantes.map(d => <div className="d-am-req" key={d.uid}>
         <Who d={d} sub="Quiere ser tu amigo" onOpen={() => setOpen(d.uid)} />
         <div className="d-row2">
@@ -175,11 +159,6 @@ export function AmigosPage({ data, commit, onMessage }: { data: AppData; commit:
         : <p className="d-hint left">Todavía no tienes amigos. Invita a alguien con tu código o búscalo aquí abajo.</p>)}
     </div>
 
-    {back.length > 0 && <div className="d-card">
-      <h2>Te agregaron</h2>
-      {back.map(d => row(d, 'Te agregó · agrégalo para ser amigos'))}
-    </div>}
-
     <div className="d-card">
       <h2>Buscar personas</h2>
       <input className="d-input" value={q} onChange={e => setQ(e.target.value)} placeholder="Apodo o código" aria-label="Buscar por apodo o código" autoCapitalize="none" />
@@ -191,13 +170,19 @@ export function AmigosPage({ data, commit, onMessage }: { data: AppData; commit:
         </>}
     </div>
 
-    {friends.length > 0 && <div className="d-card">
-      <h2>Tus amigos <small className="d-am-count">{friends.length}</small></h2>
-      {friends.map(d => {
-        const rel = relDe(uid, amigos, d, social, aceptados)
-        return row(d, `${rel === 'amigos' ? 'Amigos' : rel === 'pendiente' ? 'Solicitud enviada' : rel === 'agregado' ? 'Esperando que te agregue' : 'No aceptó tu solicitud'} · ${activo(d.actualizado) || `nivel ${d.nivel}`}`)
-      })}
-    </div>}
+    <div className="d-card">
+      <div className="d-am-title"><h2>Tu red</h2><small className="d-hint">Solo tú lo ves</small></div>
+      <div className="d-mode two" role="tablist" aria-label="Tu red">
+        <button type="button" role="tab" aria-selected={red === 'sigues'} className={red === 'sigues' ? 'on' : ''} onClick={() => setRed('sigues')}>Sigues · {friends.length}</button>
+        <button type="button" role="tab" aria-selected={red === 'siguen'} className={red === 'siguen' ? 'on' : ''} onClick={() => setRed('siguen')}>Te siguen · {teSiguen.length}</button>
+      </div>
+      {red === 'sigues'
+        ? friends.length ? friends.map(d => {
+          const rel = relDe(uid, amigos, d, social, aceptados)
+          return row(d, `${rel === 'amigos' ? 'Amigos' : rel === 'pendiente' ? 'Solicitud enviada' : rel === 'agregado' ? 'Esperando que te agregue' : 'No aceptó tu solicitud'} · ${activo(d.actualizado) || `nivel ${d.nivel}`}`)
+        }) : <p className="d-hint left">Todavía no sigues a nadie. Búscalos arriba o invita con tu código.</p>
+        : teSiguen.length ? teSiguen.map(d => row(d, amigos.includes(d.uid) ? `Amigos · ${activo(d.actualizado) || `nivel ${d.nivel}`}` : d.privada ? 'Te sigue · solicita ser su amigo' : 'Te sigue · agrégalo de regreso')) : <p className="d-hint left">Todavía nadie te sigue.</p>}
+    </div>
 
     {openDir && <Sheet title={openDir.uid === uid ? 'Mi perfil' : 'Perfil'} tall onClose={() => setOpen(null)}>
       <PerfilView p={openDir.uid === uid ? me : social?.perfiles.find(p => p.uid === openDir.uid) ?? null} dir={openDir} me={me} rel={relDe(uid, amigos, openDir, social, aceptados)} back="Cerrar" onBack={() => setOpen(null)} onToggle={() => void toggle(openDir)} />

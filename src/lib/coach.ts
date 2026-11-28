@@ -5,7 +5,7 @@
  */
 import { dateKey, type AppData, type TrainingSet } from './model'
 import { proteinMealsOn } from './nutrition'
-import { exercise, ladder, MUSCLES, nextInLadder, SHIELD_SLOTS, TEMPLATES, type Exercise, type Muscle, type Slot } from './exercises'
+import { exercise, ladder, MUSCLES, nextInLadder, prevInLadder, SHIELD_SLOTS, TEMPLATES, type Exercise, type Muscle, type Slot } from './exercises'
 
 const HOUR = 3600_000
 const DAY = 24 * HOUR
@@ -115,6 +115,10 @@ export function currentForSlot(data: AppData, slot: Slot): Exercise {
   const options = ladder(slot)
   const ids = new Set(options.map(e => e.id))
   const last = [...data.sets].filter(s => ids.has(s.exercise)).sort((a, b) => b.at - a.at)[0]
+  // v11.4: el escalón que elegiste (diagnóstico o "no me sale") gana si es más nuevo que tu última serie.
+  const elegido = data.settings.escalones?.[slot]
+  const ex = elegido && ids.has(elegido.id) ? exercise(elegido.id) : undefined
+  if (ex && (!last || elegido!.at > last.at)) return ex
   if (last) return exercise(last.exercise) ?? options[0]
   // Sin historial: arranca en el escalón que va con tu nivel (bienvenida) y con tu equipo.
   const level = data.settings.trainingLevel
@@ -127,7 +131,7 @@ export function currentForSlot(data: AppData, slot: Slot): Exercise {
 /** Patrones grandes donde el nivel de arranque cambia el ejercicio. Cuello, agarre y antebrazo arrancan siempre en lo más seguro. */
 const LEVELED: Slot[] = ['empuje', 'hombro', 'pierna', 'bisagra', 'core', 'jalon']
 
-export type Progression = { verdict: 'nuevo' | 'subir' | 'progresando' | 'fatiga' | 'repetir'; message: string; target: number[]; last: number[]; next?: Exercise }
+export type Progression = { verdict: 'nuevo' | 'subir' | 'bajar' | 'progresando' | 'fatiga' | 'repetir'; message: string; target: number[]; last: number[]; next?: Exercise; prev?: Exercise }
 
 /** Doble progresión: si todas tus series tocaron el tope del rango, sube; si no, una repetición más. */
 export function progression(data: AppData, ex: Exercise, plannedSets = 2, today = dateKey()): Progression {
@@ -151,6 +155,12 @@ export function progression(data: AppData, ex: Exercise, plannedSets = 2, today 
       message: next ? `Llegaste al tope (${hi}${unit}) en todas tus series. Sube a ${next.name} y vuelve a ${lo}.`
         : loaded ? `Tope alcanzado con peso. Súbele 1 o 2 kg a la mochila y vuelve a ${lo}.`
           : `Tope alcanzado. Métele peso con la mochila o libros y vuelve a ${lo}.` }
+  }
+  // v11.4: si la vez pasada ni la mitad del mínimo salió con técnica, el escalón es muy alto: baja uno.
+  const prev = prevInLadder(ex.id, data.settings.equipment)
+  if (prev && working.length && Math.max(...working) < Math.ceil(lo / 2)) {
+    return { verdict: 'bajar', last, target: Array(plannedSets).fill(prev.range[0]), prev,
+      message: `La vez pasada no llegaste ni a ${Math.ceil(lo / 2)}${unit}. Primero domina ${prev.name}: cuando hagas ${prev.range[1]}${prev.mode === 'seconds' ? 's' : ''} en tus series, regresas aquí más fuerte.` }
   }
   if (prevTotal && lastTotal < prevTotal * 0.8) {
     return { verdict: 'fatiga', last, target: last.slice(0, plannedSets),

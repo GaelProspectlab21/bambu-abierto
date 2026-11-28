@@ -19,6 +19,7 @@ import { pauseActivity, pauseApp, pauseStats } from './pause'
 import { clockOf, lockActive, routineFor } from './rutina'
 import { WAKE_PREFIX } from './jardin'
 import { logStretch } from './stretch'
+import { despertadorDe, despertoHoy, logDespertar } from './despertador'
 
 export type NfcResult = { next: AppData; title: string; text: string; open?: boolean; locked?: boolean }
 export const BED_HABIT = { id: 'cama', label: 'Tender la cama', mark: 'T' }
@@ -62,6 +63,12 @@ const SAME_TOUCH = 8000
 
 export function nfcServerAction(data: AppData, action: NfcAction, now: number, day: string, clock = clockOf(now)): NfcResult {
   if (action.tag === 'cama') return bedAction(data, day, clock)
+  if (action.tag === 'despertar') {
+    if (despertoHoy(data, day)) return { next: data, title: 'Ya te levantaste', text: 'Tus lagartijas de hoy ya estaban.' }
+    const meta = despertadorDe(data).reps, hechas = Math.round(action.wake?.reps ?? 0)
+    if (hechas < meta) return { next: data, title: 'Todavía no', text: `Te faltan ${meta - Math.max(0, hechas)} lagartijas para apagarla.` }
+    return { next: logDespertar(data, day, hechas, clock), title: `¡Arriba! ${hechas} lagartijas`, text: `A las ${clock}. Ya ganaste tu primer round del día.` }
+  }
   if (action.tag === 'estirar') {
     const s = action.stretch
     if (!s || !(s.seconds >= 60)) return { next: data, title: 'Estiramiento sin guardar', text: 'Para que cuente, estira al menos un minuto.' }

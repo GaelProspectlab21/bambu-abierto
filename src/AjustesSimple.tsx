@@ -9,9 +9,13 @@ import { planOf } from './lib/rutina'
 import { PauseSetup } from './PauseSetup'
 import { CandadoSetup } from './Candado'
 import { AvisosSetup, WidgetSetup } from './Widget'
+import { AdminAccounts } from './AdminAccounts'
+import { LegalCard } from './Legal'
+import { DESP_REPS, despertadorDe } from './lib/despertador'
 import { RemindersCard } from './RemindersCard'
 import { DuoIcon, type DuoIconName } from './DuoIcons'
 import { playSound, setSounds, soundsOn } from './lib/sounds'
+import { setTacto, tactoOn } from './lib/tacto'
 
 type Commit = (update: (d: AppData) => AppData) => void
 type Props = {
@@ -34,6 +38,7 @@ function nfcPath(action: NfcAction): string {
 export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImport, onSignOut, onDelete }: Props) {
   const [name, setName] = useState(data.profile.name)
   const [sound, setSound] = useState(soundsOn)
+  const [tacto, setTactoState] = useState(tactoOn)
   const [key, setKey] = useState('')
   const [confirm, setConfirm] = useState('')
   const [pass, setPass] = useState('')
@@ -63,6 +68,7 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
   const [adv, setAdv] = useState(false)
   const mods = modulesOf(data.settings)
   const plan = planOf(data)
+  const desp = despertadorDe(data)
   const set = (patch: Partial<AppData['settings']>) => commit(d => ({ ...d, settings: { ...d.settings, ...patch } }))
   const setPlan = (patch: Partial<typeof plan>) => set({ train: { ...planOf(data), ...patch } })
 
@@ -105,9 +111,15 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     <div className="d-card">
       <h2>Perfil</h2>
       <label className="d-field">Tu nombre<input className="d-input" value={name} maxLength={40} onChange={e => setName(e.target.value)} onBlur={saveName} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} /></label>
+      <label className="d-field">Cómo usas Bambú</label>
+      <div className="d-seg">
+        <button type="button" className={data.settings.modo !== 'competir' ? 'on' : ''} aria-pressed={data.settings.modo !== 'competir'} onClick={() => set({ modo: undefined })}>Hábitos y racha</button>
+        <button type="button" className={data.settings.modo === 'competir' ? 'on' : ''} aria-pressed={data.settings.modo === 'competir'} onClick={() => set({ modo: 'competir' })}>Solo competir</button>
+      </div>
+      <p className="d-hint left">{data.settings.modo === 'competir' ? 'Sin racha obligatoria ni camino del día: solo tus zonas y Amigos.' : 'Camino del día, objetivos y racha.'}</p>
       <label className="d-field">Qué usas</label>
       <div className="d-mods">{MODS.map(([k, l, icon]) => <button key={k} type="button" className={`d-mod ${mods[k] ? 'on' : ''}`} aria-pressed={mods[k]} onClick={() => set({ modules: { ...mods, [k]: !mods[k], ...(k === 'reading' && mods.reading ? { bible: false } : {}) } })}><DuoIcon name={icon} size={36} off={!mods[k]} /><span>{l}</span></button>)}</div>
-      {mods.food && <label className="d-field">Tu edad, solo para Comida<input className="d-input num" type="number" inputMode="numeric" min={8} max={99} value={data.settings.age} onChange={e => { const n = Number(e.target.value); if (n >= 8 && n <= 99) set({ age: n }) }} /></label>}
+      {mods.food && <label className="d-field">Tu edad (opcional, solo para Comida)<input className="d-input num" type="number" inputMode="numeric" min={8} max={99} placeholder="Opcional" value={data.settings.sinEdad ? '' : data.settings.age} onChange={e => { const n = Number(e.target.value); if (n >= 8 && n <= 99) set({ age: n, sinEdad: undefined }) }} /></label>}
     </div>
 
     {mods.training && <div className="d-card">
@@ -121,12 +133,26 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     <div className="d-card">
       <h2>Sonido</h2>
       <Toggle on={sound} onClick={() => { const on = !sound; setSounds(on); setSound(on); if (on) playSound('day') }} title="Sonidos de Bambú" text="Madera al marcar, campanas cuando ganas algo. Con el iPhone en silencio no suena nada." />
+      {sound && <Toggle on={tacto} onClick={() => { const on = !tacto; setTacto(on); setTactoState(on); if (on) playSound('pick') }} title="Tacto al navegar" text="Un toque de madera bajito en pestañas, chips e interruptores. Los botones de acción no suenan: así el sonido de un premio sigue significando algo." />}
     </div>
 
     <div className="d-card">
       <h2>Despertar</h2>
       <label className="d-field">Tu meta para despertar<input className="d-input" type="time" value={data.settings.reminders.wake} onChange={e => e.target.value && set({ reminders: { ...data.settings.reminders, wake: e.target.value } })} /></label>
       <p className="d-hint left">La etiqueta de tu cama compara tu hora real con esta.</p>
+      <Toggle on={desp.on} onClick={() => set({ despertador: { ...desp, on: !desp.on } })} title="Despertador de lagartijas" text="La alarma de bambú solo se apaga cuando la cámara cuenta tus lagartijas. Si no las haces, te aviso cada 5 minutos durante una hora." />
+      {desp.on && <>
+        <label className="d-field">Cuántas lagartijas</label>
+        <div className="d-seg">{DESP_REPS.map(n => <button key={n} type="button" className={desp.reps === n ? 'on' : ''} aria-pressed={desp.reps === n} onClick={() => set({ despertador: { ...desp, reps: n } })}>{n}</button>)}</div>
+        <ol className="d-steps-guide">
+          <li><span><b>Pon tu alarma de siempre</b> en el Reloj del iPhone a las {data.settings.reminders.wake}.</span></li>
+          <li><span><b>Abre Atajos</b>, Automatización, Nueva, Alarma, elige esa alarma y marca <b>Se detiene</b>. Activa Ejecutar de inmediato.</span></li>
+          <li><span><b>Agrega la acción Abrir URL</b> y pega el enlace de abajo.</span></li>
+          <li><span><b>Activa los avisos</b> de bambú más abajo: si no haces tus lagartijas, te insisto.</span></li>
+        </ol>
+        {server ? <button type="button" className="d-btn blue wide" disabled={!key} onClick={() => copy({ tag: 'despertar' })}>Copiar enlace del Atajo</button>
+          : <a className="d-btn white wide" href={nfcPath({ tag: 'despertar' })}>Probar el despertador</a>}
+      </>}
     </div>
 
     <div className="d-card">
@@ -155,9 +181,12 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     </div>
 
     {mods.training && <CandadoSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
-    {/* Avisos y widget de Kiki esperan su servidor en Supabase. Además su avisos-sw.js reemplazaría a sw.js (modo sin señal y avisos de bambu-remind). */}
+    {/* Los avisos push de Kiki siguen esperando servidor (su avisos-sw.js reemplazaría a sw.js). El widget NO:
+        su tabla bambu_widget y la función bambu-llave viven en Supabase desde el 26-nov (v11.5 lo prende). */}
     {socialListo && <AvisosSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
-    {socialListo && <WidgetSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
+    <WidgetSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />
+    {cloud && <AdminAccounts onMessage={onMessage} />}
+    <LegalCard data={data} />
     {server && <PauseSetup keyValue={key} onCopy={url => { navigator.clipboard?.writeText(url).then(() => onMessage('Enlace copiado.')).catch(() => onMessage(url)) }} />}
     {server && <RemindersCard data={data} commit={commit} onMessage={onMessage} />}
 

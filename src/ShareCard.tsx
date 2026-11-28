@@ -70,7 +70,7 @@ export async function semanaCard(s: Semana, apodo: string, duelos?: { ganados: n
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H
   const ctx = cv.getContext('2d')!
   ctx.fillStyle = C.page; ctx.fillRect(0, 0, W, H)
-  ctx.fillStyle = C.green; ctx.font = `900 60px ${F}`; ctx.fillText('bambú', 80, 140)
+  ctx.fillStyle = C.green; ctx.font = `700 60px 'Fraunces Variable', Georgia, serif`; ctx.fillText('bambú', 80, 140)
   ctx.fillStyle = C.ink; ctx.font = `900 96px ${F}`
   let y = wrap(ctx, apodo ? `La semana de ${apodo}` : 'Mi semana', 80, 270, W - 160, 104)
   ctx.fillStyle = C.dim; ctx.font = `800 42px ${F}`; ctx.fillText(rangoTexto(s.desde, s.hasta), 80, y + 4)

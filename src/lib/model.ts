@@ -39,7 +39,7 @@ export type TrainingSet = {
   reps?: number; seconds?: number; loadKg?: number; rir?: number; note?: string
 }
 export type Sport = 'caminar' | 'correr' | 'bici'
-export type Activity = { id: string; day: string; kind: 'football' | 'rest' | 'walk' | 'other'; minutes?: number; intensity?: number; note?: string; sport?: Sport; km?: number }
+export type Activity = { id: string; day: string; kind: 'football' | 'rest' | 'walk' | 'other'; minutes?: number; intensity?: number; note?: string; sport?: Sport; km?: number; deporte?: string; sinAjuste?: boolean }
 export type Checkin = {
   id: string; day: string; sleepHours?: number; energy?: number; steps?: number
   soreness?: string[]; pain?: string; painNote?: string; proteinMeals?: number; realFood?: boolean
@@ -83,6 +83,10 @@ export type Settings = {
   footballDays: number[]; weeklyFocusGoal: number; restSeconds: number
   /** Desde qué escalón arranca el coach a quien no tiene historial: 1 nuevo, 2 algo, 3 constante, 4 avanzado. */
   trainingLevel?: number
+  /** v11.4: el escalón elegido a mano por patrón (diagnóstico o "no me sale, bájale"). Gana si es más nuevo que tu última serie. */
+  escalones?: Record<string, { id: string; at: number }>
+  /** Día en que hiciste el diagnóstico de entreno. */
+  diagnostico?: string
   leverageLabels: Record<string, string>; distractions: ChecklistItem[]; pendingCue?: string
   habits: HabitDef[]; age: number; bibleOrder: 'ruta' | 'canonico'
   sleepTarget: number; stepsTarget: number; equipment: string[]; reminders: Reminders
@@ -94,13 +98,24 @@ export type Settings = {
   tablas?: { apodo: string; avatar: number; privada?: boolean }
   amigos?: string[]
   aprobados?: string[]
-  candado?: { llave: string }
+  candado?: { llave: string; desde?: number; hasta?: number; pase?: string }
   widget?: { llave: string }
   avisos?: { hora: string }
+  /** v11: despertador de lagartijas (lib/despertador.ts). La hora es reminders.wake. */
+  despertador?: { on: boolean; reps: number }
+  modo?: 'competir'
+  sinEdad?: boolean
+  minLibres?: number
+  sinUsoImportante?: boolean
+  legal?: { version: string; fecha: string; salud: boolean }
   walkDaily?: boolean
   cardioSetup?: boolean
   rutina2611?: boolean
   rondas2611?: boolean
+  toques2611?: boolean
+  hspu2611?: boolean
+  quitar2611?: boolean
+  devolver2611?: boolean
 }
 /** `north` es en quién te quieres convertir, con tus palabras. La reflexión de la noche te lo pregunta. */
 export type Profile = { name: string; onboardingComplete: boolean; north?: string }
@@ -279,7 +294,7 @@ export function cleanActivityRow(value: Rec): Activity | null {
   if (!id || !kind || !isDay(value.day)) return null
   const sport = (['caminar', 'correr', 'bici'] as const).find(k => k === value.sport)
   const km = num(value.km, 0, 500)
-  return compact({ id, day: value.day, kind, minutes: int(value.minutes, 1, 1440), intensity: int(value.intensity, 1, 3), note: cleanText(value.note, 300) || undefined, sport, km: km !== undefined ? Math.round(km * 100) / 100 : undefined })
+  return compact({ id, day: value.day, kind, minutes: int(value.minutes, 1, 1440), intensity: int(value.intensity, 1, 3), note: cleanText(value.note, 300) || undefined, sport, km: km !== undefined ? Math.round(km * 100) / 100 : undefined, deporte: typeof value.deporte === 'string' && /^[a-z]{2,20}$/.test(value.deporte) ? value.deporte : undefined, sinAjuste: value.sinAjuste === true ? true : undefined })
 }
 export function cleanCheckinRow(value: Rec): Checkin | null {
   if (!isDay(value.day)) return null
@@ -428,8 +443,21 @@ function cleanAmigos(value: unknown): string[] | undefined {
   const ids = [...new Set(value.filter((x): x is string => typeof x === 'string' && /^[A-Za-z0-9]{6,128}$/.test(x)))].slice(0, 200)
   return ids.length ? ids : undefined
 }
+function cleanEscalones(value: unknown): Settings['escalones'] {
+  if (!isRecord(value)) return undefined
+  const out: Record<string, { id: string; at: number }> = {}
+  for (const [slot, e] of Object.entries(value).slice(0, 40)) {
+    if (!/^[a-z_]{2,20}$/.test(slot) || !isRecord(e) || typeof e.id !== 'string' || !/^[a-z0-9-]{2,40}$/.test(e.id) || typeof e.at !== 'number' || !Number.isFinite(e.at)) continue
+    out[slot] = { id: e.id, at: e.at }
+  }
+  return Object.keys(out).length ? out : undefined
+}
 function cleanCandado(value: unknown): Settings['candado'] {
-  return isRecord(value) && typeof value.llave === 'string' && /^[A-Za-z0-9]{16,40}$/.test(value.llave) ? { llave: value.llave } : undefined
+  if (!isRecord(value) || typeof value.llave !== 'string' || !/^[A-Za-z0-9]{16,40}$/.test(value.llave)) return undefined
+  const ms = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v > 0 && v < 8.64e15 ? Math.round(v) : undefined
+  const desde = ms(value.desde), hasta = ms(value.hasta)
+  const pase = typeof value.pase === 'string' && /^(pase|emergencia):[A-Za-z0-9-]{1,60}$/.test(value.pase) ? value.pase : undefined
+  return { llave: value.llave, ...(desde ? { desde } : {}), ...(hasta ? { hasta } : {}), ...(pase ? { pase } : {}) }
 }
 function cleanAvisos(value: unknown): Settings['avisos'] {
   return isRecord(value) && typeof value.hora === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value.hora) ? { hora: value.hora } : undefined
@@ -454,6 +482,8 @@ export function cleanSettings(value: unknown): Settings {
     habits: cleanHabitDefs(v.habits),
     age: int(v.age, 8, 99) ?? DEFAULT_SETTINGS.age,
     trainingLevel: int(v.trainingLevel, 1, 4) ?? undefined,
+    escalones: cleanEscalones(v.escalones),
+    diagnostico: typeof v.diagnostico === 'string' && /^\d{4}-\d\d-\d\d$/.test(v.diagnostico) ? v.diagnostico : undefined,
     bibleOrder: v.bibleOrder === 'canonico' ? 'canonico' : 'ruta',
     sleepTarget: num(v.sleepTarget, 6, 12) ?? DEFAULT_SETTINGS.sleepTarget,
     stepsTarget: int(v.stepsTarget, 1000, 40000) ?? DEFAULT_SETTINGS.stepsTarget,
@@ -467,12 +497,22 @@ export function cleanSettings(value: unknown): Settings {
     cardioSetup: v.cardioSetup === true ? true : undefined,
     rutina2611: v.rutina2611 === true ? true : undefined,
     rondas2611: v.rondas2611 === true ? true : undefined,
+    toques2611: v.toques2611 === true ? true : undefined,
+    hspu2611: v.hspu2611 === true ? true : undefined,
+    quitar2611: v.quitar2611 === true ? true : undefined,
+    devolver2611: v.devolver2611 === true ? true : undefined,
     tablas: cleanTablas(v.tablas),
     amigos: cleanAmigos(v.amigos),
     aprobados: cleanAmigos(v.aprobados),
     candado: cleanCandado(v.candado),
     widget: cleanCandado(v.widget),
     avisos: cleanAvisos(v.avisos),
+    despertador: isRecord(v.despertador) ? { on: v.despertador.on === true, reps: [5, 10, 15, 20].includes(Number(v.despertador.reps)) ? Number(v.despertador.reps) : 10 } : undefined,
+    modo: v.modo === 'competir' ? 'competir' as const : undefined,
+    sinEdad: v.sinEdad === true ? true : undefined,
+    minLibres: int(v.minLibres, 0, 240),
+    sinUsoImportante: v.sinUsoImportante === true ? true : undefined,
+    legal: isRecord(v.legal) && typeof v.legal.version === 'string' && /^\d{4}-\d\d-\d\d$/.test(v.legal.version) && typeof v.legal.fecha === 'string' && v.legal.fecha.length <= 40 ? { version: v.legal.version, fecha: v.legal.fecha, salud: v.legal.salud === true } : undefined,
   }) as Settings
 }
 export function cleanHabitDays(value: unknown): Record<string, string[]> {
