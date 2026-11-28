@@ -61,6 +61,8 @@ const Cargando = () => <p className="d-hint">Cargando</p>
 const VERSION = (() => { try { return new URL(import.meta.url).pathname.split('/').pop() ?? '' } catch { return '' } })()
 import { votesOn } from './lib/identity'
 
+/** v11.5: Hoy abre en HOY. Antes go() subía la página al tope y lo primero que veías era el día de ayer. */
+function alHoy() { requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('.d-unit2.today')?.scrollIntoView({ block: 'start', behavior: 'auto' }))) }
 const NAV: { id: Section; icon: DuoIconName; label: string }[] = [
   { id: 'Hoy', icon: 'casa', label: 'Hoy' }, { id: 'Entrenar', icon: 'pesa', label: 'Entrenar' }, { id: 'Tareas', icon: 'lista', label: 'Tareas' }, { id: 'Lectura', icon: 'libro', label: 'Lectura' },
   { id: 'Comida', icon: 'plato', label: 'Comida' },
@@ -443,7 +445,7 @@ export default function App() {
   const [focusOpen, setFocusOpen] = useState(bootFocus)
   const [focusPreset, setFocusPreset] = useState<Preset | null>(null)
   const [focusKey, setFocusKey] = useState(0)
-  const go = useCallback((target: Section) => { const next: Section = target === 'Enfoque' ? 'Tareas' : target; setFocusOpen(target === 'Enfoque'); setSection(next); setLost(false); window.scrollTo({ top: 0 }) }, [])
+  const go = useCallback((target: Section) => { const next: Section = target === 'Enfoque' ? 'Tareas' : target; setFocusOpen(target === 'Enfoque'); setSection(next); setLost(false); window.scrollTo({ top: 0 }); if (next === 'Hoy') alHoy() }, [])
   const goHome = useCallback(() => { window.history.replaceState({}, '', window.location.pathname); go('Hoy') }, [go])
   const reportar = useCallback(async (error: Error, donde: string): Promise<Envio> => {
     try {

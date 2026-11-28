@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
 import { Sheet } from './Sheet'
 import { activeHabits, dateKey, makeId, modulesOf, type AppData } from './lib/model'
 import type { PersonalTask } from './lib/personal'
@@ -113,7 +113,7 @@ function dayNodes(data: AppData, day: string, today: string): PathNode[] {
 
 function Node({ n, x, onTap, mascot }: { n: PathNode; x: number; onTap: (el: HTMLElement) => void; mascot?: ReactNode }) {
   return <div className={`d-step2 ${n.state}`} style={{ '--x': `${x * 62}px` } as CSSProperties}>
-    {n.state === 'now' && <span className="d-start">{n.kind === 'train' ? '¡A ENTRENAR!' : n.kind === 'read' || n.kind === 'bible' ? '¡A LEER!' : n.kind === 'manana' ? '¡BUENOS DÍAS!' : n.kind === 'walk' ? '¡A CAMINAR!' : n.kind === 'night' ? '¡A CERRAR!' : 'EMPEZAR'}</span>}
+    {n.state === 'now' && <span className="d-start">{n.kind === 'train' ? '¡A entrenar!' : n.kind === 'read' || n.kind === 'bible' ? '¡A leer!' : n.kind === 'manana' ? '¡Buenos días!' : n.kind === 'walk' ? '¡A caminar!' : n.kind === 'night' ? '¡A cerrar!' : 'Empezar'}</span>}
     <button type="button" className={`d-node2 ${n.state} ${n.live ? 'live' : ''}`} onClick={e => onTap(e.currentTarget)} aria-label={`${n.label}${n.sub ? `, ${n.sub}` : ''}`}>
       {n.partial !== undefined && n.partial > 0 && n.state !== 'done' && n.state !== 'locked' && <svg className="d-node-ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" pathLength="100" strokeDasharray="100" strokeDashoffset={100 - n.partial * 100} /></svg>}
       <DuoIcon name={n.state === 'done' ? 'check' : n.state === 'locked' ? 'candado' : n.icon} size={44} />
@@ -129,8 +129,8 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
   const [oro, setOro] = useState<Ring | null>(null)
   const [text, setText] = useState('')
   const [daily, setDaily] = useState(false)
+  const [verAnillos, setVerAnillos] = useState(false)
   const [edit, setEdit] = useState(false)
-  const scrolled = useRef(false)
   const live = !!data.activeReading
   const now = useNow(live, 1000)
   const xpToday = xpOn(data, today)
@@ -161,9 +161,10 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
   }, [data.settings.morningSetup]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (scrolled.current) return
-    scrolled.current = true
-    window.setTimeout(() => document.querySelector('.d-unit2.today')?.scrollIntoView({ block: 'start', behavior: 'auto' }), 60)
+    // Dos intentos: el segundo cubre fuentes o datos que llegan tarde y empujan el día de hoy hacia abajo.
+    const ir = () => document.querySelector('.d-unit2.today')?.scrollIntoView({ block: 'start', behavior: 'auto' })
+    const a = window.setTimeout(ir, 60), b = window.setTimeout(() => { const t = document.querySelector('.d-unit2.today'); if (t && Math.abs(t.getBoundingClientRect().top) > 120) ir() }, 450)
+    return () => { window.clearTimeout(a); window.clearTimeout(b) }
   }, [])
 
   function tap(n: PathNode, day: string) {
@@ -206,12 +207,14 @@ export function HoyLista({ data, commit, go, onMessage }: { data: AppData; commi
     const done = nodes.filter(n => n.state === 'done').length
     const rt = routineFor(data, day)
     return <section className={`d-unit2 ${kind}`} key={day}>
-      <header className="d-unit2-head">
+      {/* v11.5: la cabecera de hoy era una tarjeta de 200 px con el detalle siempre abierto. Ahora es una
+          línea; el detalle de cada anillo se abre al tocarla. */}
+      <header className={`d-unit2-head ${kind === 'today' && verAnillos ? 'abierta' : ''}`} {...(kind === 'today' ? { role: 'button', tabIndex: 0, 'aria-expanded': verAnillos, onClick: () => setVerAnillos(v => !v), onKeyDown: (e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVerAnillos(v => !v) } } } : {})}>
         <div><b>{kind === 'today' ? saludo(data.profile.name) : kind === 'future' && day === shiftDay(today, 1) ? 'Mañana' : dayTitle(day)}</b>
-          <span>{kind === 'today' ? <>{dayTitle(day)}<br />{cerrados(anillos)} de {[anillos.cuerpo, anillos.mente, anillos.alma].filter(v => v !== null).length} anillos</> : kind === 'future' ? (rt ? rt.title : 'Día de descanso') : `${done} de ${nodes.length} hechos`}</span></div>
+          <span>{kind === 'today' ? <>{dayTitle(day)} · {cerrados(anillos)} de {[anillos.cuerpo, anillos.mente, anillos.alma].filter(v => v !== null).length} anillos</> : kind === 'future' ? (rt ? rt.title : 'Día de descanso') : `${done} de ${nodes.length} hechos`}</span></div>
         {kind === 'today' ? <AnillosDia a={anillos} oro={oroDe(data, today, anillos)} />
           : <DuoIcon name={kind === 'future' ? 'candado' : kind === 'past' && done === nodes.length && nodes.length ? 'check' : 'casa'} size={36} />}
-        {kind === 'today' && <AnillosLeyenda a={anillos} oro={oroDe(data, today, anillos)} detalle={detalleAnillos(data, today)} />}
+        {kind === 'today' && verAnillos && <AnillosLeyenda a={anillos} oro={oroDe(data, today, anillos)} detalle={detalleAnillos(data, today)} />}
       </header>
       {kind === 'today' && ofrecerOro(data, today, anillos) && <OroInvite ring={ofrecerOro(data, today, anillos)!} onOpen={() => setOro(ofrecerOro(data, today, anillos))} />}
       {nodes.map((n, i) => <Node key={n.kind} n={n} x={WAVE[(offset + i) % WAVE.length]} onTap={() => tap(n, day)}

@@ -5,7 +5,7 @@ import { imageOf, ladder, SLOT_LABEL, type Exercise } from './lib/exercises'
 import { available, personalBest, sessionsOf, setValue, type PlanItem } from './lib/coach'
 import { checkValue, footballToAsk, restFor } from './lib/session'
 import { haptic } from './lib/haptic'
-import { Card, Chips, MoveImage, Stepper, celebrate, chime, mmss } from './ui'
+import { Card, Chips, MoveImage, Stepper, celebrate, countTick, goSignal, mmss } from './ui'
 
 export type Commit = (update: (d: AppData) => AppData) => void
 export type OnMessage = (text: string, undo?: () => void) => void
@@ -69,8 +69,10 @@ export function RestTimer({ data, commit, now, next }: { data: AppData; commit: 
   const until = data.activeWorkout?.restUntil
   const remaining = until ? Math.ceil((until - now) / 1000) : 0
   const rang = useRef<number | null>(null)
+  const ticked = useRef(0)
   useEffect(() => {
-    if (until && remaining <= 0 && rang.current !== until && now - until < 5000) { rang.current = until; chime() }
+    if (until && remaining > 0 && remaining <= 3 && ticked.current !== remaining) { ticked.current = remaining; countTick() }
+    if (until && remaining <= 0 && rang.current !== until && now - until < 5000) { rang.current = until; ticked.current = 0; goSignal() }
   }, [remaining, until, now])
   if (!until || remaining <= -30) return null
   return <div className={`rest-timer ${remaining <= 0 ? 'over' : ''}`} role="timer" aria-live="polite">

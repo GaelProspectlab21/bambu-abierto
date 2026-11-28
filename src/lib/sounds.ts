@@ -7,12 +7,14 @@
  */
 export type SoundKind = 'complete' | 'undo' | 'achieve' | 'record' | 'streak' | 'level' | 'day' | 'gold' | 'focusStart' | 'focusEnd'
   | 'miss' | 'tick' | 'go' | 'bible' | 'night' | 'meal' | 'awake'
+  | 'stretchIn' | 'pose' | 'sideL' | 'sideR' | 'count' | 'breathe' | 'stretchDone' | 'pause' | 'resume' | 'pick' | 'pop' | 'ribbit'
 export const SOUND_KEY = 'bambu.sonidos'
 
 /** Re pentatónica, de Re4 a Re6. */
 export const SCALE = [293.66, 329.63, 369.99, 440, 493.88, 587.33, 659.26, 739.99, 880, 987.77, 1174.66] as const
-type Voice = 'wood' | 'bell' | 'bowl'
-type Note = readonly [voice: Voice, degree: number, at: number, vol?: number]
+type Voice = 'wood' | 'bell' | 'bowl' | 'air'
+/** pan: -1 es el oído izquierdo, 1 el derecho. Así el estiramiento te dice de qué lado sigues sin verlo. */
+type Note = readonly [voice: Voice, degree: number, at: number, vol?: number, pan?: number]
 
 /** La partitura de cada momento: [voz, grado de la escala, segundos desde el inicio, volumen]. */
 export const SCORES: Record<Exclude<SoundKind, 'complete'>, readonly Note[]> = {
@@ -33,9 +35,25 @@ export const SCORES: Record<Exclude<SoundKind, 'complete'>, readonly Note[]> = {
   night: [['bowl', 0, 0, .6], ['bell', 4, .5, .3], ['bell', 2, 1.1, .25]],
   meal: [['wood', 4, 0, .55], ['wood', 6, .09, .5]],
   awake: [['wood', 3, 0], ['wood', 5, .08], ['wood', 7, .16], ['wood', 8, .24], ['bell', 10, .34, .7], ['bell', 8, .34, .45], ['bowl', 3, .34, .6]],
+  // v11.5: el estiramiento era mudo y en iPhone la vibración no llega si no tocas nada. Ahora el
+  // sonido te guía con los ojos cerrados: respiras al empezar, cuentas 3, 2, 1, la campanita cambia
+  // de postura y el toc-toc suena del lado que toca.
+  stretchIn: [['bowl', 0, 0, .6], ['air', 3, .15, .8]],
+  count: [['wood', 2, 0, .3]],
+  pose: [['bell', 5, 0, .4], ['bell', 7, .12, .45]],
+  sideL: [['wood', 4, 0, .6, -.8], ['wood', 4, .1, .5, -.8]],
+  sideR: [['wood', 4, 0, .6, .8], ['wood', 6, .1, .5, .8]],
+  breathe: [['air', 2, 0, .7]],
+  stretchDone: [['bowl', 0, 0, .7], ['bell', 4, .3, .4], ['bell', 7, .55, .45], ['bell', 9, .8, .5], ['air', 3, .3, .5]],
+  pause: [['wood', 3, 0, .35], ['wood', 1, .06, .3]],
+  resume: [['wood', 1, 0, .3], ['wood', 3, .06, .35]],
+  // Diagnóstico, Brote y el sapo del día: lo que eliges a propósito responde.
+  pick: [['wood', 6, 0, .4]],
+  pop: [['wood', 9, 0, .45], ['wood', 7, .05, .3]],
+  ribbit: [['wood', 0, 0, .7], ['wood', 0, .055, .6], ['wood', 2, .15, .7]],
 }
 /** Más alto gana: una celebración nunca la tapa el clic que la provocó. */
-const PRIORITY: Record<SoundKind, number> = { undo: 0, miss: 0, tick: 1, complete: 1, meal: 1, achieve: 2, record: 2, focusStart: 2, go: 2, bible: 2, gold: 3, streak: 3, night: 3, level: 4, day: 4, focusEnd: 4, awake: 4 }
+const PRIORITY: Record<SoundKind, number> = { undo: 0, miss: 0, pause: 0, resume: 0, pick: 0, pop: 0, tick: 1, count: 1, breathe: 1, complete: 1, meal: 1, achieve: 2, record: 2, focusStart: 2, go: 2, bible: 2, stretchIn: 2, pose: 2, sideL: 2, sideR: 2, ribbit: 2, gold: 3, streak: 3, night: 3, level: 4, day: 4, focusEnd: 4, awake: 4, stretchDone: 4 }
 
 /** Encendido salvo que lo apagues. El iPhone respeta el modo silencio porque Web Audio es ambiente. */
 export function soundAllowed(preference: string | null, hidden: boolean, interrupted: boolean, mediaPlaying: boolean): boolean {
@@ -78,13 +96,13 @@ export function primeSounds() {
   }
   for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, wake, { capture: true, passive: true })
 }
-let bus: { dry: AudioNode; wet: AudioNode } | undefined
+let bus: { dry: AudioNode; wet: AudioNode; ctx: BaseAudioContext } | undefined
 let last = { at: -Infinity, priority: -1 }
 let combo = { step: -1, at: -Infinity }
 
 /** Un cuarto pequeño: compresor para que nada truene y una cola de reverb corta para que respire. */
-function chain(ctx: AudioContext) {
-  if (bus) return bus
+function chain(ctx: BaseAudioContext) {
+  if (bus && bus.ctx === ctx) return bus
   const comp = ctx.createDynamicsCompressor()
   comp.threshold.value = -14; comp.ratio.value = 4
   const master = ctx.createGain(); master.gain.value = 1
@@ -94,11 +112,11 @@ function chain(ctx: AudioContext) {
   const verb = ctx.createConvolver(); verb.buffer = ir
   const send = ctx.createGain(); send.gain.value = .16
   send.connect(verb); verb.connect(master)
-  bus = { dry: master, wet: send }
+  bus = { dry: master, wet: send, ctx }
   return bus
 }
 
-function partial(ctx: AudioContext, out: AudioNode[], hz: number, t: number, peak: number, decay: number, attack = .002) {
+function partial(ctx: BaseAudioContext, out: AudioNode[], hz: number, t: number, peak: number, decay: number, attack = .002) {
   const osc = ctx.createOscillator(), g = ctx.createGain()
   osc.frequency.setValueAtTime(hz * 1.015, t); osc.frequency.exponentialRampToValueAtTime(hz, t + .012)
   g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + attack); g.gain.exponentialRampToValueAtTime(.0001, t + decay)
@@ -108,7 +126,7 @@ function partial(ctx: AudioContext, out: AudioNode[], hz: number, t: number, pea
 }
 
 /** El golpe de madera: el ataque es ruido filtrado (la baqueta), el cuerpo son modos de un tubo de bambú. */
-function knock(ctx: AudioContext, out: AudioNode[], hz: number, t: number, vol: number) {
+function knock(ctx: BaseAudioContext, out: AudioNode[], hz: number, t: number, vol: number) {
   const n = Math.floor(ctx.sampleRate * .012), buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0)
   for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n)
   const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain()
@@ -117,8 +135,27 @@ function knock(ctx: AudioContext, out: AudioNode[], hz: number, t: number, vol: 
   src.onended = () => { src.disconnect(); bp.disconnect(); g.disconnect() }
 }
 
-function voice(ctx: AudioContext, [kind, degree, at, vol = 1]: Note, t0: number) {
-  const { dry, wet } = chain(ctx), hz = SCALE[Math.max(0, Math.min(SCALE.length - 1, degree))], t = t0 + at
+/** Una respiración: ruido de aire que sube (inhalas) y baja despacio (sueltas). Dura unos 3 s. */
+function breath(ctx: BaseAudioContext, out: AudioNode[], hz: number, t: number, vol: number) {
+  const dur = 3, n = Math.floor(ctx.sampleRate * dur), buf = ctx.createBuffer(1, n, ctx.sampleRate), d = buf.getChannelData(0)
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1
+  const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain()
+  src.buffer = buf; bp.type = 'bandpass'; bp.Q.value = .8
+  bp.frequency.setValueAtTime(hz * 1.5, t); bp.frequency.linearRampToValueAtTime(hz * 3, t + 1.1); bp.frequency.exponentialRampToValueAtTime(hz, t + dur)
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.34 * vol, t + 1.1); g.gain.exponentialRampToValueAtTime(.0001, t + dur)
+  src.connect(bp); bp.connect(g); out.forEach(o => g.connect(o)); src.start(t); src.stop(t + dur + .05)
+  src.onended = () => { src.disconnect(); bp.disconnect(); g.disconnect() }
+}
+
+function voice(ctx: BaseAudioContext, [kind, degree, at, vol = 1, pan]: Note, t0: number) {
+  const bus = chain(ctx), hz = SCALE[Math.max(0, Math.min(SCALE.length - 1, degree))], t = t0 + at
+  let dry: AudioNode = bus.dry
+  const wet = bus.wet
+  if (pan) {
+    const p = ctx.createStereoPanner(); p.pan.value = pan; p.connect(bus.dry); dry = p
+    if (typeof window !== 'undefined') window.setTimeout(() => p.disconnect(), (at + 3.5) * 1000)
+  }
+  if (kind === 'air') { breath(ctx, [dry, wet], hz, t, vol); return }
   if (kind === 'wood') {
     knock(ctx, [dry, wet], hz, t, vol)
     partial(ctx, [dry, wet], hz, t, .5 * vol, .32)
@@ -130,6 +167,11 @@ function voice(ctx: AudioContext, [kind, degree, at, vol = 1]: Note, t0: number)
     // El cuenco: dos tonos casi iguales que laten despacio. Entra suave y se queda.
     ;[[1, 1], [1.004, .8], [2.71, .25]].forEach(([r, a]) => partial(ctx, [dry, wet], hz * r, t, .3 * a * vol, 3.2, .04))
   }
+}
+
+/** Agenda una partitura en cualquier contexto (también uno sin altavoz, para exportar muestras .wav). */
+export function scheduleScore(ctx: BaseAudioContext, kind: Exclude<SoundKind, 'complete'>, t0 = ctx.currentTime + .005) {
+  SCORES[kind].forEach(note => voice(ctx, note, t0))
 }
 
 /** force: la campana del bloque suena aunque el sonido de premios esté apagado (es una alarma). */

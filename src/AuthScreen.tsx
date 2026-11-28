@@ -18,9 +18,11 @@ function iosInBrowser(): boolean {
 
 /** Entrada v9: el diseño de Kiki con las reglas de la nube de Gael (invitación, 12 caracteres, Google oficial). */
 export function AuthScreen({ recovery = false, onRecoveryComplete }: Props) {
-  const [view, setView] = useState<View>('entrar')
+  // v11.5: el enlace que manda la cuenta dueña (?invita=CODIGO) abre "Tengo invitación" con el código puesto.
+  const [invitado] = useState(() => { try { return (new URL(window.location.href).searchParams.get('invita') ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) } catch { return '' } })
+  const [view, setView] = useState<View>(invitado ? 'crear' : 'entrar')
   const [name, setName] = useState('')
-  const [invite, setInvite] = useState('')
+  const [invite, setInvite] = useState(invitado)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { dateKey, type AppData, type Routine, type RoutineItem, type RoutineKind, type TrainPlan } from './lib/model'
 import { applyBump, bumps, CATALOG, clockOf, doneCount, label, lockActive, logSet, newItem, nextStep, planOf, seedWeek, usesCoach, quietBump, roundsOf, routineFor, routineProgress, setsNeeded, stepsOf, undoLast, weekIndex, WEEK_DAYS, WEEK_SHORT, type Step } from './lib/rutina'
 import { XP } from './lib/xp'
-import { chime, useNow, useWakeLock } from './ui'
+import { chime, countTick, goSignal, useNow, useWakeLock } from './ui'
 import { haptic } from './lib/haptic'
 import { BroteArt } from './Brote'
 import { DuoIcon } from './DuoIcons'
@@ -64,10 +64,14 @@ function Runner({ data, commit, rt, today, start, rest, onClose }: { data: AppDa
   useEffect(() => { setCount(0); setAdjust(false); setTimer({ startedAt: null, before: 0 }); setPrepUntil(null); fired.current = false }, [item?.id, step?.slot])
   useEffect(() => {
     if (!prepUntil) return
-    if (prepLeft <= 0) { setPrepUntil(null); setTimer({ startedAt: Date.now(), before: 0 }); chime(); return }
-    if (prepLeft <= 3 && beeped.current !== prepLeft) { beeped.current = prepLeft; haptic(40) }
+    if (prepLeft <= 0) { setPrepUntil(null); setTimer({ startedAt: Date.now(), before: 0 }); goSignal(); return }
+    if (prepLeft <= 3 && beeped.current !== prepLeft) { beeped.current = prepLeft; haptic(40); countTick() }
   }, [prepLeft, prepUntil])
-  useEffect(() => { if (restUntil && restLeft <= 0) { chime(); setRestUntil(null) } }, [restLeft, restUntil])
+  const restTick = useRef(0)
+  useEffect(() => {
+    if (restUntil && restLeft > 0 && restLeft <= 3 && restTick.current !== restLeft) { restTick.current = restLeft; countTick() }
+    if (restUntil && restLeft <= 0) { restTick.current = 0; goSignal(); setRestUntil(null) }
+  }, [restLeft, restUntil])
   useEffect(() => {
     if (!item || item.kind !== 'seconds' || !running || item.target <= 0 || left > 0 || fired.current) return
     fired.current = true

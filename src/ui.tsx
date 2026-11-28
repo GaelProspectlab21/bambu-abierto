@@ -62,6 +62,18 @@ export function chime() {
   playSound('focusEnd', true)
 }
 
+/**
+ * v11.5: arranque y fin de descanso en el entreno. Antes usaban la campana lenta del bloque
+ * (2 s de cuenco): en una serie se sentía tarde. Ahora es "¡va!": madera y campana, corto.
+ * Igual que la campana, suena aunque los premios estén en silencio, porque es un aviso.
+ */
+export function goSignal() {
+  try { navigator.vibrate?.(120) } catch { /* sin vibración */ }
+  playSound('go', true)
+}
+/** Los últimos 3 segundos antes de arrancar o de volver a la serie. */
+export function countTick() { playSound('count') }
+
 /** Mantiene la pantalla encendida mientras haya una sesión abierta. */
 let awakeVideo: HTMLVideoElement | null = null
 let awakeUsers = 0

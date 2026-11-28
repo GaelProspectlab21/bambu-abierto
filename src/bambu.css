@@ -429,3 +429,28 @@
 }
 .fb-clock-card { container-type: inline-size; }
 @supports (font-size: 1cqi) { .fb-run.full .fb-clock, .fb-run:fullscreen .fb-clock { font-size: min(30cqi, 230px); } .fb-clock { font-size: min(30cqi, 120px); } }
+
+/* v11.5 · Hoy: la cabecera del día es una línea. El detalle de anillos se abre al tocarla. */
+.d-unit2.today .d-unit2-head { margin-bottom: 18px; padding: 10px 12px 10px 16px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.d-unit2.today .d-unit2-head:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--d-green-lip); }
+.d-unit2.today .d-unit2-head > div:first-child b { font-size: 19px; line-height: 1.15; }
+.d-unit2.today .d-unit2-head > div:first-child span { font-size: 13px; }
+.d-unit2.today .d-unit2-head .d-anillos { width: 52px; height: 52px; }
+.d-unit2.today .d-unit2-head:focus-visible { outline: 3px solid var(--d-gold); outline-offset: 3px; }
+@media (max-width: 360px) { .d-unit2.today .d-unit2-head .d-anillos { width: 48px; height: 48px; } .d-unit2.today .d-unit2-head > div:first-child b { font-size: 18px; } }
+
+/* v11.5 · Estiramiento: Pausa y Siguiente siempre a la mano, aunque la postura traiga foto y pasos largos. */
+.st-play { padding-bottom: 96px; }
+.st-play .st-controls { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: min(480px, 100%); margin: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--d-page); border-top: 2px solid var(--d-line); z-index: 2; }
+.d-unit2.today .d-unit2-head { margin-bottom: 30px; }
+.d-start { letter-spacing: 0; }
+
+/* v11.5 · Invitar a un amigo (solo la cuenta dueña). */
+.admin-accounts { display: grid; gap: 12px; }
+.admin-code { justify-self: center; padding: 10px 22px; border: 2px dashed var(--d-gold); border-radius: var(--d-radius); background: var(--d-gold-light); color: var(--d-gold); font-family: var(--display); font-size: 30px; font-weight: 700; letter-spacing: .14em; font-variant-numeric: tabular-nums; cursor: pointer; }
+.admin-list li { border: 2px solid var(--d-line); border-radius: var(--d-radius); background: var(--d-bg); }
+.admin-list small { color: var(--d-dim); }
+
+/* v11.5 · La entrada (lo primero que ve un amigo invitado) habla como Bambú: sin mayúsculas ni azul. */
+.d-auth .d-btn, .d-auth .d-mode button, .d-auth .d-pass-eye, .d-auth .d-auth-link { text-transform: none; letter-spacing: 0; }
+.d-auth .d-pass-eye, .d-auth .d-auth-link { color: var(--d-gold); }

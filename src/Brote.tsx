@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { playSound } from './lib/sounds'
 import type { AppData } from './lib/model'
 import { broteSays } from './lib/brote'
 import { game } from './lib/gamification'
@@ -33,7 +34,7 @@ export function BroteCard({ data, now }: { data: AppData; now: number }) {
   const [i, setI] = useState(0)
   const line = say.lines[i % say.lines.length]
   return <section className={`card brote-card mood-${say.mood}`} aria-label="Brote, tu compañero">
-    <button className="brote-btn" onClick={() => { setI(n => n + 1); haptic() }} aria-label="Tocar a Brote para otro consejo"><BroteArt mood={say.mood} /></button>
+    <button className="brote-btn" onClick={() => { setI(n => n + 1); haptic(); playSound('pop') }} aria-label="Tocar a Brote para otro consejo"><BroteArt mood={say.mood} /></button>
     <div className="bubble" aria-live="polite">
       <p key={line}>{line}</p>
       <small>{say.lines.length > 1 ? 'Toca a Brote para otro consejo.' : ''}</small>

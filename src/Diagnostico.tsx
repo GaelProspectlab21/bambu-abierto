@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { playSound } from './lib/sounds'
 import { dateKey, type AppData } from './lib/model'
 import { aplicarDiagnostico, escalonPara, PRUEBAS } from './lib/diagnostico'
 import { pasoDe, SLOT_LABEL, type Slot } from './lib/exercises'
@@ -30,11 +31,13 @@ export function DiagnosticoSheet({ data, commit, onClose, onMessage }: { data: A
   const p = PRUEBAS[i]
   function elegir(k: number) {
     haptic(8)
+    playSound('pick')
     setResp(r => ({ ...r, [p.slot]: k }))
     setI(i + 1)
   }
   function guardar() {
     haptic([12, 30, 12])
+    playSound('achieve')
     commit(d => aplicarDiagnostico(d, resp, dateKey()))
     onMessage('Listo. Tu sesión ya arranca en tus escalones.')
     onClose()

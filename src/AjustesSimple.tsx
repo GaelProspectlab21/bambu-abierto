@@ -9,6 +9,7 @@ import { planOf } from './lib/rutina'
 import { PauseSetup } from './PauseSetup'
 import { CandadoSetup } from './Candado'
 import { AvisosSetup, WidgetSetup } from './Widget'
+import { AdminAccounts } from './AdminAccounts'
 import { LegalCard } from './Legal'
 import { DESP_REPS, despertadorDe } from './lib/despertador'
 import { RemindersCard } from './RemindersCard'
@@ -177,9 +178,11 @@ export function AjustesSimple({ data, commit, onMessage, cloud, onExport, onImpo
     </div>
 
     {mods.training && <CandadoSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
-    {/* Avisos y widget de Kiki esperan su servidor en Supabase. Además su avisos-sw.js reemplazaría a sw.js (modo sin señal y avisos de bambu-remind). */}
+    {/* Los avisos push de Kiki siguen esperando servidor (su avisos-sw.js reemplazaría a sw.js). El widget NO:
+        su tabla bambu_widget y la función bambu-llave viven en Supabase desde el 26-nov (v11.5 lo prende). */}
     {socialListo && <AvisosSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
-    {socialListo && <WidgetSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />}
+    <WidgetSetup data={data} commit={commit} onMessage={onMessage} cloud={cloud} />
+    {cloud && <AdminAccounts onMessage={onMessage} />}
     <LegalCard data={data} />
     {server && <PauseSetup keyValue={key} onCopy={url => { navigator.clipboard?.writeText(url).then(() => onMessage('Enlace copiado.')).catch(() => onMessage(url)) }} />}
     {server && <RemindersCard data={data} commit={commit} onMessage={onMessage} />}

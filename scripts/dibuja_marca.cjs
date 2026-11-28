@@ -40,3 +40,5 @@ out('img/sin-senal.svg', React.createElement(BroteArt, { mood: 'sinSenal', size:
 out('img/perdido.svg', React.createElement(BroteArt, { mood: 'calma', look: 'historial', size: 160 }))
 out('img/brote-coach.svg', React.createElement(BroteArt, { mood: 'orgulloso', look: 'coach', size: 160 }))
 RANKS.forEach((r, i) => out(r.img, React.createElement(RangoArt, { tier: i, size: 200 })))
+// v11.5: las caras del widget de Scriptable. Scriptable no lee SVG: scripts/iconos.cjs las pasa a PNG y borra el SVG.
+for (const mood of ['feliz', 'animo', 'orgulloso', 'sueno']) out(`widget/brote-${mood}.svg`, React.createElement(BroteArt, { mood, size: 300 }))

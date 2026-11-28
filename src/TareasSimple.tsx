@@ -43,7 +43,7 @@ export function TareasSimple({ data, commit, onFocus }: { data: AppData; commit:
     toggleTask(commit, id, today)
   }
   function tocar(el: HTMLElement, id: string) {
-    if (eligiendo) { haptic([10, 20, 10]); commit(d => marcarSapo(d, id, today)); setEligiendo(false); return }
+    if (eligiendo) { haptic([10, 20, 10]); playSound('ribbit'); commit(d => marcarSapo(d, id, today)); setEligiendo(false); return }
     hecho(el, id)
   }
   const tag = (due?: string) => !due || due === today ? '' : due < today ? `Atrasada, ${fmtDay(due)}` : fmtDay(due)

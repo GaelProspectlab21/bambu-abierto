@@ -184,6 +184,40 @@ ok('v9 lectura por llave: validación, formato y minimización')
   ok('v10.3 sonido: encendido por defecto, interrupciones, partituras en escala e impulso con tope')
 }
 
+{
+  const { holdCues, transitionCue, variedSteps } = moduleOf('stretch')
+  const { SCORES } = moduleOf('sounds')
+  // v11.5: el estiramiento cuenta 3, 2, 1 una sola vez aunque el reloj salte de 250 en 250 ms.
+  let prev = 30, all = []
+  for (let left = 30; left >= -0.25; left -= 0.25) { all.push(...holdCues(prev, left, 30, 'static')); prev = left }
+  assert.deepEqual(all, ['breathe', 'count', 'count', 'count'])
+  // Un salto grande (el teléfono se durmió) no se come la cuenta: cruza los tres umbrales.
+  assert.deepEqual(holdCues(5, 0, 30, 'static'), ['count', 'count', 'count'])
+  // Las dinámicas y las cortas no llevan soplo; una de 2 s no cuenta un 3 que no existe.
+  assert.deepEqual(holdCues(16, 14, 30, 'dynamic'), [])
+  assert.deepEqual(holdCues(2, 0, 2, 'static'), ['count'])
+  // Mismo estiramiento del otro lado: suena del lado que toca. Postura nueva: campanita.
+  const izq = { name: 'Cuádriceps', side: 'Lado izquierdo' }, der = { name: 'Cuádriceps', side: 'Lado derecho' }
+  assert.equal(transitionCue(izq, der), 'sideR')
+  assert.equal(transitionCue(der, izq), 'sideL')
+  assert.equal(transitionCue(der, { name: 'Gato y vaca' }), 'pose')
+  assert.ok(SCORES.sideL.every(n => n[4] < 0) && SCORES.sideR.every(n => n[4] > 0), 'cada lado suena de su oído')
+  const steps = variedSteps('noche', '2026-11-27')
+  for (let k = 1; k < steps.length; k++) assert.ok(['sideL', 'sideR', 'pose'].includes(transitionCue(steps[k - 1], steps[k])))
+  ok('v11.5 estiramiento con sonido: cuenta 3 2 1, soplo a la mitad y el lado en su oído')
+}
+
+{
+  // v11.5: la cuenta dueña invita desde Ajustes; el enlace trae el código y no arrastra lo que había en la URL.
+  const { mensajeInvitacion } = moduleOf('invitar')
+  const m = mensajeInvitacion('AB23CD45', 'https://bambu-personal-gael.vercel.app/?ir=ajustes#x')
+  assert.match(m, /https:\/\/bambu-personal-gael\.vercel\.app\/\?invita=AB23CD45 /)
+  assert.doesNotMatch(m, /ir=ajustes|#x/)
+  assert.match(m, /AB23CD45\. Sirve una vez/)
+  assert.doesNotMatch(m, /—| - |\.\.\./, 'puntuación humana')
+  ok('v11.5 invitar: enlace limpio con el código puesto')
+}
+
 // Rachas y lectura
 const today = '2026-11-04'
 assert.equal(streak(['2026-11-01', '2026-11-02', '2026-11-03'], today).current, 3)
